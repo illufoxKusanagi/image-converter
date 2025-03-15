@@ -14,7 +14,7 @@ ButtonToggle::ButtonToggle(bool isCollapsed, QWidget *parent)
                 "}"
                 "QPushButton:hover {"
                 "    background-color: " +
-                Colors::Secondary400.name() +
+                Colors::Grey400.name() +
                 ";"
                 "}");
 }

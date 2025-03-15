@@ -31,12 +31,12 @@ void ButtonAction::setEnabled(bool isEnabled) {
                   "}"
                   "QPushButton:hover {"
                   "    background-color: " +
-                  Colors::Primary500.name() +
+                  Colors::Primary400.name() +
                   ";"
                   "}"
                   "QPushButton:pressed {"
                   "    background-color: " +
-                  Colors::Primary600.name() +
+                  Colors::Primary500.name() +
                   ";"
                   "}");
   } else {

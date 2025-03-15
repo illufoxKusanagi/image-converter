@@ -11,12 +11,12 @@ InputField::InputField(const QString &unitText, QWidget *parent)
   layout->addWidget(m_unitLabel);
 
   m_input->setStyleSheet("padding: 4px 12px; border: 1px solid " +
-                         Colors::Secondary400.name() + "; border-radius: 8px;" +
+                         Colors::Grey400.name() + "; border-radius: 8px;" +
                          TextStyle::BodySmallRegular() +
-                         "color: " + Colors::Secondary400.name() + ";");
+                         "color: " + Colors::Grey400.name() + ";");
   m_input->setFixedSize(128, 32);
   m_unitLabel->setStyleSheet(TextStyle::BodySmallRegular() +
-                             "color: " + Colors::Secondary700.name() + ";");
+                             "color: " + Colors::Grey700.name() + ";");
 }
 
 void InputField::setValue(double value) {

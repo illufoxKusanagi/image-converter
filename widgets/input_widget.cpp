@@ -10,7 +10,7 @@ InputWidget::InputWidget(const InputType &inputType, QWidget *parent)
   layout->setSpacing(8);
   layout->addWidget(m_label);
   m_label->setStyleSheet(TextStyle::BodyMediumRegular() +
-                         "color: " + Colors::Secondary700.name() +
+                         "color: " + Colors::Grey700.name() +
                          ";"
                          "white-space: normal;");
   m_label->setWordWrap(true);

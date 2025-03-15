@@ -15,18 +15,18 @@ InputUpload::InputUpload(QWidget *parent)
                                 "min-width: 64px;"
                                 "padding: 4px 12px; "
                                 "border: 1px solid " +
-                                Colors::Secondary400.name() +
+                                Colors::Grey400.name() +
                                 ";"
                                 "border-radius: 8px;" +
                                 TextStyle::BodySmallRegular() +
-                                "color: " + Colors::Secondary400.name() +
+                                "color: " + Colors::Grey400.name() +
                                 ";"
                                 "}"
                                 "QPushButton:pressed {"
                                 "background-color: " +
-                                Colors::Secondary50.name() +
+                                Colors::Grey100.name() +
                                 ";"
                                 "}");
   m_uploadLabel->setStyleSheet(TextStyle::SubttileSmallRegular() +
-                               "color: " + Colors::Secondary700.name() + ";");
+                               "color: " + Colors::Grey700.name() + ";");
 }

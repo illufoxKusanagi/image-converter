@@ -25,10 +25,12 @@ set(PROJECT_WIDGETS
         widgets/input_upload.h
         widgets/input_invalid.cpp
         widgets/input_invalid.h
-        widgets/input_upload_widget.cpp
-        widgets/input_upload_widget.h
         widgets/input_widget.cpp
         widgets/input_widget.h
+        widgets/button_sidebar_widget.cpp
+        widgets/button_sidebar_widget.h
+        widgets/left_panel.cpp
+        widgets/left_panel.h
 )
 
 set(PROJECT_STYLES

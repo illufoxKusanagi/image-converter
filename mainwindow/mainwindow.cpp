@@ -10,4 +10,5 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   MainPage *mainPage = new MainPage(this);
   QVBoxLayout *layout = new QVBoxLayout(centralWidget);
   layout->addWidget(mainPage);
+  setCentralWidget(centralWidget);
 }
