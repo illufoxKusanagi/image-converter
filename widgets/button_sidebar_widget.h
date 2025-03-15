@@ -1,7 +1,7 @@
 #ifndef BUTTONSIDEBARWIDGET_H
 #define BUTTONSIDEBARWIDGET_H
 
-#include "../resources/icon_paths.h"
+#include "../resources/icon_type.h"
 #include "../styles/colors.h"
 #include "../styles/text_style.h"
 #include <QBoxLayout>

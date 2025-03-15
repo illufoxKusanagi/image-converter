@@ -11,11 +11,11 @@
 #include <QWidget>
 #include <QtConcurrent/QtConcurrent>
 
-class LeftPanel : public QWidget {
+class SidebarPanel : public QWidget {
   Q_OBJECT
 
 public:
-  explicit LeftPanel(QWidget *parent = nullptr);
+  explicit SidebarPanel(QWidget *parent = nullptr);
 public slots:
   void emitNavigateSignal(int pageIndex);
 

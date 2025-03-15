@@ -27,16 +27,14 @@ set(PROJECT_WIDGETS
         widgets/input_invalid.h
         widgets/input_widget.cpp
         widgets/input_widget.h
-        widgets/button_sidebar_widget.cpp
-        widgets/button_sidebar_widget.h
-        widgets/left_panel.cpp
-        widgets/left_panel.h
 )
 
 set(PROJECT_STYLES
         styles/colors.h
         styles/text_style.h
         resources/input_type.h
+        resources/icon_type.h
+        resources/icons.qrc
 )
 
 set(

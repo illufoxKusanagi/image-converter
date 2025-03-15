@@ -1,6 +1,6 @@
 #include "left_panel.h"
 
-LeftPanel::LeftPanel(QWidget *parent)
+SidebarPanel::SidebarPanel(QWidget *parent)
     : QWidget(parent), m_buttonLayout(nullptr) {
   QVBoxLayout *mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(0, 0, 0, 0);
@@ -42,15 +42,16 @@ LeftPanel::LeftPanel(QWidget *parent)
                 "}");
 }
 
-void LeftPanel::emitNavigateSignal(int pageIndex) {
+void SidebarPanel::emitNavigateSignal(int pageIndex) {
   emit navigateToPage(pageIndex);
 }
 
-void LeftPanel::createRunButton() {}
+void SidebarPanel::createRunButton() {}
 
-void LeftPanel::setupInputPageButtons() {}
+void SidebarPanel::setupInputPageButtons() {}
 
-void LeftPanel::setupOutputPageButtons() {}
+void SidebarPanel::setupOutputPageButtons() {}
 
-void LeftPanel::updateButtonState(QFuture<void> future, ButtonAction *runButton,
-                                  ButtonAction *runStaticButton) {}
+void SidebarPanel::updateButtonState(QFuture<void> future,
+                                     ButtonAction *runButton,
+                                     ButtonAction *runStaticButton) {}

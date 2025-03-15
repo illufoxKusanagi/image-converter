@@ -4,10 +4,10 @@ ButtonAction::ButtonAction(const QString &buttonText,
                            const QString &isRunButton, QWidget *parent)
     : QPushButton(buttonText, parent) {
   QHBoxLayout *layout = new QHBoxLayout(this);
-  // if (isRunButton == "yes") {
-  //   setIcon(QIcon(":/icons/icons/right-arrow-active.svg"));
-  //   setIconSize(QSize(24, 24));
-  // }
+  if (isRunButton == "yes") {
+    setIcon(QIcon(":/icons/right-arrow-active.svg"));
+    setIconSize(QSize(24, 24));
+  }
 }
 
 QString ButtonAction::getText() const { return text(); }

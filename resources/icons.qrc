@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file>icons/expand.svg</file>
+        <file>icons/play-active.svg</file>
+        <file>icons/play-disabled.svg</file>
+        <file>icons/collapse.svg</file>
+        <file>icons/arrow-down.svg</file>
+        <file>icons/arrow-down-disabled.svg</file>
+        <file>icons/arrow-up.svg</file>
+        <file>icons/arrow-up-disabled.svg</file>
+        <file>icons/arrow-down-black.svg</file>
+        <file>icons/upload.svg</file>
+    </qresource>
+</RCC>
