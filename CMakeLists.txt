@@ -34,6 +34,8 @@ set(PROJECT_WIDGETS
         widgets/button_sidebar_active.h
         widgets/button_sidebar_widget.cpp
         widgets/button_sidebar_widget.h
+        widgets/drop_file_widget.h
+        widgets/drop_file_widget.cpp
 )
 
 set(PROJECT_STYLES
@@ -66,6 +68,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         ${PROJECT_WIDGETS}
         ${PROJECT_STYLES}
         ${PROJECT_PAGES}
+
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET ImageConverter APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
