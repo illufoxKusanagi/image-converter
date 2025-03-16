@@ -49,8 +49,8 @@ void SidebarPanel::createSidebarButtons() {
     button->setEnabled(true);
     connect(button, &QPushButton::clicked, this, [this, i]() {
       m_currentIndex = i;
-      // updateButtonStates();
-      emit buttonClicked(m_currentIndex);
+      updateButtonState();
+      emit navigateToPage(m_currentIndex);
     });
     m_categoryButtons.append(button);
     m_buttonLayout->addWidget(button);

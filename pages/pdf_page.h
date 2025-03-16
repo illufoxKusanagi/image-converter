@@ -12,6 +12,7 @@ public:
 
 private:
   QVBoxLayout *mainLayout;
+  void setupImageInput();
 };
 
 #endif // PDF_PAGE_H
