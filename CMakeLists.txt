@@ -27,6 +27,12 @@ set(PROJECT_WIDGETS
         widgets/input_invalid.h
         widgets/input_widget.cpp
         widgets/input_widget.h
+        widgets/sidebar_panel.cpp
+        widgets/sidebar_panel.h
+        widgets/button_sidebar_active.cpp
+        widgets/button_sidebar_active.h
+        widgets/button_sidebar_widget.cpp
+        widgets/button_sidebar_widget.h
 )
 
 set(PROJECT_STYLES

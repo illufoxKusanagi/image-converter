@@ -1,7 +1,8 @@
 #ifndef LEFT_PANEL_H
 #define LEFT_PANEL_H
 
-#include "../widgets/button_action.h"
+#include "button_action.h"
+#include "button_sidebar_active.h"
 #include "button_toggle.h"
 #include <QFuture>
 #include <QFutureWatcher>
@@ -31,7 +32,7 @@ private:
 
   int getCurrentIndex() const { return m_currentIndex; }
   void setCurrentIndex(int index) { m_currentIndex = index; }
-  void createRunButton();
+  void createSidebarButtons();
   void setupInputPageButtons();
   void setupOutputPageButtons();
   void updateButtonState(QFuture<void> future, ButtonAction *runButton,

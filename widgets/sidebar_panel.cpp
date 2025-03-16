@@ -1,4 +1,4 @@
-#include "left_panel.h"
+#include "sidebar_panel.h"
 
 SidebarPanel::SidebarPanel(QWidget *parent)
     : QWidget(parent), m_buttonLayout(nullptr) {
@@ -15,11 +15,10 @@ SidebarPanel::SidebarPanel(QWidget *parent)
   connect(m_buttonToggle, &QPushButton::clicked, this, [this]() {
     m_isCollapsed = !m_isCollapsed;
     m_buttonToggle->toggleCollapse();
-    m_runButtonLayout->setContentsMargins(0, 0, 0, 0);
     setFixedWidth(m_isCollapsed ? 160 : 320);
   });
   setupInputPageButtons();
-  createRunButton();
+  createSidebarButtons();
   setupOutputPageButtons();
   QScrollArea *scrollArea = new QScrollArea(this);
   scrollArea->setWidget(buttonContainer);
@@ -32,21 +31,30 @@ SidebarPanel::SidebarPanel(QWidget *parent)
   setLayout(mainLayout);
   setStyleSheet("QWidget {"
                 "    background-color: " +
-                Colors::Secondary500.name() +
+                Colors::Secondary600.name() +
                 ";"
                 "}"
-                "QScrollArea {"
-                "    background-color: " +
-                Colors::Secondary500.name() +
-                ";"
-                "}");
+                // "QScrollArea {"
+                // "    background-color: " +
+                // Colors::Secondary600.name() +
+                // ";"
+                // "}"
+  );
 }
 
 void SidebarPanel::emitNavigateSignal(int pageIndex) {
   emit navigateToPage(pageIndex);
 }
 
-void SidebarPanel::createRunButton() {}
+void SidebarPanel::createSidebarButtons() {
+  ButtonSidebarActive *inputButton =
+      new ButtonSidebarActive("output", "Testing", this);
+  // connect(inputButton, &ButtonSidebarWidget::clicked, this,
+  //         [this]() { emitNavigateSignal(0); });
+  inputButton->setIconSize(40, 40);
+  inputButton->setEnabled(true);
+  m_buttonLayout->addWidget(inputButton);
+}
 
 void SidebarPanel::setupInputPageButtons() {}
 
