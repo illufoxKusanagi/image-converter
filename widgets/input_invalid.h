@@ -1,8 +1,8 @@
 #ifndef INPUTINVALID_H
 #define INPUTINVALID_H
 
-#include "../styles/colors.h"
-#include "../styles/text_style.h"
+#include "styles/colors.h"
+#include "styles/text_style.h"
 #include <QBoxLayout>
 #include <QLabel>
 

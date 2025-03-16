@@ -1,8 +1,8 @@
 #ifndef BUTTONACTION_H
 #define BUTTONACTION_H
 
-#include "../styles/colors.h"
-#include "../styles/text_style.h"
+#include "styles/colors.h"
+#include "styles/text_style.h"
 #include <QHBoxLayout>
 #include <QPushButton>
 

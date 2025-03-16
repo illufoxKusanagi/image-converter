@@ -1,8 +1,8 @@
 #include "sidebar_panel.h"
 
 SidebarPanel::SidebarPanel(QWidget *parent)
-    : QWidget(parent), m_buttonLayout(nullptr) {
-  QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    : QWidget(parent), mainLayout(new QVBoxLayout(this)),
+      m_buttonLayout(nullptr) {
   mainLayout->setContentsMargins(0, 0, 0, 0);
   m_buttonToggle = new ButtonToggle(m_isCollapsed, this);
   QWidget *buttonContainer = new QWidget(this);
@@ -11,24 +11,17 @@ SidebarPanel::SidebarPanel(QWidget *parent)
   m_buttonLayout->setSpacing(8);
   m_buttonLayout->setAlignment(Qt::AlignTop);
   m_buttonLayout->addWidget(m_buttonToggle);
-
+  mainLayout->addWidget(buttonContainer);
   connect(m_buttonToggle, &QPushButton::clicked, this, [this]() {
     m_isCollapsed = !m_isCollapsed;
     m_buttonToggle->toggleCollapse();
     setFixedWidth(m_isCollapsed ? 160 : 320);
   });
-  setupInputPageButtons();
   createSidebarButtons();
-  setupOutputPageButtons();
-  QScrollArea *scrollArea = new QScrollArea(this);
-  scrollArea->setWidget(buttonContainer);
-  scrollArea->setWidgetResizable(true);
-  scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-  scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-  scrollArea->setFrameShape(QFrame::NoFrame);
-  mainLayout->addWidget(scrollArea);
   setFixedWidth(320);
   setLayout(mainLayout);
+  setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+
   setStyleSheet("QWidget {"
                 "    background-color: " +
                 Colors::Secondary600.name() +
@@ -47,18 +40,33 @@ void SidebarPanel::emitNavigateSignal(int pageIndex) {
 }
 
 void SidebarPanel::createSidebarButtons() {
-  ButtonSidebarActive *inputButton =
-      new ButtonSidebarActive("output", "Testing", this);
-  // connect(inputButton, &ButtonSidebarWidget::clicked, this,
-  //         [this]() { emitNavigateSignal(0); });
-  inputButton->setIconSize(40, 40);
-  inputButton->setEnabled(true);
-  m_buttonLayout->addWidget(inputButton);
+  QStringList buttonNames = {"Convert and Compress Image", "Compress PDF"};
+  QStringList buttonIcons = {"output", "output"};
+  for (int i = 0; i < buttonNames.size(); i++) {
+    ButtonSidebarActive *button =
+        new ButtonSidebarActive(buttonIcons[i], buttonNames[i], this);
+    button->setIconSize(40, 40);
+    button->setEnabled(true);
+    connect(button, &QPushButton::clicked, this, [this, i]() {
+      m_currentIndex = i;
+      // updateButtonStates();
+      emit buttonClicked(m_currentIndex);
+    });
+    m_categoryButtons.append(button);
+    m_buttonLayout->addWidget(button);
+  }
 }
 
-void SidebarPanel::setupInputPageButtons() {}
+void SidebarPanel::updateButtonState() {
+  for (int i = 0; i < m_categoryButtons.size(); i++) {
+    m_categoryButtons[i]->setEnabled(i == m_currentIndex);
+  }
+}
 
-void SidebarPanel::setupOutputPageButtons() {}
+void SidebarPanel::onPageChanged(int pageIndex) {
+  m_currentIndex = pageIndex;
+  updateButtonState();
+}
 
 void SidebarPanel::updateButtonState(QFuture<void> future,
                                      ButtonAction *runButton,

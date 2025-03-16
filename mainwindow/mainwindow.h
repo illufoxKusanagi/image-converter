@@ -1,8 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "../pages/main_page.h"
-#include "../widgets/sidebar_panel.h"
+#include "pages/main_page.h"
+#include "widgets/sidebar_panel.h"
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QFileDialog>

@@ -1,12 +1,13 @@
 #ifndef BUTTONSIDEBARACTIVE_H
 #define BUTTONSIDEBARACTIVE_H
 
-#include "../resources/icon_type.h"
-#include "../styles/colors.h"
-#include "../styles/text_style.h"
 #include "button_sidebar_widget.h"
+#include "resources/icon_type.h"
+#include "styles/colors.h"
+#include "styles/text_style.h"
 #include <QBoxLayout>
 #include <QPushButton>
+
 
 class ButtonSidebarActive : public QPushButton {
   Q_OBJECT

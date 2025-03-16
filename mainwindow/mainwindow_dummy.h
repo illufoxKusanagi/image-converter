@@ -1,7 +1,7 @@
 #ifndef MainWindowDummy_H
 #define MainWindowDummy_H
 
-#include "../pages/main_page.h"
+#include "pages/main_page.h"
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QFileDialog>

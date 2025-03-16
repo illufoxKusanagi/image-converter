@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
+
 set(PROJECT_WIDGETS
         widgets/button_action.cpp
         widgets/button_action.h
@@ -47,6 +48,8 @@ set(
         PROJECT_PAGES
         pages/main_page.cpp
         pages/main_page.h
+        pages/pdf_page.cpp
+        pages/pdf_page.h
 )
 
 set(PROJECT_SOURCES
@@ -83,7 +86,7 @@ else()
 endif()
 
 target_link_libraries(ImageConverter PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
-
+target_include_directories(ImageConverter PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.
