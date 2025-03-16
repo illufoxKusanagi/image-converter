@@ -5,7 +5,10 @@ ButtonAction::ButtonAction(const QString &buttonText,
     : QPushButton(buttonText, parent) {
   QHBoxLayout *layout = new QHBoxLayout(this);
   if (isRunButton == "yes") {
-    setIcon(QIcon(":/icons/right-arrow-active.svg"));
+    setIcon(QIcon(":/icons/icons/right-arrow-active.svg"));
+    setIconSize(QSize(24, 24));
+  } else if (isRunButton == "upload") {
+    setIcon(QIcon(":/icons/icons/upload.svg"));
     setIconSize(QSize(24, 24));
   }
 }
