@@ -14,8 +14,7 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile)
                 "}"
                 "QLabel {"
                 " background-color: transparent; " +
-                TextStyle::BodyMediumRegular() +
-                "color : " + Colors::Grey900.name() +
+                TextStyle::BodyBigBold() + "color : " + Colors::Grey900.name() +
                 ";"
                 "}"
                 "QFrame[frameShape=\"4\"] {"
@@ -23,12 +22,11 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile)
                 Colors::Grey400.name() +
                 ";"
                 "    color: transparent;"
-                "    max-height: 0.02px;"
                 "}");
 
   QLabel *icon = new QLabel(this);
   QLabel *label =
-      new QLabel("drag and drop your " + typeFile + " here...", this);
+      new QLabel("Chose your file or drag your " + typeFile + " here...", this);
   QPixmap pixmap(":/icons/icons/upload.svg");
   QPixmap coloredIcon =
       createColoredIcon(":/icons/icons/upload.svg", Colors::Primary600, 40, 40);
@@ -36,36 +34,49 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile)
   ButtonAction *browseButton = new ButtonAction("Browse", "", this);
   browseButton->setFixedSize(128, 40);
   browseButton->setEnabled(true);
-
   icon->setPixmap(coloredIcon);
   icon->setAlignment(Qt::AlignCenter);
   label->setAlignment(Qt::AlignCenter);
+  label->setMinimumHeight(50);
+  label->setMaximumWidth(400);
+  label->setWordWrap(true);
+  label->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
   mainLayout->addWidget(icon, 0, Qt::AlignCenter);
   mainLayout->addWidget(label, 0, Qt::AlignCenter);
   setupOrSeparatorLayout();
   mainLayout->addWidget(browseButton, 0, Qt::AlignCenter);
+  setFixedSize(320, 320);
   setLayout(mainLayout);
 }
 
 void DropFileWidget::setupOrSeparatorLayout() {
+  QString styling = "QLabel{"
+                    "color: " +
+                    Colors::Grey400.name() + ";" + TextStyle::BodySmallBold() +
+                    "}";
+  QWidget *orWidget = new QWidget(this);
+  QHBoxLayout *orLayout = new QHBoxLayout(orWidget);
+  QLabel *formatLabel = new QLabel("jpg, jpeg, png, webp", this);
   QLabel *optional = new QLabel("or", this);
-
   QFrame *lineAbove = new QFrame(this);
-  lineAbove->setFrameShape(QFrame::HLine);
-  lineAbove->setFixedHeight(1);
-
   QFrame *lineBelow = new QFrame(this);
-  lineBelow->setFrameShape(QFrame::HLine);
-  lineBelow->setFixedHeight(1);
-
-  QHBoxLayout *orLayout = new QHBoxLayout();
+  orLayout->setAlignment(Qt::AlignCenter);
   orLayout->setSpacing(8);
+  lineAbove->setFrameShape(QFrame::HLine);
+  lineAbove->setFrameShadow(QFrame::Plain);
+  lineAbove->setFixedHeight(1);
+  lineBelow->setFrameShape(QFrame::HLine);
+  lineBelow->setFrameShadow(QFrame::Plain);
+  lineBelow->setFixedHeight(1);
+  formatLabel->setStyleSheet(styling);
+  optional->setStyleSheet(styling);
   orLayout->addWidget(lineAbove, 1);
   orLayout->addWidget(optional, 0);
   orLayout->addWidget(lineBelow, 1);
   orLayout->setContentsMargins(40, 0, 40, 0);
   optional->setAlignment(Qt::AlignCenter);
-  mainLayout->addLayout(orLayout);
+  mainLayout->addWidget(formatLabel, 0, Qt::AlignCenter);
+  mainLayout->addWidget(orWidget);
 }
 
 QPixmap DropFileWidget::createColoredIcon(const QString &iconPath,
