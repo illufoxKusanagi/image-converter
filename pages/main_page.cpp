@@ -5,11 +5,10 @@ MainPage::MainPage(QWidget *parent)
   mainLayout->setContentsMargins(16, 16, 16, 16);
   mainLayout->setSpacing(32);
 
-  ButtonAction *browseButton = new ButtonAction("Pilih Gambar", "upload", this);
-  browseButton->setFixedSize(150, 50);
-  browseButton->setEnabled(true);
+  // ButtonAction *browseButton = new ButtonAction("Pilih Gambar", "upload",
+  // this); browseButton->setFixedSize(150, 50); browseButton->setEnabled(true);
   setupImageLayout();
-  mainLayout->addWidget(browseButton);
+  // mainLayout->addWidget(browseButton);
   setLayout(mainLayout);
   // setStyleSheet("QWidget {"
   //               "    background-color: " +
@@ -19,23 +18,12 @@ MainPage::MainPage(QWidget *parent)
 }
 
 void MainPage::setupImageInput() {
-  QWidget *dragWidget = new QWidget(this);
-  QVBoxLayout *dragLayout = new QVBoxLayout(dragWidget);
-  dragLayout->setContentsMargins(0, 0, 0, 0);
-  dragWidget->setStyleSheet("background-color: " + Colors::Secondary100.name() +
-                            ";"
-                            "border: 2px dashed " +
-                            Colors::Secondary900.name() + ";");
-  QLabel *dragIcon = new QLabel(this);
-  QLabel *dragLabel = new QLabel("Drop your image here...", this);
-  QPixmap pixmap(":/icons/icons/upload.svg");
-  QPixmap scaledPixmap = pixmap.scaled(40, 40, Qt::KeepAspectRatio);
-  // dragIcon->setFixedSize(80, 80);
-  dragIcon->setPixmap(scaledPixmap);
-  dragIcon->setAlignment(Qt::AlignCenter);
-  dragLabel->setAlignment(Qt::AlignCenter);
-  dragLayout->addWidget(dragIcon);
-  dragLayout->addWidget(dragLabel);
+  DropFileWidget *dragWidget = new DropFileWidget(this, "Image");
+  // dragWidget->setStyleSheet("background-color: " +
+  // Colors::Secondary100.name() +
+  //                           ";"
+  //                           "border: 2px dashed " +
+  //                           Colors::Secondary900.name() + ";");
   m_imageLayout->addWidget(dragWidget);
 }
 
