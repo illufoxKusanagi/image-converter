@@ -42,9 +42,15 @@ void MainPage::setupExtensionButton() {
   m_imageLayout->addWidget(buttonWidget);
 }
 
+void MainPage::setupQualitySlider() {
+  SliderWidget *qualitySlider = new SliderWidget(this, "Image Quality");
+  m_imageLayout->addWidget(qualitySlider);
+}
+
 void MainPage::setupImageLayout() {
-  m_imageLayout = new QHBoxLayout(this);
+  m_imageLayout = new QVBoxLayout(this);
   setupImageInput();
   setupExtensionButton();
+  setupQualitySlider();
   mainLayout->addLayout(m_imageLayout);
 }

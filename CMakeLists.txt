@@ -12,7 +12,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
-
 set(PROJECT_WIDGETS
         widgets/button_action.cpp
         widgets/button_action.h
@@ -36,6 +35,8 @@ set(PROJECT_WIDGETS
         widgets/button_sidebar_widget.h
         widgets/drop_file_widget.h
         widgets/drop_file_widget.cpp
+        widgets/slider_widget.h
+        widgets/slider_widget.cpp
 )
 
 set(PROJECT_STYLES

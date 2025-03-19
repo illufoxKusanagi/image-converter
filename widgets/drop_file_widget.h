@@ -1,5 +1,5 @@
-#ifndef DROP_FILE_WIDGET_H
-#define DROP_FILE_WIDGET_H
+#ifndef DROPFILEWIDGET_H
+#define DROPFILEWIDGET_H
 
 #include "styles/colors.h"
 #include "styles/text_style.h"
@@ -22,4 +22,4 @@ private:
                             int width, int height);
 };
 
-#endif // DROP_FILE_WIDGET_H
+#endif // DROPFILEWIDGET_H
