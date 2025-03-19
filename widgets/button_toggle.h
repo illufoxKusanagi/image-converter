@@ -1,5 +1,5 @@
-#ifndef ButtonToggle_H
-#define ButtonToggle_H
+#ifndef BUTTONTOGGLE_H
+#define BUTTONTOGGLE_H
 
 #include "styles/colors.h"
 #include <QPushButton>
