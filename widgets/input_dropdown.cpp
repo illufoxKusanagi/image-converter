@@ -5,7 +5,6 @@ InputDropdown::InputDropdown(QWidget *parent, QStringList options)
   connect(m_dropdown, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
           [this](int) { emit valueChanged(); });
   QHBoxLayout *layout = new QHBoxLayout(this);
-  QStringList options = {"jpg", "jpeg", "png", "webp"};
   layout->setContentsMargins(0, 0, 0, 0);
   m_dropdown->addItems(options);
   m_dropdown->setStyleSheet(

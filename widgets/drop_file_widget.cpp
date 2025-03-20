@@ -31,7 +31,7 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile)
   QPixmap coloredIcon =
       createColoredIcon(":/icons/icons/upload.svg", Colors::Primary600, 40, 40);
   QPixmap scaledPixmap = pixmap.scaled(40, 40, Qt::KeepAspectRatio);
-  ButtonAction *browseButton = new ButtonAction("Browse", "", this);
+  ButtonAction *browseButton = new ButtonAction(this, "Browse");
   browseButton->setFixedSize(128, 40);
   browseButton->setEnabled(true);
   icon->setPixmap(coloredIcon);

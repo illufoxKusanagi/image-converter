@@ -11,7 +11,7 @@ MainPage::MainPage(QWidget *parent)
 
 void MainPage::setupImageInput() {
   DropFileWidget *dragWidget = new DropFileWidget(this, "Image");
-  m_imageLayout->addWidget(dragWidget, 0, Qt::AlignCenter);
+  m_imageLayout->addWidget(dragWidget, 1, Qt::AlignCenter);
 }
 
 void MainPage::setupExtensionButton() {
@@ -21,10 +21,11 @@ void MainPage::setupExtensionButton() {
   buttonLayout->setSpacing(16);
   buttonLayout->setAlignment(Qt::AlignCenter);
   buttonWidget->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+  QStringList extensionOptions = {"jpg", "jpeg", "png", "webp", "tiff"};
   InputWidget *sourceExtension =
-      new InputWidget(InputType("dropdown", "From"), this);
+      new InputWidget(this, InputType("dropdown", "From"), extensionOptions);
   InputWidget *targetExtension =
-      new InputWidget(InputType("dropdown", "To"), this);
+      new InputWidget(this, InputType("dropdown", "To"), extensionOptions);
   buttonLayout->addWidget(sourceExtension);
   buttonLayout->addWidget(targetExtension);
   m_imageLayout->addWidget(buttonWidget);
@@ -32,7 +33,7 @@ void MainPage::setupExtensionButton() {
 
 void MainPage::setupQualitySlider() {
   SliderWidget *qualitySlider = new SliderWidget(this, "Image Quality");
-  m_imageLayout->addWidget(qualitySlider, 0, Qt::AlignCenter);
+  m_imageLayout->addWidget(qualitySlider, 1, Qt::AlignCenter);
 }
 
 void MainPage::setupImageLayout() {
