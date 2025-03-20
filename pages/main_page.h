@@ -16,6 +16,8 @@ public:
 private:
   QVBoxLayout *mainLayout;
   QVBoxLayout *m_imageLayout;
+  SliderWidget *m_qualitySlider;
+  DropFileWidget *m_dropFileWidget;
   void setupImageInput();
   void setupExtensionButton();
   void setupImageLayout();
