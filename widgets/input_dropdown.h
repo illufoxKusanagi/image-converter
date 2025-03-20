@@ -17,7 +17,7 @@ signals:
   void valueChanged();
 
 public:
-  explicit InputDropdown(QWidget *parent = nullptr);
+  explicit InputDropdown(QWidget *parent = nullptr, QStringList options = {});
 
   QString currentText() const;
   void setCurrentText(const QString &text);

@@ -1,11 +1,11 @@
 #include "input_dropdown.h"
 
-InputDropdown::InputDropdown(QWidget *parent)
+InputDropdown::InputDropdown(QWidget *parent, QStringList options)
     : QWidget(parent), m_dropdown(new QComboBox(this)) {
   connect(m_dropdown, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
           [this](int) { emit valueChanged(); });
   QHBoxLayout *layout = new QHBoxLayout(this);
-  QStringList options = {"12", "10", "8", "6"};
+  QStringList options = {"jpg", "jpeg", "png", "webp"};
   layout->setContentsMargins(0, 0, 0, 0);
   m_dropdown->addItems(options);
   m_dropdown->setStyleSheet(

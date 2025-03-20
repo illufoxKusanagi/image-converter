@@ -1,7 +1,7 @@
 
 #include "input_field.h"
 
-InputField::InputField(const QString &unitText, QWidget *parent)
+InputField::InputField(QWidget *parent, const QString &unitText)
     : QWidget(parent), m_input(new QLineEdit(this)),
       m_unitLabel(new QLabel(unitText, this)) {
   QHBoxLayout *layout = new QHBoxLayout(this);
