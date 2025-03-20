@@ -4,8 +4,11 @@ PdfPage::PdfPage(QWidget *parent) : QWidget(parent) {
   mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(16, 16, 16, 16);
   mainLayout->setSpacing(32);
-  DropFileWidget *dragWidget = new DropFileWidget(this, "PDF");
-  mainLayout->addWidget(dragWidget);
+  QLabel *title = new QLabel("Convert PDF to Image (Coming Soon!)", this);
+  title->setStyleSheet(TextStyle::Heading1());
+  mainLayout->addWidget(title, 0, Qt::AlignCenter);
+  // DropFileWidget *dragWidget = new DropFileWidget(this, "PDF");
+  // mainLayout->addWidget(dragWidget);
   // QWidget *dragWidget = new QWidget(this);
   // QVBoxLayout *dragLayout = new QVBoxLayout(dragWidget);
   // dragLayout->setContentsMargins(0, 0, 0, 0);

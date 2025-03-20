@@ -10,7 +10,9 @@ MainPage::MainPage(QWidget *parent)
 }
 
 void MainPage::setupImageInput() {
-  DropFileWidget *dragWidget = new DropFileWidget(this, "Image");
+  m_qualitySlider = new SliderWidget(this, "Image Quality");
+  DropFileWidget *dragWidget =
+      new DropFileWidget(this, "Image", m_qualitySlider);
   m_imageLayout->addWidget(dragWidget, 1, Qt::AlignCenter);
 }
 
@@ -31,10 +33,7 @@ void MainPage::setupExtensionButton() {
   m_imageLayout->addWidget(buttonWidget);
 }
 
-void MainPage::setupQualitySlider() {
-  SliderWidget *qualitySlider = new SliderWidget(this, "Image Quality");
-  m_imageLayout->addWidget(qualitySlider, 1, Qt::AlignCenter);
-}
+void MainPage::setupQualitySlider() {}
 
 void MainPage::setupImageLayout() {
   m_imageLayout = new QVBoxLayout(this);
@@ -42,6 +41,7 @@ void MainPage::setupImageLayout() {
   m_imageLayout->setSpacing(8);
   setupImageInput();
   setupExtensionButton();
-  setupQualitySlider();
+  // setupQualitySlider();
+  m_imageLayout->addWidget(m_qualitySlider, 1, Qt::AlignCenter);
   mainLayout->addLayout(m_imageLayout);
 }

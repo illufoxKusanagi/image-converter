@@ -1,7 +1,8 @@
 #include "drop_file_widget.h"
 
-DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile)
-    : QGroupBox(parent) {
+DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
+                               SliderWidget *sliderWidget)
+    : QGroupBox(parent), m_sliderWidget(sliderWidget) {
   mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(0, 0, 0, 0);
   mainLayout->setSpacing(16);
@@ -47,6 +48,9 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile)
   mainLayout->addWidget(browseButton, 0, Qt::AlignCenter);
   setFixedSize(320, 320);
   setLayout(mainLayout);
+  connect(m_sliderWidget, &SliderWidget::valueChanged, this,
+          &DropFileWidget::onSliderValueChanged);
+  setAcceptDrops(true);
 }
 
 void DropFileWidget::setupOrSeparatorLayout() {
@@ -98,4 +102,44 @@ QPixmap DropFileWidget::createColoredIcon(const QString &iconPath,
   painter.end();
 
   return coloredPixmap;
+}
+
+void DropFileWidget::dragEnterEvent(QDragEnterEvent *event) {
+  if (event->mimeData()->hasUrls()) {
+    event->acceptProposedAction();
+  }
+}
+
+void DropFileWidget::dropEvent(QDropEvent *event) {
+  QList<QUrl> urls = event->mimeData()->urls();
+  if (urls.isEmpty()) {
+    return;
+  }
+  QString sourcePath = urls.first().toLocalFile();
+  if (sourcePath.isEmpty()) {
+    return;
+  }
+  convertImage(sourcePath);
+}
+
+void DropFileWidget::convertImage(const QString sourcePath) {
+  QImage image(sourcePath);
+  if (image.isNull()) {
+    QMessageBox::warning(this, "Error", "Failed to open image!");
+    return;
+  }
+
+  QString outputPath;
+  if (sourcePath.endsWith(".jpg") || sourcePath.endsWith(".jpeg") ||
+      sourcePath.endsWith(".png") || sourcePath.endsWith(".webp") ||
+      sourcePath.endsWith(".tiff")) {
+    outputPath = sourcePath;
+  } else {
+    outputPath = sourcePath + ".jpg";
+  }
+}
+
+void DropFileWidget::onSliderValueChanged() {
+  m_qualityValue = m_sliderWidget->getValue();
+  // qDebug() << "Quality value: " << m_qualityValue;
 }
