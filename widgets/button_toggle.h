@@ -8,7 +8,7 @@
 class ButtonToggle : public QPushButton {
   Q_OBJECT
 public:
-  explicit ButtonToggle(bool isCollapsed = false, QWidget *parent = nullptr);
+  explicit ButtonToggle(QWidget *parent = nullptr, bool isCollapsed = false);
   void updateIcon();
   void toggleCollapse();
 

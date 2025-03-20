@@ -1,6 +1,6 @@
 #include "button_toggle.h"
 
-ButtonToggle::ButtonToggle(bool isCollapsed, QWidget *parent)
+ButtonToggle::ButtonToggle(QWidget *parent, bool isCollapsed)
     : QPushButton(parent) {
   updateIcon();
   setIconSize(QSize(36, 36));
