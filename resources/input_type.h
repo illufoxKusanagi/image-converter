@@ -11,7 +11,7 @@ public:
   QString unit;
   double value;
   bool isReadOnly;
-
+  InputType() : type(""), label(""), unit(""), isReadOnly(false) {}
   InputType(const QString &inputType, const QString &inputLabel,
             const QString &inputUnit = "", double value = 0.0,
             bool isReadOnly = false)
