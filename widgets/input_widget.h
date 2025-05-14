@@ -16,6 +16,15 @@ struct InputSize {
   int height;
 };
 
+/**
+ * @brief Constructs an input widget supporting various input types and options.
+ *
+ * Creates an InputWidget that can display and manage different input components (such as fields, dropdowns, or uploads) based on the specified input type and optional list of choices.
+ *
+ * @param parent Optional parent widget.
+ * @param inputType Specifies the type of input component to display.
+ * @param options Optional list of selectable options for input types that support them.
+ */
 class InputWidget : public QWidget {
   Q_OBJECT
 public:

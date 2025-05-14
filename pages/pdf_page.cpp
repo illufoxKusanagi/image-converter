@@ -1,5 +1,12 @@
 #include "pdf_page.h"
 
+/**
+ * @brief Constructs a PdfPage widget with a centered heading label.
+ *
+ * Initializes the widget with a vertical layout, applying margins and spacing, and adds a centered heading label as the main UI element.
+ *
+ * @param parent The parent widget.
+ */
 PdfPage::PdfPage(QWidget *parent) : QWidget(parent) {
   mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(16, 16, 16, 16);

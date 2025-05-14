@@ -9,6 +9,16 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+/**
+ * @brief A QWidget combining a slider and spin box with synchronized values.
+ *
+ * The SliderWidget displays a label, a slider, and a spin box in a vertical layout. Changing the value in either the slider or spin box updates the other, and the widget emits a signal when the value changes.
+ *
+ * @param parent Optional parent widget.
+ * @param originTitle Optional label text displayed above the controls.
+ *
+ * @signal valueChanged() Emitted whenever the value is changed by the user.
+ */
 class SliderWidget : public QWidget {
   Q_OBJECT
 public:

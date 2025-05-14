@@ -1,5 +1,13 @@
 #include "button_toggle.h"
 
+/**
+ * @brief Constructs a toggle button with a specified collapsed state and parent widget.
+ *
+ * Initializes the button's icon, size, margins, and visual style based on the collapsed state.
+ *
+ * @param parent The parent widget.
+ * @param isCollapsed Whether the button starts in the collapsed state.
+ */
 ButtonToggle::ButtonToggle(QWidget *parent, bool isCollapsed)
     : QPushButton(parent) {
   updateIcon();

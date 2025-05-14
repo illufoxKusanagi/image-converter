@@ -1,5 +1,14 @@
 #include "input_widget.h"
 
+/**
+ * @brief Constructs an input widget with a label and a control based on the specified input type.
+ *
+ * Creates a labeled input control (field, dropdown, upload, or invalid indicator) according to the provided input type and options. The widget layout and appearance are configured for consistent styling and alignment.
+ *
+ * @param parent The parent widget.
+ * @param inputType Specifies the type, label, and configuration for the input control.
+ * @param options List of selectable options, used if the input type is "dropdown".
+ */
 InputWidget::InputWidget(QWidget *parent, const InputType &inputType,
                          QStringList options)
     : QWidget(parent), m_inputField(nullptr), m_inputUpload(nullptr),
@@ -40,6 +49,14 @@ InputWidget::InputWidget(QWidget *parent, const InputType &inputType,
   adjustSize();
 }
 
+/**
+ * @brief Creates and configures an input field widget based on the provided input type.
+ *
+ * Initializes an InputField with the specified unit, placeholder, read-only status, and initial value from the input type.
+ * Connects the field's text change signal to update the internal value and emit the valueChanged signal.
+ *
+ * @param inputType Structure containing configuration for the input field, including unit, read-only status, and initial value.
+ */
 void InputWidget::buildInputField(InputType inputType) {
   m_inputField = new InputField(this, inputType.unit);
   m_inputField->setPlaceholder();

@@ -11,6 +11,15 @@
 #include <QSizePolicy>
 #include <Qwidget>
 
+/**
+ * @brief Constructs a sidebar button widget with an optional icon and label.
+ *
+ * Initializes the widget with the specified parent, icon type, and button label. If no icon type or label is provided, the widget is created with default empty values.
+ *
+ * @param parent Optional parent widget.
+ * @param iconType Optional icon type identifier.
+ * @param buttonLabel Optional text label for the button.
+ */
 class ButtonSidebarWidget : public QWidget {
 public:
   explicit ButtonSidebarWidget(QWidget *parent = nullptr,

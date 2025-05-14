@@ -1,6 +1,12 @@
-
 #include "input_field.h"
 
+/**
+ * @brief Constructs an input field widget with an associated unit label.
+ *
+ * Creates a horizontally arranged widget containing a text input and a label displaying the specified unit text. Applies fixed sizing and custom styles to both elements.
+ *
+ * @param unitText The text to display as the unit label next to the input field.
+ */
 InputField::InputField(QWidget *parent, const QString &unitText)
     : QWidget(parent), m_input(new QLineEdit(this)),
       m_unitLabel(new QLabel(unitText, this)) {

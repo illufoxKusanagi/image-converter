@@ -1,5 +1,14 @@
 #include "button_sidebar_widget.h"
 
+/**
+ * @brief Constructs a sidebar button widget with an icon and label arranged horizontally.
+ *
+ * Initializes the widget with the specified icon type and button label, applying a fixed height, bold white text style, and transparent background.
+ *
+ * @param parent The parent widget.
+ * @param iconType The identifier for the icon to display.
+ * @param buttonLabel The text label to display next to the icon.
+ */
 ButtonSidebarWidget::ButtonSidebarWidget(QWidget *parent,
                                          const QString &iconType,
                                          const QString &buttonLabel)

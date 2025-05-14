@@ -8,6 +8,14 @@
 #include <QLineEdit>
 #include <optional>
 
+/**
+ * @brief A QWidget-based input field for numeric values with optional unit display.
+ *
+ * Provides a line edit for user input, an optional unit label, and emits a signal when the value changes.
+ *
+ * @param parent Optional parent widget.
+ * @param unitText Optional text to display as the unit label next to the input field.
+ */
 class InputField : public QWidget {
   Q_OBJECT
 

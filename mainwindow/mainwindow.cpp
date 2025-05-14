@@ -1,5 +1,10 @@
 #include "mainwindow.h"
 
+/**
+ * @brief Constructs the main window with a sidebar and stacked page layout.
+ *
+ * Initializes the main window by creating a sidebar panel and a stacked widget containing the main and PDF pages. Sets up the layout, connects navigation signals, and displays the main page by default.
+ */
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   QWidget *centralWidget = new QWidget(this);
   QHBoxLayout *mainLayout = new QHBoxLayout(centralWidget);

@@ -1,5 +1,14 @@
 #include "button_sidebar_active.h"
 
+/**
+ * @brief Constructs a sidebar button with a custom icon and label.
+ *
+ * Initializes the button with the specified icon type and label, embedding a content widget that displays both. Sets up layout and size policies for proper appearance within a sidebar.
+ *
+ * @param iconType The type or identifier of the icon to display.
+ * @param buttonLabel The text label to display on the button.
+ * @param parent The parent widget, if any.
+ */
 ButtonSidebarActive::ButtonSidebarActive(const QString &iconType,
                                          const QString &buttonLabel,
                                          QWidget *parent)

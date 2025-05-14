@@ -5,6 +5,14 @@
 #include <QPushButton>
 #include <QWidget>
 
+/**
+ * @brief A QPushButton subclass that toggles between collapsed and expanded states.
+ *
+ * The ButtonToggle provides a button that can represent and switch between collapsed and expanded states, updating its icon accordingly.
+ *
+ * @param parent Optional parent widget.
+ * @param isCollapsed Initial collapsed state of the button.
+ */
 class ButtonToggle : public QPushButton {
   Q_OBJECT
 public:

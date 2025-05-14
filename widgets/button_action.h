@@ -6,6 +6,15 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 
+/**
+ * @brief Creates a custom button with optional text and run-action designation.
+ *
+ * Constructs a ButtonAction widget, optionally setting its parent, display text, and a string indicating if it is a "run" button.
+ *
+ * @param parent Optional parent widget.
+ * @param buttonText Optional text to display on the button.
+ * @param isRunButton Optional string to indicate if the button is a "run" button.
+ */
 class ButtonAction : public QPushButton {
   Q_OBJECT
 

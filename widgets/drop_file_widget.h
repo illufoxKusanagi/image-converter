@@ -17,6 +17,15 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+/**
+ * @brief Widget for drag-and-drop file input with optional quality adjustment.
+ *
+ * DropFileWidget enables users to select files via drag-and-drop or a file dialog, and optionally adjust quality settings using an integrated slider. It supports handling file input events and provides access to the selected file path.
+ *
+ * @param parent Optional parent widget.
+ * @param typeFile String specifying the file type label (default is "File").
+ * @param sliderWidget Optional pointer to a SliderWidget for quality adjustment.
+ */
 class DropFileWidget : public QGroupBox {
   Q_OBJECT
 public:

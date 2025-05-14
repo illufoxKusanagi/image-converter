@@ -1,5 +1,12 @@
 #include "sidebar_panel.h"
 
+/**
+ * @brief Constructs a collapsible sidebar panel with navigation buttons.
+ *
+ * Initializes the sidebar with a toggle button for collapsing or expanding its width and adds navigation buttons for different pages. Sets up the layout, appearance, and initial state of the sidebar.
+ *
+ * @param parent The parent widget.
+ */
 SidebarPanel::SidebarPanel(QWidget *parent)
     : QWidget(parent), mainLayout(new QVBoxLayout(this)),
       m_buttonLayout(nullptr) {
@@ -35,10 +42,20 @@ SidebarPanel::SidebarPanel(QWidget *parent)
   );
 }
 
+/**
+ * @brief Emits a signal to navigate to the specified page.
+ *
+ * @param pageIndex Index of the page to navigate to.
+ */
 void SidebarPanel::emitNavigateSignal(int pageIndex) {
   emit navigateToPage(pageIndex);
 }
 
+/**
+ * @brief Creates and adds navigation buttons to the sidebar.
+ *
+ * Generates sidebar buttons for navigation (e.g., "Convert Image", "Compress PDF"), sets their icons and sizes, and connects their click events to update the current selection and emit navigation signals.
+ */
 void SidebarPanel::createSidebarButtons() {
   QStringList buttonNames = {"Convert Image", "Compress PDF"};
   QStringList buttonIcons = {"output", "output"};

@@ -8,6 +8,11 @@
 #include <QGroupBox>
 #include <QStackedWidget>
 
+/**
+ * @brief Handles the event when the process button is clicked.
+ *
+ * This slot is triggered in response to the user clicking the process button, initiating the main processing action for the page.
+ */
 class MainPage : public QWidget {
   Q_OBJECT
 

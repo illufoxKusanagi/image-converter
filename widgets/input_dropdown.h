@@ -10,6 +10,14 @@
 #include <QOverload>
 #include <QStringList>
 
+/**
+ * @brief Constructs an InputDropdown widget with optional parent and dropdown options.
+ *
+ * Initializes the dropdown with the provided list of string options. If no options are given, the dropdown will be empty.
+ *
+ * @param parent Optional parent widget.
+ * @param options List of strings to populate the dropdown menu.
+ */
 class InputDropdown : public QWidget {
   Q_OBJECT
 

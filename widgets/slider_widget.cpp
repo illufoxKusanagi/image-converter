@@ -1,5 +1,13 @@
 #include "slider_widget.h"
 
+/**
+ * @brief Constructs a slider widget with a label, synchronized slider, and spin box for value selection.
+ *
+ * Creates a vertical layout containing a styled label, a horizontal slider, and a spin box, all representing a value between 0 and 100. The slider and spin box are initialized to 60 and kept in sync, allowing users to adjust the value using either control.
+ *
+ * @param parent The parent widget.
+ * @param originTitle The text to display in the label above the slider.
+ */
 SliderWidget::SliderWidget(QWidget *parent, QString originTitle)
     : QWidget(parent), m_value(60) {
   mainLayout = new QVBoxLayout(this);
@@ -27,6 +35,11 @@ SliderWidget::SliderWidget(QWidget *parent, QString originTitle)
   setLayout(mainLayout);
 }
 
+/**
+ * @brief Updates the slider to match the spin box value and emits a valueChanged signal.
+ *
+ * Synchronizes the slider's value with the spin box, updates the internal value, and emits the valueChanged signal to notify listeners of the change.
+ */
 void SliderWidget::updateSliderValue() {
   m_slider->blockSignals(true);
   m_slider->setValue(m_spinBox->value());
@@ -35,6 +48,11 @@ void SliderWidget::updateSliderValue() {
   emit valueChanged();
 }
 
+/**
+ * @brief Updates the spin box to match the slider's value and emits a valueChanged signal.
+ *
+ * Synchronizes the spin box with the current value of the slider, updates the internal value, and notifies listeners of the change.
+ */
 void SliderWidget::updateSpinBoxValue() {
   m_spinBox->blockSignals(true);
   m_spinBox->setValue(m_slider->value());
@@ -43,4 +61,9 @@ void SliderWidget::updateSpinBoxValue() {
   emit valueChanged();
 }
 
+/**
+ * @brief Returns the current value selected by the slider and spin box.
+ *
+ * @return int The current value, ranging from 0 to 100.
+ */
 int SliderWidget::getValue() { return m_value; }

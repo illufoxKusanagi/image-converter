@@ -7,6 +7,13 @@
 #include <QStackedWidget>
 
 
+/**
+ * @brief Constructs a PdfPage widget with an optional parent.
+ *
+ * Initializes the PdfPage, which serves as a container for PDF-related input and display widgets.
+ *
+ * @param parent Optional parent widget.
+ */
 class PdfPage : public QWidget {
   Q_OBJECT
 public:
