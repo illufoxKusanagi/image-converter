@@ -23,6 +23,8 @@ public:
   explicit DropFileWidget(QWidget *parent = nullptr, QString typeFile = "File",
                           SliderWidget *sliderWidget = nullptr);
   QString getFilePath();
+  enum ImageExtension { JPG, JPEG, PNG, WEBP, TIFF, PDF };
+  void setSourceExtension(ImageExtension &sourceExtension);
 
 public slots:
   void convertImage(const QString sourcePath);
@@ -39,9 +41,10 @@ private slots:
 private:
   QVBoxLayout *mainLayout;
   SliderWidget *m_sliderWidget;
-  void setupOrSeparatorLayout();
+  QString m_sourceExtension;
   int m_qualityValue;
   QString m_sourcePath;
+  void setupOrSeparatorLayout();
   QPixmap createColoredIcon(const QString &iconPath, const QColor &color,
                             int width, int height);
 };

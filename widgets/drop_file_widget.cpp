@@ -7,6 +7,7 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
   mainLayout->setContentsMargins(0, 0, 0, 0);
   mainLayout->setSpacing(16);
   mainLayout->setAlignment(Qt::AlignCenter);
+  ImageExtension sourceExtension = JPG;
   setStyleSheet("QGroupBox {"
                 "border: 2px solid " +
                 Colors::Secondary400.name() +
@@ -128,8 +129,8 @@ void DropFileWidget::convertImage(const QString sourcePath) {
     QMessageBox::warning(this, "Error", "Failed to open image!");
     return;
   }
-
-  QString outputPath = sourcePath;
+  QString outputPath = QFileDialog::getSaveFileName(
+      this, "Save Image", QDir::homePath(), "Images (*.jpg);;All Files (*)");
   int lastDotIndex = outputPath.lastIndexOf(".");
   if (lastDotIndex != -1) {
     outputPath = outputPath.left(lastDotIndex);
@@ -161,4 +162,27 @@ QString DropFileWidget::getFilePath() { return m_sourcePath; }
 
 void DropFileWidget::onSliderValueChanged() {
   m_qualityValue = m_sliderWidget->getValue();
+}
+
+void DropFileWidget::setSourceExtension(ImageExtension &sourceExtension) {
+  switch (sourceExtension) {
+  case JPG:
+    m_sourceExtension = "JPG";
+    break;
+  case JPEG:
+    m_sourceExtension = "JPEG";
+    break;
+  case PNG:
+    m_sourceExtension = "PNG";
+    break;
+  case WEBP:
+    m_sourceExtension = "WEBP";
+    break;
+  case TIFF:
+    m_sourceExtension = "TIFF";
+    break;
+  case PDF:
+    m_sourceExtension = "PDF";
+    break;
+  }
 }

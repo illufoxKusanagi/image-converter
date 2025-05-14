@@ -13,6 +13,7 @@ class MainPage : public QWidget {
 
 private slots:
   void onProcessButtonClicked();
+  void onImageSourceChanged();
 
 public:
   explicit MainPage(QWidget *parent = nullptr);

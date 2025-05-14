@@ -23,11 +23,10 @@ void MainPage::setupExtensionButton() {
   m_buttonLayout->setAlignment(Qt::AlignCenter);
   m_buttonWidget->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
   QStringList extensionOptions = {"jpg", "jpeg", "png", "webp", "tiff"};
-  InputWidget *sourceExtension =
-      new InputWidget(this, InputType("dropdown", "From"), extensionOptions);
   InputWidget *targetExtension =
       new InputWidget(this, InputType("dropdown", "To"), extensionOptions);
-  m_buttonLayout->addWidget(sourceExtension);
+  connect(targetExtension, &InputWidget::valueChanged, this, [this]() {});
+  targetExtension->getValue();
   m_buttonLayout->addWidget(targetExtension);
 }
 
@@ -53,13 +52,17 @@ void MainPage::setupImageLayout() {
           MainPage::onProcessButtonClicked);
   setupImageInput();
   setupExtensionButton();
-  // setupQualitySlider();
   setupImageAttribute();
   mainLayout->addLayout(m_imageLayout);
-  mainLayout->addWidget(processButton);
+  mainLayout->addWidget(processButton, 0, Qt::AlignCenter);
 }
 
 void MainPage::onProcessButtonClicked() {
   QString filePath = m_dragWidget->getFilePath();
   m_dragWidget->convertImage(filePath);
+}
+
+void MainPage::onImageSourceChanged() {
+  // m_dragWidget->setSourceExtension(m_dragWidget->m_sourceExtension);
+  // m_dragWidget->convertImage(m_dragWidget->getFilePath());
 }
