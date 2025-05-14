@@ -4,7 +4,7 @@ SidebarPanel::SidebarPanel(QWidget *parent)
     : QWidget(parent), mainLayout(new QVBoxLayout(this)),
       m_buttonLayout(nullptr) {
   mainLayout->setContentsMargins(0, 0, 0, 0);
-  m_buttonToggle = new ButtonToggle(m_isCollapsed, this);
+  m_buttonToggle = new ButtonToggle(this, m_isCollapsed);
   QWidget *buttonContainer = new QWidget(this);
   m_buttonLayout = new QVBoxLayout(buttonContainer);
   m_buttonLayout->setContentsMargins(8, 8, 8, 8);
@@ -40,7 +40,7 @@ void SidebarPanel::emitNavigateSignal(int pageIndex) {
 }
 
 void SidebarPanel::createSidebarButtons() {
-  QStringList buttonNames = {"Convert and Compress Image", "Compress PDF"};
+  QStringList buttonNames = {"Convert Image", "Compress PDF"};
   QStringList buttonIcons = {"output", "output"};
   for (int i = 0; i < buttonNames.size(); i++) {
     ButtonSidebarActive *button =

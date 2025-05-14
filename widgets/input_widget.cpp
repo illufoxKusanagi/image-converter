@@ -1,6 +1,7 @@
 #include "input_widget.h"
 
-InputWidget::InputWidget(const InputType &inputType, QWidget *parent)
+InputWidget::InputWidget(QWidget *parent, const InputType &inputType,
+                         QStringList options)
     : QWidget(parent), m_inputField(nullptr), m_inputUpload(nullptr),
       m_inputDropdown(nullptr), m_inputInvalid(nullptr) {
   layout = new QVBoxLayout(this);
@@ -10,7 +11,7 @@ InputWidget::InputWidget(const InputType &inputType, QWidget *parent)
   layout->setSpacing(8);
   layout->addWidget(m_label);
   m_label->setStyleSheet(TextStyle::BodyMediumRegular() +
-                         "color: " + Colors::Grey700.name() +
+                         "color: " + Colors::Secondary700.name() +
                          ";"
                          "white-space: normal;");
   m_label->setWordWrap(true);
@@ -18,9 +19,7 @@ InputWidget::InputWidget(const InputType &inputType, QWidget *parent)
   if (inputType.type == "field") {
     buildInputField(inputType);
   } else if (inputType.type == "dropdown") {
-    m_inputDropdown = new InputDropdown(this);
-    // m_inputDropdown->setSizePolicy(QSizePolicy::Expanding,
-    // QSizePolicy::Fixed);
+    m_inputDropdown = new InputDropdown(this, options);
     connect(m_inputDropdown, &InputDropdown::valueChanged, this, [this]() {
       m_inputValue = m_inputDropdown->getValue();
       emit valueChanged();
@@ -42,7 +41,7 @@ InputWidget::InputWidget(const InputType &inputType, QWidget *parent)
 }
 
 void InputWidget::buildInputField(InputType inputType) {
-  m_inputField = new InputField(inputType.unit, this);
+  m_inputField = new InputField(this, inputType.unit);
   m_inputField->setPlaceholder();
   m_inputField->setReadOnly(inputType.isReadOnly);
   m_inputField->setValue(inputType.value);

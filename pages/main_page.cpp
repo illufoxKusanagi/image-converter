@@ -2,61 +2,64 @@
 
 MainPage::MainPage(QWidget *parent)
     : QWidget(parent), mainLayout(new QVBoxLayout(this)) {
-  mainLayout->setContentsMargins(16, 16, 16, 16);
-  mainLayout->setSpacing(32);
-
-  ButtonAction *browseButton = new ButtonAction("Pilih Gambar", "upload", this);
-  browseButton->setFixedSize(150, 50);
-  browseButton->setEnabled(true);
+  mainLayout->setContentsMargins(32, 32, 32, 32);
+  mainLayout->setSpacing(16);
+  mainLayout->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
   setupImageLayout();
-  mainLayout->addWidget(browseButton);
   setLayout(mainLayout);
-  // setStyleSheet("QWidget {"
-  //               "    background-color: " +
-  //               Colors::Secondary600.name() +
-  //               ";"
-  //               "}");
 }
 
 void MainPage::setupImageInput() {
-  QWidget *dragWidget = new QWidget(this);
-  QVBoxLayout *dragLayout = new QVBoxLayout(dragWidget);
-  dragLayout->setContentsMargins(0, 0, 0, 0);
-  dragWidget->setStyleSheet("background-color: " + Colors::Secondary100.name() +
-                            ";"
-                            "border: 2px dashed " +
-                            Colors::Secondary900.name() + ";");
-  QLabel *dragIcon = new QLabel(this);
-  QLabel *dragLabel = new QLabel("Drop your image here...", this);
-  QPixmap pixmap(":/icons/icons/upload.svg");
-  QPixmap scaledPixmap = pixmap.scaled(40, 40, Qt::KeepAspectRatio);
-  // dragIcon->setFixedSize(80, 80);
-  dragIcon->setPixmap(scaledPixmap);
-  dragIcon->setAlignment(Qt::AlignCenter);
-  dragLabel->setAlignment(Qt::AlignCenter);
-  dragLayout->addWidget(dragIcon);
-  dragLayout->addWidget(dragLabel);
-  m_imageLayout->addWidget(dragWidget);
+  m_qualitySlider = new SliderWidget(this, "Image Quality");
+  m_dragWidget = new DropFileWidget(this, "Image", m_qualitySlider);
+  m_imageLayout->addWidget(m_dragWidget, 1, Qt::AlignCenter);
 }
 
 void MainPage::setupExtensionButton() {
-  QWidget *buttonWidget = new QWidget(this);
-  QVBoxLayout *buttonLayout = new QVBoxLayout(buttonWidget);
-  buttonLayout->setContentsMargins(0, 0, 0, 0);
-  buttonLayout->setSpacing(16);
-  buttonWidget->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+  m_buttonWidget = new QWidget(this);
+  m_buttonLayout = new QVBoxLayout(m_buttonWidget);
+  m_buttonLayout->setContentsMargins(0, 0, 0, 0);
+  m_buttonLayout->setSpacing(8);
+  m_buttonLayout->setAlignment(Qt::AlignCenter);
+  m_buttonWidget->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+  QStringList extensionOptions = {"jpg", "jpeg", "png", "webp", "tiff"};
   InputWidget *sourceExtension =
-      new InputWidget(InputType("dropdown", "From"), this);
+      new InputWidget(this, InputType("dropdown", "From"), extensionOptions);
   InputWidget *targetExtension =
-      new InputWidget(InputType("dropdown", "To"), this);
-  buttonLayout->addWidget(sourceExtension);
-  buttonLayout->addWidget(targetExtension);
-  m_imageLayout->addWidget(buttonWidget);
+      new InputWidget(this, InputType("dropdown", "To"), extensionOptions);
+  m_buttonLayout->addWidget(sourceExtension);
+  m_buttonLayout->addWidget(targetExtension);
 }
 
+void MainPage::setupImageAttribute() {
+  QHBoxLayout *attributeLayout = new QHBoxLayout(this);
+  attributeLayout->setContentsMargins(0, 0, 0, 0);
+  attributeLayout->setSpacing(16);
+  attributeLayout->addWidget(m_buttonWidget);
+  attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignTop);
+  m_imageLayout->addLayout(attributeLayout);
+}
+
+void MainPage::setupQualitySlider() {}
+
 void MainPage::setupImageLayout() {
-  m_imageLayout = new QHBoxLayout(this);
+  m_imageLayout = new QVBoxLayout(this);
+  m_imageLayout->setAlignment(Qt::AlignCenter);
+  m_imageLayout->setSpacing(8);
+  ButtonAction *processButton = new ButtonAction(this, "Process Image", "no");
+  processButton->setEnabled(true);
+  processButton->setSize(256, 42);
+  connect(processButton, &QPushButton::clicked, this,
+          MainPage::onProcessButtonClicked);
   setupImageInput();
   setupExtensionButton();
+  // setupQualitySlider();
+  setupImageAttribute();
   mainLayout->addLayout(m_imageLayout);
+  mainLayout->addWidget(processButton);
+}
+
+void MainPage::onProcessButtonClicked() {
+  QString filePath = m_dragWidget->getFilePath();
+  m_dragWidget->convertImage(filePath);
 }

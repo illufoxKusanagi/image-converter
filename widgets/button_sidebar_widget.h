@@ -13,9 +13,9 @@
 
 class ButtonSidebarWidget : public QWidget {
 public:
-  explicit ButtonSidebarWidget(const QString &iconType,
-                               const QString &buttonLabel,
-                               QWidget *parent = nullptr);
+  explicit ButtonSidebarWidget(QWidget *parent = nullptr,
+                               const QString &iconType = "",
+                               const QString &buttonLabel = "");
   void setLabelVisible(bool visible);
   void setIconVisible(bool visible);
   void setIconSize(int width, int height);

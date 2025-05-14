@@ -15,7 +15,7 @@ signals:
   void valueChanged(double value);
 
 public:
-  explicit InputField(const QString &unitText = "", QWidget *parent = nullptr);
+  explicit InputField(QWidget *parent = nullptr, const QString &unitText = "");
   void setValue(double value);
   void setPlaceholder();
   void setReadOnly(bool isReadOnly);

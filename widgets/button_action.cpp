@@ -1,7 +1,7 @@
 #include "button_action.h"
 
-ButtonAction::ButtonAction(const QString &buttonText,
-                           const QString &isRunButton, QWidget *parent)
+ButtonAction::ButtonAction(QWidget *parent, const QString &buttonText,
+                           const QString &isRunButton)
     : QPushButton(buttonText, parent) {
   QHBoxLayout *layout = new QHBoxLayout(this);
   if (isRunButton == "yes") {
@@ -22,7 +22,6 @@ void ButtonAction::setEnabled(bool isEnabled) {
                   "    padding: 12px 4px;"
                   "    border: 0 solid;"
                   "    border-radius: 12px;"
-                  "    max-width: 150px;"
                   "    background-color: " +
                   Colors::Primary600.name() +
                   ";"
@@ -47,7 +46,6 @@ void ButtonAction::setEnabled(bool isEnabled) {
                   "    padding: 12px 4px;"
                   "    border: 0 solid;"
                   "    border-radius: 12px;"
-                  "    max-width: 150px;"
                   "    background-color: " +
                   Colors::Grey400.name() +
                   ";"

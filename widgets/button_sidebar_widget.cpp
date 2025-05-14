@@ -1,8 +1,8 @@
 #include "button_sidebar_widget.h"
 
-ButtonSidebarWidget::ButtonSidebarWidget(const QString &iconType,
-                                         const QString &buttonLabel,
-                                         QWidget *parent)
+ButtonSidebarWidget::ButtonSidebarWidget(QWidget *parent,
+                                         const QString &iconType,
+                                         const QString &buttonLabel)
     : QWidget(parent) {
   mainLayout = new QHBoxLayout(this);
   mainLayout->setContentsMargins(0, 0, 0, 0);

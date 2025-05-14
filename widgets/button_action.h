@@ -10,9 +10,9 @@ class ButtonAction : public QPushButton {
   Q_OBJECT
 
 public:
-  explicit ButtonAction(const QString &buttonText = "",
-                        const QString &isRunButton = "",
-                        QWidget *parent = nullptr);
+  explicit ButtonAction(QWidget *parent = nullptr,
+                        const QString &buttonText = "",
+                        const QString &isRunButton = "");
   using QPushButton::setText;
   QString getText() const;
   void setEnabled(bool isEnabled);
