@@ -6,14 +6,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   stackedWidget = new QStackedWidget(this);
   mainLayout->setContentsMargins(0, 0, 0, 0);
   MainPage *mainPage = new MainPage(this);
-  SidebarPanel *sidebarPanel = new SidebarPanel(this);
+  // SidebarPanel *sidebarPanel = new SidebarPanel(this);
   PdfPage *pdfPage = new PdfPage(this);
-  mainLayout->addWidget(sidebarPanel);
+  // mainLayout->addWidget(sidebarPanel);
   stackedWidget->addWidget(mainPage);
   stackedWidget->addWidget(pdfPage);
   mainLayout->addWidget(stackedWidget);
-  connect(sidebarPanel, &SidebarPanel::navigateToPage, this,
-          &MainWindow::navigateToPage);
+  // connect(sidebarPanel, &SidebarPanel::navigateToPage, this,
+  //         &MainWindow::navigateToPage);
   setCentralWidget(centralWidget);
   navigateToPage(0);
 }

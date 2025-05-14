@@ -1,5 +1,4 @@
 #include "main_page.h"
-#include <QDebug>
 
 MainPage::MainPage(QWidget *parent)
     : QWidget(parent), mainLayout(new QVBoxLayout(this)) {
@@ -62,26 +61,26 @@ void MainPage::setupImageLayout() {
 
 void MainPage::onProcessButtonClicked() {
   QString filePath = m_dragWidget->getFilePath();
-  m_dragWidget->convertImage(filePath);
+  if (!filePath.isEmpty())
+    m_dragWidget->convertImage(filePath);
+  else {
+    MessageBoxWidget messageBox("Error", "No file selected!",
+                                MessageBoxWidget::Critical);
+    return;
+  }
 }
 
 void MainPage::onImageTargetExtensionChanged() {
-  // tes
   double value = m_targetExtension->getValue();
   if (value == 0) {
-    qDebug() << "Selected extension: JPG";
     m_sourceExtension = DropFileWidget::ImageExtension::JPG;
   } else if (value == 1) {
-    qDebug() << "Selected extension: JPEG";
     m_sourceExtension = DropFileWidget::ImageExtension::JPEG;
   } else if (value == 2) {
-    qDebug() << "Selected extension: PNG";
     m_sourceExtension = DropFileWidget::ImageExtension::PNG;
   } else if (value == 3) {
-    qDebug() << "Selected extension: WEBP";
     m_sourceExtension = DropFileWidget::ImageExtension::WEBP;
   } else if (value == 4) {
-    qDebug() << "Selected extension: TIFF";
     m_sourceExtension = DropFileWidget::ImageExtension::TIFF;
   }
 }

@@ -11,5 +11,6 @@
         <file>icons/arrow-down-black.svg</file>
         <file>icons/upload.svg</file>
         <file>icons/upload.svg</file>
+        <file>icons/image.svg</file>
     </qresource>
 </RCC>

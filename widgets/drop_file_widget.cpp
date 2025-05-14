@@ -4,7 +4,7 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
                                SliderWidget *sliderWidget,
                                ImageExtension *sourceExtension)
     : QGroupBox(parent), m_sourceExtension(sourceExtension),
-      m_sliderWidget(sliderWidget) {
+      m_sliderWidget(sliderWidget), m_typeFile(typeFile) {
   mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(0, 0, 0, 0);
   mainLayout->setSpacing(16);
@@ -26,38 +26,67 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
                 ";"
                 "    color: transparent;"
                 "}");
+  setupEmptyFileWidget();
+  setupChosenFileWidget();
+  setFixedSize(320, 320);
+  setLayout(mainLayout);
+  connect(m_sliderWidget, &SliderWidget::valueChanged, this,
+          &DropFileWidget::onSliderValueChanged);
+  connect(m_browseButton, &ButtonAction::clicked, this,
+          &DropFileWidget::onBrowseButtonPressed);
+  setAcceptDrops(true);
+  updateWidgetVisibility();
+}
 
-  QLabel *icon = new QLabel(this);
-  QLabel *label =
-      new QLabel("Chose your file or drag your " + typeFile + " here...", this);
+void DropFileWidget::setupEmptyFileWidget() {
+  m_emptyFieldWidget = new QWidget(this);
+  QVBoxLayout *emptyFieldLayout = new QVBoxLayout(m_emptyFieldWidget);
+  m_emptyFieldWidget->setFixedSize(256, 256);
+  m_icon = new QLabel(this);
+  QLabel *label = new QLabel(
+      "Chose your file or drag your " + m_typeFile + " here...", this);
   QPixmap pixmap(":/icons/icons/upload.svg");
   QPixmap coloredIcon =
       createColoredIcon(":/icons/icons/upload.svg", Colors::Primary600, 40, 40);
   QPixmap scaledPixmap = pixmap.scaled(40, 40, Qt::KeepAspectRatio);
-  ButtonAction *browseButton = new ButtonAction(this, "Browse");
-  browseButton->setFixedSize(128, 40);
-  browseButton->setEnabled(true);
-  icon->setPixmap(coloredIcon);
-  icon->setAlignment(Qt::AlignCenter);
+  m_browseButton = new ButtonAction(this, "Browse");
+  m_browseButton->setFixedSize(128, 40);
+  m_browseButton->setEnabled(true);
+  m_icon->setPixmap(coloredIcon);
+  m_icon->setAlignment(Qt::AlignCenter);
   label->setAlignment(Qt::AlignCenter);
   label->setMinimumHeight(50);
   label->setMaximumWidth(400);
   label->setWordWrap(true);
   label->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-  mainLayout->addWidget(icon, 0, Qt::AlignCenter);
-  mainLayout->addWidget(label, 0, Qt::AlignCenter);
-  setupOrSeparatorLayout();
-  mainLayout->addWidget(browseButton, 0, Qt::AlignCenter);
-  setFixedSize(320, 320);
-  setLayout(mainLayout);
-  connect(m_sliderWidget, &SliderWidget::valueChanged, this,
-          &DropFileWidget::onSliderValueChanged);
-  connect(browseButton, &ButtonAction::clicked, this,
-          &DropFileWidget::onBrowseButtonPressed);
-  setAcceptDrops(true);
+  emptyFieldLayout->addWidget(m_icon, 0, Qt::AlignCenter);
+  emptyFieldLayout->addWidget(label, 0, Qt::AlignCenter);
+  setupOrSeparatorLayout(emptyFieldLayout);
+  emptyFieldLayout->addWidget(m_browseButton, 0, Qt::AlignCenter);
+  mainLayout->addWidget(m_emptyFieldWidget);
 }
 
-void DropFileWidget::setupOrSeparatorLayout() {
+void DropFileWidget::setupChosenFileWidget() {
+  m_chosenFileWidget = new QWidget(this);
+  QVBoxLayout *chosenFileLayout = new QVBoxLayout(m_chosenFileWidget);
+  m_chosenIcon = new QLabel(this);
+  QPixmap coloredIcon =
+      createColoredIcon(":/icons/icons/image.svg", Colors::Primary600, 40, 40);
+  m_chosenIcon->setPixmap(coloredIcon);
+  m_chosenIcon->setAlignment(Qt::AlignCenter);
+  m_chosenLabel = new QLabel("Selected file: " + m_sourcePath, this);
+  m_chosenLabel->setAlignment(Qt::AlignCenter);
+  m_chosenLabel->setMinimumHeight(50);
+  m_chosenLabel->setMaximumWidth(400);
+  m_chosenLabel->setWordWrap(true);
+  m_chosenLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+  chosenFileLayout->addWidget(m_chosenIcon, 0, Qt::AlignCenter);
+  chosenFileLayout->addWidget(m_chosenLabel, 0, Qt::AlignCenter);
+  mainLayout->addWidget(m_chosenFileWidget);
+  m_chosenFileWidget->setVisible(false);
+}
+
+void DropFileWidget::setupOrSeparatorLayout(QVBoxLayout *layout) {
   QString styling = "QLabel{"
                     "color: " +
                     Colors::Grey400.name() + ";" + TextStyle::BodySmallBold() +
@@ -83,8 +112,19 @@ void DropFileWidget::setupOrSeparatorLayout() {
   orLayout->addWidget(lineBelow, 1);
   orLayout->setContentsMargins(40, 0, 40, 0);
   optional->setAlignment(Qt::AlignCenter);
-  mainLayout->addWidget(formatLabel, 0, Qt::AlignCenter);
-  mainLayout->addWidget(orWidget);
+  layout->addWidget(formatLabel, 0, Qt::AlignCenter);
+  layout->addWidget(orWidget);
+}
+
+void DropFileWidget::updateWidgetVisibility() {
+  if (m_sourcePath.isEmpty()) {
+    m_emptyFieldWidget->setVisible(true);
+    m_chosenFileWidget->setVisible(false);
+  } else {
+    m_emptyFieldWidget->setVisible(false);
+    m_chosenFileWidget->setVisible(true);
+  }
+  m_chosenLabel->setText("Selected file: " + m_sourcePath);
 }
 
 QPixmap DropFileWidget::createColoredIcon(const QString &iconPath,
@@ -119,16 +159,19 @@ void DropFileWidget::dropEvent(QDropEvent *event) {
   if (urls.isEmpty()) {
     return;
   }
-  m_sourcePath = urls.first().toLocalFile();
-  if (m_sourcePath.isEmpty()) {
+  QString newPath = urls.first().toLocalFile();
+  if (newPath.isEmpty()) {
     return;
   }
+  m_sourcePath = newPath.replace("\\", "/");
+  updateWidgetVisibility();
 }
 
 void DropFileWidget::convertImage(const QString sourcePath) {
   QImage image(sourcePath);
   if (image.isNull()) {
-    QMessageBox::warning(this, "Error", "Failed to open image!");
+    MessageBoxWidget messageBox("Error", QString("Failed to open image!"),
+                                MessageBoxWidget::Critical);
     return;
   }
   QString outputPath =
@@ -140,13 +183,14 @@ void DropFileWidget::convertImage(const QString sourcePath) {
 
   int quality = m_qualityValue;
   if (!saveImage(&image, outputPath, quality, m_sourceExtension)) {
-    QMessageBox::warning(this, "Error", "Failed to save image as JPG!");
+    MessageBoxWidget messageBox(
+        "Error", QString("Failed to save image as " + *m_sourceExtension),
+        MessageBoxWidget::Critical);
     return;
   }
-
-  QMessageBox::information(
-      this, "Success",
-      QString("Image converted successfully at " + outputPath));
+  MessageBoxWidget messageBox(
+      "Success", QString("Image converted successfully at " + outputPath),
+      MessageBoxWidget::Information);
 }
 
 void DropFileWidget::onBrowseButtonPressed() {
@@ -157,6 +201,7 @@ void DropFileWidget::onBrowseButtonPressed() {
     return;
   }
   m_sourcePath = fileName;
+  updateWidgetVisibility();
 }
 
 QString DropFileWidget::getFilePath() { return m_sourcePath; }
@@ -164,30 +209,6 @@ QString DropFileWidget::getFilePath() { return m_sourcePath; }
 void DropFileWidget::onSliderValueChanged() {
   m_qualityValue = m_sliderWidget->getValue();
 }
-
-// void DropFileWidget::setSourceExtension(const ImageExtension
-// &sourceExtension) {
-//   switch (sourceExtension) {
-//   case JPG:
-//     m_sourceExtension = "JPG";
-//     break;
-//   case JPEG:
-//     m_sourceExtension = "JPEG";
-//     break;
-//   case PNG:
-//     m_sourceExtension = "PNG";
-//     break;
-//   case WEBP:
-//     m_sourceExtension = "WEBP";
-//     break;
-//   case TIFF:
-//     m_sourceExtension = "TIFF";
-//     break;
-//   case PDF:
-//     m_sourceExtension = "PDF";
-//     break;
-//   }
-// }
 
 bool DropFileWidget::saveImage(const QImage *image, const QString &outputPath,
                                const int quality,
