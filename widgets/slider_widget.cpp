@@ -3,7 +3,7 @@
 SliderWidget::SliderWidget(QWidget *parent, QString originTitle)
     : QWidget(parent), m_value(60) {
   mainLayout = new QVBoxLayout(this);
-  QString labelTitle = "Change your " + originTitle + " here";
+  QString labelTitle = originTitle;
   m_label = new QLabel(labelTitle, this);
   m_label->setStyleSheet("color: " + Colors::Grey900.name() + ";" +
                          TextStyle::BodyMediumRegular());

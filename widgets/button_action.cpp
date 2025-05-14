@@ -22,7 +22,6 @@ void ButtonAction::setEnabled(bool isEnabled) {
                   "    padding: 12px 4px;"
                   "    border: 0 solid;"
                   "    border-radius: 12px;"
-                  "    max-width: 150px;"
                   "    background-color: " +
                   Colors::Primary600.name() +
                   ";"
@@ -47,7 +46,6 @@ void ButtonAction::setEnabled(bool isEnabled) {
                   "    padding: 12px 4px;"
                   "    border: 0 solid;"
                   "    border-radius: 12px;"
-                  "    max-width: 150px;"
                   "    background-color: " +
                   Colors::Grey400.name() +
                   ";"

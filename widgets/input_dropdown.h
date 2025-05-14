@@ -17,7 +17,8 @@ signals:
   void valueChanged();
 
 public:
-  explicit InputDropdown(QWidget *parent = nullptr, QStringList options = {});
+  explicit InputDropdown(QWidget *parent = nullptr,
+                         const QStringList options = {});
 
   QString currentText() const;
   void setCurrentText(const QString &text);
@@ -26,6 +27,8 @@ public:
 
 private:
   QComboBox *m_dropdown;
+  const QStringList m_options;
+  void setValue();
 };
 
 #endif // INPUTDROPDOWN_H

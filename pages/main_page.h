@@ -10,6 +10,10 @@
 
 class MainPage : public QWidget {
   Q_OBJECT
+
+private slots:
+  void onProcessButtonClicked();
+
 public:
   explicit MainPage(QWidget *parent = nullptr);
 
@@ -18,10 +22,14 @@ private:
   QVBoxLayout *m_imageLayout;
   SliderWidget *m_qualitySlider;
   DropFileWidget *m_dropFileWidget;
+  QWidget *m_buttonWidget;
+  QVBoxLayout *m_buttonLayout;
+  DropFileWidget *m_dragWidget;
   void setupImageInput();
   void setupExtensionButton();
   void setupImageLayout();
   void setupQualitySlider();
+  void setupImageAttribute();
 };
 
 #endif // MAIN_PAGE_H

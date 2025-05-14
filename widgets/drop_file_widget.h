@@ -22,15 +22,18 @@ class DropFileWidget : public QGroupBox {
 public:
   explicit DropFileWidget(QWidget *parent = nullptr, QString typeFile = "File",
                           SliderWidget *sliderWidget = nullptr);
+  QString getFilePath();
+
+public slots:
+  void convertImage(const QString sourcePath);
 
 protected:
   void dragEnterEvent(QDragEnterEvent *event) override;
   void dropEvent(QDropEvent *event) override;
 
 private slots:
-  // void browseFile();
+  void onBrowseButtonPressed();
   void onSliderValueChanged();
-  void convertImage(const QString sourcePath);
   // void compressPdf();
 
 private:
@@ -38,6 +41,7 @@ private:
   SliderWidget *m_sliderWidget;
   void setupOrSeparatorLayout();
   int m_qualityValue;
+  QString m_sourcePath;
   QPixmap createColoredIcon(const QString &iconPath, const QColor &color,
                             int width, int height);
 };

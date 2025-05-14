@@ -50,6 +50,7 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
   setLayout(mainLayout);
   connect(m_sliderWidget, &SliderWidget::valueChanged, this,
           &DropFileWidget::onSliderValueChanged);
+  connect(browseButton, &ButtonAction::clicked, this, onBrowseButtonPressed);
   setAcceptDrops(true);
 }
 
@@ -115,11 +116,10 @@ void DropFileWidget::dropEvent(QDropEvent *event) {
   if (urls.isEmpty()) {
     return;
   }
-  QString sourcePath = urls.first().toLocalFile();
-  if (sourcePath.isEmpty()) {
+  m_sourcePath = urls.first().toLocalFile();
+  if (m_sourcePath.isEmpty()) {
     return;
   }
-  convertImage(sourcePath);
 }
 
 void DropFileWidget::convertImage(const QString sourcePath) {
@@ -129,17 +129,36 @@ void DropFileWidget::convertImage(const QString sourcePath) {
     return;
   }
 
-  QString outputPath;
-  if (sourcePath.endsWith(".jpg") || sourcePath.endsWith(".jpeg") ||
-      sourcePath.endsWith(".png") || sourcePath.endsWith(".webp") ||
-      sourcePath.endsWith(".tiff")) {
-    outputPath = sourcePath;
-  } else {
-    outputPath = sourcePath + ".jpg";
+  QString outputPath = sourcePath;
+  int lastDotIndex = outputPath.lastIndexOf(".");
+  if (lastDotIndex != -1) {
+    outputPath = outputPath.left(lastDotIndex);
   }
+  outputPath += ".jpg";
+
+  int quality = m_qualityValue;
+  if (!image.save(outputPath, "JPG", quality)) {
+    QMessageBox::warning(this, "Error", "Failed to save image as JPG!");
+    return;
+  }
+
+  QMessageBox::information(
+      this, "Success",
+      QString("Image converted successfully at " + outputPath));
 }
+
+void DropFileWidget::onBrowseButtonPressed() {
+  QString fileName = QFileDialog::getOpenFileName(
+      this, "Select a file", QDir::homePath(),
+      "Images (*.png *.jpg *.jpeg *.webp);;All Files (*)");
+  if (fileName.isEmpty()) {
+    return;
+  }
+  m_sourcePath = fileName;
+}
+
+QString DropFileWidget::getFilePath() { return m_sourcePath; }
 
 void DropFileWidget::onSliderValueChanged() {
   m_qualityValue = m_sliderWidget->getValue();
-  // qDebug() << "Quality value: " << m_qualityValue;
 }

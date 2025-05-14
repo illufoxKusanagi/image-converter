@@ -40,7 +40,7 @@ void SidebarPanel::emitNavigateSignal(int pageIndex) {
 }
 
 void SidebarPanel::createSidebarButtons() {
-  QStringList buttonNames = {"Convert and Compress Image", "Compress PDF"};
+  QStringList buttonNames = {"Convert Image", "Compress PDF"};
   QStringList buttonIcons = {"output", "output"};
   for (int i = 0; i < buttonNames.size(); i++) {
     ButtonSidebarActive *button =

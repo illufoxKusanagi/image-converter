@@ -11,26 +11,33 @@ MainPage::MainPage(QWidget *parent)
 
 void MainPage::setupImageInput() {
   m_qualitySlider = new SliderWidget(this, "Image Quality");
-  DropFileWidget *dragWidget =
-      new DropFileWidget(this, "Image", m_qualitySlider);
-  m_imageLayout->addWidget(dragWidget, 1, Qt::AlignCenter);
+  m_dragWidget = new DropFileWidget(this, "Image", m_qualitySlider);
+  m_imageLayout->addWidget(m_dragWidget, 1, Qt::AlignCenter);
 }
 
 void MainPage::setupExtensionButton() {
-  QWidget *buttonWidget = new QWidget(this);
-  QHBoxLayout *buttonLayout = new QHBoxLayout(buttonWidget);
-  buttonLayout->setContentsMargins(0, 0, 0, 0);
-  buttonLayout->setSpacing(16);
-  buttonLayout->setAlignment(Qt::AlignCenter);
-  buttonWidget->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+  m_buttonWidget = new QWidget(this);
+  m_buttonLayout = new QVBoxLayout(m_buttonWidget);
+  m_buttonLayout->setContentsMargins(0, 0, 0, 0);
+  m_buttonLayout->setSpacing(8);
+  m_buttonLayout->setAlignment(Qt::AlignCenter);
+  m_buttonWidget->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
   QStringList extensionOptions = {"jpg", "jpeg", "png", "webp", "tiff"};
   InputWidget *sourceExtension =
       new InputWidget(this, InputType("dropdown", "From"), extensionOptions);
   InputWidget *targetExtension =
       new InputWidget(this, InputType("dropdown", "To"), extensionOptions);
-  buttonLayout->addWidget(sourceExtension);
-  buttonLayout->addWidget(targetExtension);
-  m_imageLayout->addWidget(buttonWidget);
+  m_buttonLayout->addWidget(sourceExtension);
+  m_buttonLayout->addWidget(targetExtension);
+}
+
+void MainPage::setupImageAttribute() {
+  QHBoxLayout *attributeLayout = new QHBoxLayout(this);
+  attributeLayout->setContentsMargins(0, 0, 0, 0);
+  attributeLayout->setSpacing(16);
+  attributeLayout->addWidget(m_buttonWidget);
+  attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignTop);
+  m_imageLayout->addLayout(attributeLayout);
 }
 
 void MainPage::setupQualitySlider() {}
@@ -39,9 +46,20 @@ void MainPage::setupImageLayout() {
   m_imageLayout = new QVBoxLayout(this);
   m_imageLayout->setAlignment(Qt::AlignCenter);
   m_imageLayout->setSpacing(8);
+  ButtonAction *processButton = new ButtonAction(this, "Process Image", "no");
+  processButton->setEnabled(true);
+  processButton->setSize(256, 42);
+  connect(processButton, &QPushButton::clicked, this,
+          MainPage::onProcessButtonClicked);
   setupImageInput();
   setupExtensionButton();
   // setupQualitySlider();
-  m_imageLayout->addWidget(m_qualitySlider, 1, Qt::AlignCenter);
+  setupImageAttribute();
   mainLayout->addLayout(m_imageLayout);
+  mainLayout->addWidget(processButton);
+}
+
+void MainPage::onProcessButtonClicked() {
+  QString filePath = m_dragWidget->getFilePath();
+  m_dragWidget->convertImage(filePath);
 }
