@@ -20,11 +20,11 @@
 class DropFileWidget : public QGroupBox {
   Q_OBJECT
 public:
-  explicit DropFileWidget(QWidget *parent = nullptr, QString typeFile = "File",
-                          SliderWidget *sliderWidget = nullptr);
-  QString getFilePath();
   enum ImageExtension { JPG, JPEG, PNG, WEBP, TIFF, PDF };
-  void setSourceExtension(const ImageExtension &sourceExtension);
+  explicit DropFileWidget(QWidget *parent = nullptr, QString typeFile = "File",
+                          SliderWidget *sliderWidget = nullptr,
+                          ImageExtension *sourceExtension = nullptr);
+  QString getFilePath();
 
 public slots:
   void convertImage(const QString sourcePath);
@@ -41,10 +41,12 @@ private slots:
 private:
   QVBoxLayout *mainLayout;
   SliderWidget *m_sliderWidget;
-  QString m_sourceExtension;
+  ImageExtension *m_sourceExtension;
   int m_qualityValue;
   QString m_sourcePath;
   void setupOrSeparatorLayout();
+  bool saveImage(const QImage *image, const QString &outputPath,
+                 const int quality, const ImageExtension *sourceExtension);
   QPixmap createColoredIcon(const QString &iconPath, const QColor &color,
                             int width, int height);
 };

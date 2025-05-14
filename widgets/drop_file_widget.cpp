@@ -1,8 +1,10 @@
 #include "drop_file_widget.h"
 
 DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
-                               SliderWidget *sliderWidget)
-    : QGroupBox(parent), m_sliderWidget(sliderWidget) {
+                               SliderWidget *sliderWidget,
+                               ImageExtension *sourceExtension)
+    : QGroupBox(parent), m_sourceExtension(sourceExtension),
+      m_sliderWidget(sliderWidget) {
   mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(0, 0, 0, 0);
   mainLayout->setSpacing(16);
@@ -50,7 +52,8 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
   setLayout(mainLayout);
   connect(m_sliderWidget, &SliderWidget::valueChanged, this,
           &DropFileWidget::onSliderValueChanged);
-  connect(browseButton, &ButtonAction::clicked, this, onBrowseButtonPressed);
+  connect(browseButton, &ButtonAction::clicked, this,
+          &DropFileWidget::onBrowseButtonPressed);
   setAcceptDrops(true);
 }
 
@@ -128,16 +131,15 @@ void DropFileWidget::convertImage(const QString sourcePath) {
     QMessageBox::warning(this, "Error", "Failed to open image!");
     return;
   }
-  QString outputPath = QFileDialog::getSaveFileName(
-      this, "Save Image", QDir::homePath(), "Images (*.jpg);;All Files (*)");
+  QString outputPath =
+      QFileDialog::getSaveFileName(this, "Save Image", QDir::homePath());
   int lastDotIndex = outputPath.lastIndexOf(".");
   if (lastDotIndex != -1) {
     outputPath = outputPath.left(lastDotIndex);
   }
-  outputPath += ".jpg";
 
   int quality = m_qualityValue;
-  if (!image.save(outputPath, "JPG", quality)) {
+  if (!saveImage(&image, outputPath, quality, m_sourceExtension)) {
     QMessageBox::warning(this, "Error", "Failed to save image as JPG!");
     return;
   }
@@ -163,25 +165,61 @@ void DropFileWidget::onSliderValueChanged() {
   m_qualityValue = m_sliderWidget->getValue();
 }
 
-void DropFileWidget::setSourceExtension(const ImageExtension &sourceExtension) {
-  switch (sourceExtension) {
+// void DropFileWidget::setSourceExtension(const ImageExtension
+// &sourceExtension) {
+//   switch (sourceExtension) {
+//   case JPG:
+//     m_sourceExtension = "JPG";
+//     break;
+//   case JPEG:
+//     m_sourceExtension = "JPEG";
+//     break;
+//   case PNG:
+//     m_sourceExtension = "PNG";
+//     break;
+//   case WEBP:
+//     m_sourceExtension = "WEBP";
+//     break;
+//   case TIFF:
+//     m_sourceExtension = "TIFF";
+//     break;
+//   case PDF:
+//     m_sourceExtension = "PDF";
+//     break;
+//   }
+// }
+
+bool DropFileWidget::saveImage(const QImage *image, const QString &outputPath,
+                               const int quality,
+                               const ImageExtension *sourceExtension) {
+  bool isSuccess = false;
+  QString formatString;
+  switch (*sourceExtension) {
   case JPG:
-    m_sourceExtension = "JPG";
+    formatString = "JPG";
+    isSuccess = image->save(outputPath + "." + formatString.toLower(),
+                            formatString.toLatin1().constData(), quality);
     break;
   case JPEG:
-    m_sourceExtension = "JPEG";
+    formatString = "JPEG";
+    isSuccess = image->save(outputPath + "." + formatString.toLower(),
+                            formatString.toLatin1().constData(), quality);
     break;
   case PNG:
-    m_sourceExtension = "PNG";
+    formatString = "PNG";
+    isSuccess = image->save(outputPath + "." + formatString.toLower(),
+                            formatString.toLatin1().constData(), -1);
     break;
   case WEBP:
-    m_sourceExtension = "WEBP";
+    formatString = "WEBP";
+    isSuccess = image->save(outputPath + "." + formatString.toLower(),
+                            formatString.toLatin1().constData(), quality);
     break;
   case TIFF:
-    m_sourceExtension = "TIFF";
-    break;
-  case PDF:
-    m_sourceExtension = "PDF";
+    formatString = "TIFF";
+    isSuccess = image->save(outputPath + "." + formatString.toLower(),
+                            formatString.toLatin1().constData(), quality);
     break;
   }
+  return isSuccess;
 }
