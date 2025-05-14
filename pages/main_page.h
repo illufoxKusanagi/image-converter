@@ -13,7 +13,7 @@ class MainPage : public QWidget {
 
 private slots:
   void onProcessButtonClicked();
-  void onImageSourceChanged();
+  void onImageTargetExtensionChanged();
 
 public:
   explicit MainPage(QWidget *parent = nullptr);
@@ -26,6 +26,8 @@ private:
   QWidget *m_buttonWidget;
   QVBoxLayout *m_buttonLayout;
   DropFileWidget *m_dragWidget;
+  InputWidget *m_targetExtension;
+  DropFileWidget::ImageExtension m_sourceExtension;
   void setupImageInput();
   void setupExtensionButton();
   void setupImageLayout();

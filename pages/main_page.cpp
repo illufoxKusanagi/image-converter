@@ -1,4 +1,5 @@
 #include "main_page.h"
+#include <QDebug>
 
 MainPage::MainPage(QWidget *parent)
     : QWidget(parent), mainLayout(new QVBoxLayout(this)) {
@@ -11,7 +12,8 @@ MainPage::MainPage(QWidget *parent)
 
 void MainPage::setupImageInput() {
   m_qualitySlider = new SliderWidget(this, "Image Quality");
-  m_dragWidget = new DropFileWidget(this, "Image", m_qualitySlider);
+  m_dragWidget =
+      new DropFileWidget(this, "Image", m_qualitySlider, &m_sourceExtension);
   m_imageLayout->addWidget(m_dragWidget, 1, Qt::AlignCenter);
 }
 
@@ -23,11 +25,12 @@ void MainPage::setupExtensionButton() {
   m_buttonLayout->setAlignment(Qt::AlignCenter);
   m_buttonWidget->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
   QStringList extensionOptions = {"jpg", "jpeg", "png", "webp", "tiff"};
-  InputWidget *targetExtension =
+  m_targetExtension =
       new InputWidget(this, InputType("dropdown", "To"), extensionOptions);
-  connect(targetExtension, &InputWidget::valueChanged, this, [this]() {});
-  targetExtension->getValue();
-  m_buttonLayout->addWidget(targetExtension);
+  connect(m_targetExtension, &InputWidget::valueChanged, this,
+          MainPage::onImageTargetExtensionChanged);
+  m_targetExtension->getValue();
+  m_buttonLayout->addWidget(m_targetExtension);
 }
 
 void MainPage::setupImageAttribute() {
@@ -62,7 +65,23 @@ void MainPage::onProcessButtonClicked() {
   m_dragWidget->convertImage(filePath);
 }
 
-void MainPage::onImageSourceChanged() {
-  // m_dragWidget->setSourceExtension(m_dragWidget->m_sourceExtension);
-  // m_dragWidget->convertImage(m_dragWidget->getFilePath());
+void MainPage::onImageTargetExtensionChanged() {
+  // tes
+  double value = m_targetExtension->getValue();
+  if (value == 0) {
+    qDebug() << "Selected extension: JPG";
+    m_sourceExtension = DropFileWidget::ImageExtension::JPG;
+  } else if (value == 1) {
+    qDebug() << "Selected extension: JPEG";
+    m_sourceExtension = DropFileWidget::ImageExtension::JPEG;
+  } else if (value == 2) {
+    qDebug() << "Selected extension: PNG";
+    m_sourceExtension = DropFileWidget::ImageExtension::PNG;
+  } else if (value == 3) {
+    qDebug() << "Selected extension: WEBP";
+    m_sourceExtension = DropFileWidget::ImageExtension::WEBP;
+  } else if (value == 4) {
+    qDebug() << "Selected extension: TIFF";
+    m_sourceExtension = DropFileWidget::ImageExtension::TIFF;
+  }
 }
