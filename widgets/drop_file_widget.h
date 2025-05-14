@@ -24,7 +24,7 @@ public:
                           SliderWidget *sliderWidget = nullptr);
   QString getFilePath();
   enum ImageExtension { JPG, JPEG, PNG, WEBP, TIFF, PDF };
-  void setSourceExtension(ImageExtension &sourceExtension);
+  void setSourceExtension(const ImageExtension &sourceExtension);
 
 public slots:
   void convertImage(const QString sourcePath);

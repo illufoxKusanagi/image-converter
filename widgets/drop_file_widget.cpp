@@ -7,7 +7,6 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
   mainLayout->setContentsMargins(0, 0, 0, 0);
   mainLayout->setSpacing(16);
   mainLayout->setAlignment(Qt::AlignCenter);
-  ImageExtension sourceExtension = JPG;
   setStyleSheet("QGroupBox {"
                 "border: 2px solid " +
                 Colors::Secondary400.name() +
@@ -164,7 +163,7 @@ void DropFileWidget::onSliderValueChanged() {
   m_qualityValue = m_sliderWidget->getValue();
 }
 
-void DropFileWidget::setSourceExtension(ImageExtension &sourceExtension) {
+void DropFileWidget::setSourceExtension(const ImageExtension &sourceExtension) {
   switch (sourceExtension) {
   case JPG:
     m_sourceExtension = "JPG";
