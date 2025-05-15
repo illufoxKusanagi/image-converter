@@ -4,6 +4,7 @@
 #include "styles/colors.h"
 #include "styles/text_style.h"
 #include "widgets/button_action.h"
+#include "widgets/message_box_widget.h"
 #include "widgets/slider_widget.h"
 #include <QDir>
 #include <QDragEnterEvent>
@@ -11,7 +12,6 @@
 #include <QFileDialog>
 #include <QGroupBox>
 #include <QLabel>
-#include <QMessageBox>
 #include <QMimeData>
 #include <QPainter>
 #include <QVBoxLayout>
@@ -42,9 +42,19 @@ private:
   QVBoxLayout *mainLayout;
   SliderWidget *m_sliderWidget;
   ImageExtension *m_sourceExtension;
+  ButtonAction *m_browseButton;
+  QLabel *m_icon;
+  QLabel *m_chosenIcon;
   int m_qualityValue;
   QString m_sourcePath;
-  void setupOrSeparatorLayout();
+  QString m_typeFile;
+  QWidget *m_emptyFieldWidget;
+  QWidget *m_chosenFileWidget;
+  QLabel *m_chosenLabel;
+  void setupOrSeparatorLayout(QVBoxLayout *layout);
+  void setupEmptyFileWidget();
+  void setupChosenFileWidget();
+  void updateWidgetVisibility();
   bool saveImage(const QImage *image, const QString &outputPath,
                  const int quality, const ImageExtension *sourceExtension);
   QPixmap createColoredIcon(const QString &iconPath, const QColor &color,

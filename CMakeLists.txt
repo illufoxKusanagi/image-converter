@@ -37,6 +37,8 @@ set(PROJECT_WIDGETS
         widgets/drop_file_widget.cpp
         widgets/slider_widget.h
         widgets/slider_widget.cpp
+        widgets/message_box_widget.cpp
+        widgets/message_box_widget.h
 )
 
 set(PROJECT_STYLES

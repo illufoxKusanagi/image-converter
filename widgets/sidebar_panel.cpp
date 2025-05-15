@@ -26,13 +26,7 @@ SidebarPanel::SidebarPanel(QWidget *parent)
                 "    background-color: " +
                 Colors::Secondary600.name() +
                 ";"
-                "}"
-                // "QScrollArea {"
-                // "    background-color: " +
-                // Colors::Secondary600.name() +
-                // ";"
-                // "}"
-  );
+                "}");
 }
 
 void SidebarPanel::emitNavigateSignal(int pageIndex) {
