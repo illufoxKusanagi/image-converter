@@ -11,7 +11,7 @@ InputWidget::InputWidget(QWidget *parent, const InputType &inputType,
   layout->setSpacing(8);
   layout->addWidget(m_label);
   m_label->setStyleSheet(TextStyle::BodyMediumRegular() +
-                         "color: " + Colors::Secondary700.name() +
+                         "color: " + Colors::StandardBlack.name() +
                          ";"
                          "white-space: normal;");
   m_label->setWordWrap(true);

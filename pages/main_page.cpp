@@ -9,47 +9,41 @@ MainPage::MainPage(QWidget *parent)
   setLayout(mainLayout);
 }
 
-void MainPage::setupImageInput() {
-  m_qualitySlider = new SliderWidget(this, "Image Quality");
-  m_dragWidget =
-      new DropFileWidget(this, "Image", m_qualitySlider, &m_sourceExtension);
-  m_imageLayout->addWidget(m_dragWidget, 1, Qt::AlignBottom);
-}
+void MainPage::setupImageInput() {}
 
 void MainPage::setupExtensionButton() {
   QStringList extensionOptions = {"jpg", "jpeg", "png", "webp", "tiff"};
   m_targetExtension =
-      new InputWidget(this, InputType("dropdown", "To"), extensionOptions);
+      new InputWidget(this, InputType("dropdown", "Target"), extensionOptions);
   connect(m_targetExtension, &InputWidget::valueChanged, this,
           MainPage::onImageTargetExtensionChanged);
   m_targetExtension->getValue();
 }
 
 void MainPage::setupImageAttribute() {
-  QHBoxLayout *attributeLayout = new QHBoxLayout(this);
+  m_qualitySlider = new SliderWidget(this, "Image Quality");
+  QHBoxLayout *attributeLayout = new QHBoxLayout();
   attributeLayout->setContentsMargins(0, 0, 0, 0);
   attributeLayout->setSpacing(16);
-  attributeLayout->addWidget(m_targetExtension);
-  attributeLayout->addWidget(m_qualitySlider);
-  attributeLayout->setAlignment(Qt::AlignBottom);
-  m_imageLayout->addLayout(attributeLayout);
+  setupExtensionButton();
+  attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignBottom);
+  attributeLayout->addWidget(m_targetExtension, 1, Qt::AlignBottom);
+  // attributeLayout->setAlignment(Qt::AlignTop);
+  mainLayout->addLayout(attributeLayout);
 }
 
 void MainPage::setupQualitySlider() {}
 
 void MainPage::setupImageLayout() {
-  m_imageLayout = new QVBoxLayout(this);
-  m_imageLayout->setSpacing(8);
-  m_imageLayout->setAlignment(Qt::AlignCenter);
+  m_dragWidget =
+      new DropFileWidget(this, "Image", m_qualitySlider, &m_sourceExtension);
   ButtonAction *processButton = new ButtonAction(this, "Process Image", "no");
   processButton->setEnabled(true);
   processButton->setSize(256, 42);
   connect(processButton, &QPushButton::clicked, this,
           MainPage::onProcessButtonClicked);
-  setupImageInput();
-  setupExtensionButton();
+  mainLayout->addWidget(m_dragWidget);
   setupImageAttribute();
-  mainLayout->addLayout(m_imageLayout);
   mainLayout->addWidget(processButton, 0, Qt::AlignCenter);
 }
 

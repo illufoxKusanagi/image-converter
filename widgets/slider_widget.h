@@ -28,6 +28,9 @@ private:
   QSlider *m_slider;
   QSpinBox *m_spinBox;
   int m_value;
+  static const QString s_labelStyling;
+  static const QString s_spinBoxStyling;
+  static const QString s_sliderStyling;
 };
 
 #endif // INPUTWIDGET_H
