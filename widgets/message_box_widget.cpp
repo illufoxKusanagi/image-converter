@@ -1,6 +1,6 @@
 #include "message_box_widget.h"
 
-MessageBoxWidget::MessageBoxWidget(QString windowTitle, QString text,
+MessageBoxWidget::MessageBoxWidget(QString &windowTitle, QString &text,
                                    IconType iconType) {
   setWindowTitle(windowTitle);
   setText(text);
@@ -28,7 +28,7 @@ MessageBoxWidget::MessageBoxWidget(QString windowTitle, QString text,
   exec();
 }
 
-QMessageBox::Icon MessageBoxWidget::switchIcon(IconType iconType) {
+constexpr QMessageBox::Icon MessageBoxWidget::switchIcon(IconType iconType) {
   switch (iconType) {
   case NoIcon:
     return QMessageBox::NoIcon;

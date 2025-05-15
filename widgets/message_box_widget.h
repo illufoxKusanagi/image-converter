@@ -16,11 +16,12 @@ public:
     Warning = 3,
     Critical = 4
   };
-  explicit MessageBoxWidget(QString windowTitle, QString text,
+  explicit MessageBoxWidget(QString &windowTitle, QString &text,
                             IconType iconType);
 
 private:
-  QMessageBox::Icon switchIcon(IconType iconType);
+  static constexpr QMessageBox::Icon
+  MessageBoxWidget::switchIcon(IconType iconType);
 };
 
 #endif // MESSAGE_BOX_H
