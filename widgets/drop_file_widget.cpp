@@ -30,8 +30,12 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
   setupChosenFileWidget();
   setFixedSize(320, 320);
   setLayout(mainLayout);
-  connect(m_sliderWidget, &SliderWidget::valueChanged, this,
-          &DropFileWidget::onSliderValueChanged);
+  if (m_sliderWidget) {
+    connect(m_sliderWidget, &SliderWidget::valueChanged, this,
+            &DropFileWidget::onSliderValueChanged);
+  } else {
+    m_qualityValue = 100;
+  }
   connect(m_browseButton, &ButtonAction::clicked, this,
           &DropFileWidget::onBrowseButtonPressed);
   setAcceptDrops(true);
@@ -163,7 +167,7 @@ void DropFileWidget::dropEvent(QDropEvent *event) {
   if (newPath.isEmpty()) {
     return;
   }
-  m_sourcePath = newPath.replace("\\", "/");
+  m_sourcePath = QDir::cleanPath(QDir::fromNativeSeparators(newPath));
   updateWidgetVisibility();
 }
 
@@ -172,6 +176,7 @@ void DropFileWidget::convertImage(const QString sourcePath) {
   if (image.isNull()) {
     MessageBoxWidget messageBox("Error", QString("Failed to open image!"),
                                 MessageBoxWidget::Critical);
+    messageBox.exec();
     return;
   }
   QString outputPath =
@@ -179,6 +184,7 @@ void DropFileWidget::convertImage(const QString sourcePath) {
   if (outputPath.isEmpty()) {
     MessageBoxWidget messageBox("Error", "No image selected!",
                                 MessageBoxWidget::Warning);
+    messageBox.exec();
     return;
   }
   int lastDotIndex = outputPath.lastIndexOf(".");
@@ -191,11 +197,13 @@ void DropFileWidget::convertImage(const QString sourcePath) {
     MessageBoxWidget messageBox(
         "Error", QString("Failed to save image as " + *m_sourceExtension),
         MessageBoxWidget::Critical);
+    messageBox.exec();
     return;
   }
   MessageBoxWidget messageBox(
       "Success", QString("Image converted successfully at " + outputPath),
       MessageBoxWidget::Information);
+  messageBox.exec();
 }
 
 void DropFileWidget::onBrowseButtonPressed() {
@@ -205,6 +213,7 @@ void DropFileWidget::onBrowseButtonPressed() {
   if (fileName.isEmpty()) {
     MessageBoxWidget messageBox("Error", "No image selected!",
                                 MessageBoxWidget::Warning);
+    messageBox.exec();
     return;
   }
   m_sourcePath = fileName;
@@ -248,6 +257,8 @@ bool DropFileWidget::saveImage(const QImage *image, const QString &outputPath,
     isSuccess = image->save(outputPath + "." + formatString.toLower(),
                             formatString.toLatin1().constData(), quality);
     break;
+  default:
+    Q_UNREACHABLE();
   }
   return isSuccess;
 }

@@ -12,7 +12,6 @@
 #include <QFileDialog>
 #include <QGroupBox>
 #include <QLabel>
-#include <QMessageBox>
 #include <QMimeData>
 #include <QPainter>
 #include <QVBoxLayout>

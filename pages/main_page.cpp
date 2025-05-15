@@ -60,6 +60,7 @@ void MainPage::onProcessButtonClicked() {
   else {
     MessageBoxWidget messageBox("Error", "No file selected!",
                                 MessageBoxWidget::Critical);
+    messageBox.exec();
     return;
   }
 }

@@ -1,7 +1,7 @@
 #include "message_box_widget.h"
 
-MessageBoxWidget::MessageBoxWidget(QString &windowTitle, QString &text,
-                                   IconType iconType) {
+MessageBoxWidget::MessageBoxWidget(const QString &windowTitle,
+                                   const QString &text, IconType iconType) {
   setWindowTitle(windowTitle);
   setText(text);
   setIcon(switchIcon(iconType));
@@ -25,7 +25,6 @@ MessageBoxWidget::MessageBoxWidget(QString &windowTitle, QString &text,
                 Colors::Primary600.name() +
                 ";"
                 "}");
-  exec();
 }
 
 constexpr QMessageBox::Icon MessageBoxWidget::switchIcon(IconType iconType) {
