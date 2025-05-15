@@ -176,6 +176,11 @@ void DropFileWidget::convertImage(const QString sourcePath) {
   }
   QString outputPath =
       QFileDialog::getSaveFileName(this, "Save Image", QDir::homePath());
+  if (outputPath.isEmpty()) {
+    MessageBoxWidget messageBox("Error", "No image selected!",
+                                MessageBoxWidget::Warning);
+    return;
+  }
   int lastDotIndex = outputPath.lastIndexOf(".");
   if (lastDotIndex != -1) {
     outputPath = outputPath.left(lastDotIndex);
@@ -198,6 +203,8 @@ void DropFileWidget::onBrowseButtonPressed() {
       this, "Select a file", QDir::homePath(),
       "Images (*.png *.jpg *.jpeg *.webp);;All Files (*)");
   if (fileName.isEmpty()) {
+    MessageBoxWidget messageBox("Error", "No image selected!",
+                                MessageBoxWidget::Warning);
     return;
   }
   m_sourcePath = fileName;
