@@ -10,8 +10,8 @@
         <file>icons/arrow-up-disabled.svg</file>
         <file>icons/arrow-down-black.svg</file>
         <file>icons/upload.svg</file>
-        <file>icons/upload.svg</file>
         <file>icons/image.svg</file>
         <file>icons/arrow-up-black.svg</file>
+        <file>icons/icon-logo.png</file>
     </qresource>
 </RCC>
