@@ -14,7 +14,7 @@ SliderWidget::SliderWidget(QWidget *parent, QString originTitle)
   m_spinBox = new QSpinBox(this);
   m_spinBox->setRange(0, 100);
   m_spinBox->setValue(m_value);
-  m_spinBox->setFixedSize(128, 40);
+  m_spinBox->setFixedHeight(40);
   connect(m_slider, &QSlider::valueChanged, this,
           &SliderWidget::updateSpinBoxValue);
   connect(m_spinBox, QOverload<int>::of(&QSpinBox::valueChanged), this,

@@ -21,20 +21,20 @@ void MainPage::setupExtensionButton() {
 }
 
 void MainPage::setupImageAttribute() {
-  m_qualitySlider = new SliderWidget(this, "Image Quality");
   QHBoxLayout *attributeLayout = new QHBoxLayout();
   attributeLayout->setContentsMargins(0, 0, 0, 0);
   attributeLayout->setSpacing(16);
   setupExtensionButton();
   attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignBottom);
   attributeLayout->addWidget(m_targetExtension, 1, Qt::AlignBottom);
-  // attributeLayout->setAlignment(Qt::AlignTop);
   mainLayout->addLayout(attributeLayout);
 }
 
 void MainPage::setupQualitySlider() {}
 
 void MainPage::setupImageLayout() {
+  m_qualitySlider = new SliderWidget(this, "Image Quality");
+  m_qualitySlider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
   m_dragWidget =
       new DropFileWidget(this, "Image", m_qualitySlider, &m_sourceExtension);
   ButtonAction *processButton = new ButtonAction(this, "Process Image", "no");

@@ -7,7 +7,7 @@ InputDropdown::InputDropdown(QWidget *parent, const QStringList options)
   QHBoxLayout *layout = new QHBoxLayout(this);
   layout->setContentsMargins(0, 0, 0, 0);
   m_dropdown->addItems(options);
-  m_dropdown->setFixedSize(128, 40);
+  m_dropdown->setFixedSize(160, 40);
   m_dropdown->setStyleSheet(
       "QComboBox {"
       "    color: " +
