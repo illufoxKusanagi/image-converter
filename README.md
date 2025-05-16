@@ -42,6 +42,27 @@ ImageConverter is a simple yet powerful tool designed to help users convert imag
 
 ---
 
+## 🚀 Usage
+
+1. **Launch the application**
+2. **Select the input image** you want to convert
+3. **Choose the output format** from the dropdown menu
+4. **Click "Process Image"** to process the image
+5. **Save** the converted file to your desired location
+
+---
+
+## 📝 Project Structure
+
+The project is organized into several components:
+
+- **Widgets**: Custom UI controls like 'InputDropdown' for format selection
+- **Colors**: Consistent color scheme used throughout the application
+- **TextStyle**: Consistent typography styling used throughout the application
+- **Resources**: Icons and images used in the interface
+
+---
+
 ## 🔧 Getting Started
 
 To run the Train Simulation App, follow these steps:
@@ -75,27 +96,6 @@ To run the Train Simulation App, follow these steps:
 
 3. **Run the Application**:
    - After building, run the application from Qt Creator.
-
----
-
-## 🚀 Usage
-
-1. **Launch the application**
-2. **Select the input image** you want to convert
-3. **Choose the output format** from the dropdown menu
-4. **Click "Process Image"** to process the image
-5. **Save** the converted file to your desired location
-
----
-
-## 📝 Project Structure
-
-The project is organized into several components:
-
-- **Widgets**: Custom UI controls like 'InputDropdown' for format selection
-- **Colors**: Consistent color scheme used throughout the application
-- **TextStyle**: Consistent typography styling used throughout the application
-- **Resources**: Icons and images used in the interface
 
 ---
 
