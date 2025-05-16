@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
+
   QWidget *centralWidget = new QWidget(this);
   QHBoxLayout *mainLayout = new QHBoxLayout(centralWidget);
   stackedWidget = new QStackedWidget(this);
@@ -16,6 +17,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   //         &MainWindow::navigateToPage);
   setCentralWidget(centralWidget);
   navigateToPage(0);
+  setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint |
+                 Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint);
 }
 
 void MainWindow::navigateToPage(int pageIndex) {
