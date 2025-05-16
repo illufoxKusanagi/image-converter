@@ -1,5 +1,6 @@
 # ImageConverter
 <img width="64" alt="icon-logo" src="https://github.com/user-attachments/assets/8e5b16d0-39c2-4b11-a517-651b18d27001" />
+
 A Qt-based desktop application for converting images between different formats with a clean, modern interface.
 
 ---
