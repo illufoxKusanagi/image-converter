@@ -1,6 +1,9 @@
 #include "mainwindow/mainwindow.h"
-
 #include <QApplication>
+#include <QByteArray>
+#include <QCryptographicHash>
+#include <QInputDialog>
+#include <QString>
 
 int main(int argc, char *argv[]) {
   QApplication app(argc, argv);
