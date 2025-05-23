@@ -5,7 +5,11 @@ MainPage::MainPage(QWidget *parent)
   mainLayout->setContentsMargins(32, 32, 32, 32);
   mainLayout->setSpacing(16);
   mainLayout->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
+  m_sourceExtension = DropFileWidget::ImageExtension::JPG;
   setupImageLayout();
+  if (m_targetExtension) {
+    onImageTargetExtensionChanged();
+  }
   setLayout(mainLayout);
 }
 
@@ -48,14 +52,50 @@ void MainPage::setupImageLayout() {
 }
 
 void MainPage::onProcessButtonClicked() {
-  QString filePath = m_dragWidget->getFilePath();
-  if (!filePath.isEmpty())
-    m_dragWidget->convertImage(filePath);
-  else {
+  QStringList sourcePaths = m_dragWidget->getFilePaths();
+  if (sourcePaths.isEmpty()) {
     MessageBoxWidget messageBox("Error", "No file selected!",
                                 MessageBoxWidget::Critical);
     messageBox.exec();
     return;
+  }
+  int quality = m_qualitySlider->getValue();
+  if (sourcePaths.size() == 1) {
+    m_dragWidget->convertImage(sourcePaths.first());
+  } else {
+    QString outputDir = QFileDialog::getExistingDirectory(
+        this, "Select Output Directory", QDir::homePath());
+    if (outputDir.isEmpty()) {
+      MessageBoxWidget messageBox("Error", "No output directory selected!",
+                                  MessageBoxWidget::Critical);
+      messageBox.exec();
+      return;
+    }
+    int successCount = 0;
+    int failureCount = 0;
+    for (const QString &sourcePath : sourcePaths) {
+      QImage image(sourcePath);
+      if (image.isNull()) {
+        qWarning() << "Failed to load image:" << sourcePath;
+        failureCount++;
+        continue;
+      }
+      QFileInfo fileInfo(sourcePath);
+      QString baseOutputName = QDir(outputDir).filePath(fileInfo.baseName());
+      if (m_dragWidget->saveImage(&image, baseOutputName, quality,
+                                  &m_sourceExtension)) {
+        successCount++;
+      } else {
+        failureCount++;
+      }
+    }
+    MessageBoxWidget messageBox(
+        "Batch Conversion Complete",
+        QString("%1 image(s) converted successfully.\n%2 image(s) failed.")
+            .arg(successCount)
+            .arg(failureCount),
+        MessageBoxWidget::Information);
+    messageBox.exec();
   }
 }
 

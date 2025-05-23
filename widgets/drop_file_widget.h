@@ -25,6 +25,10 @@ public:
                           SliderWidget *sliderWidget = nullptr,
                           ImageExtension *sourceExtension = nullptr);
   QString getFilePath();
+  QStringList getFilePaths();
+  QString imageExtensionToString(const ImageExtension &sourceExtension) const;
+  bool saveImage(const QImage *image, const QString &outputPath,
+                 const int quality, const ImageExtension *sourceExtension);
 
 public slots:
   void convertImage(const QString sourcePath);
@@ -47,6 +51,7 @@ private:
   QLabel *m_chosenIcon;
   int m_qualityValue;
   QString m_sourcePath;
+  QStringList m_filePaths;
   QString m_typeFile;
   QWidget *m_emptyFieldWidget;
   QWidget *m_chosenFileWidget;
@@ -55,8 +60,6 @@ private:
   void setupEmptyFileWidget();
   void setupChosenFileWidget();
   void updateWidgetVisibility();
-  bool saveImage(const QImage *image, const QString &outputPath,
-                 const int quality, const ImageExtension *sourceExtension);
   QPixmap createColoredIcon(const QString &iconPath, const QColor &color,
                             int width, int height);
 };

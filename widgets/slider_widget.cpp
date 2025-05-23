@@ -1,7 +1,7 @@
 #include "slider_widget.h"
 
 SliderWidget::SliderWidget(QWidget *parent, QString originTitle)
-    : QWidget(parent), m_value(60) {
+    : QWidget(parent), m_value(100) {
   mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(0, 0, 0, 0);
   mainLayout->setSpacing(8);
