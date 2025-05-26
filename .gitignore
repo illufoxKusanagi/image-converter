@@ -4,5 +4,6 @@
 *.tmp
 *.log
 *.user
+*.json
 /build
 /.vscode
