@@ -81,7 +81,6 @@ void MainPage::onProcessButtonClicked() {
       }
       QFileInfo fileInfo(sourcePath);
       QString baseOutputName = QDir(outputDir).filePath(fileInfo.baseName());
-      qDebug() << "Base output name:" << baseOutputName;
       if (m_dragWidget->saveImage(&image, baseOutputName, quality,
                                   &m_sourceExtension)) {
         successCount++;

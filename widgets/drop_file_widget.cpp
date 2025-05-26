@@ -217,6 +217,7 @@ void DropFileWidget::convertImage(const QString sourcePath) {
   if (outputPathWithExt.isEmpty()) {
     MessageBoxWidget messageBox("Error", "No output file selected!",
                                 MessageBoxWidget::Warning);
+    messageBox.exec();
     return;
   }
 
