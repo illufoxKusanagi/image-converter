@@ -121,7 +121,7 @@ void DropFileWidget::setupOrSeparatorLayout(QVBoxLayout *layout) {
 }
 
 void DropFileWidget::updateWidgetVisibility() {
-  if (m_sourcePath.isEmpty()) {
+  if (m_filePaths.isEmpty()) {
     m_emptyFieldWidget->setVisible(true);
     m_chosenFileWidget->setVisible(false);
   } else {
@@ -172,7 +172,6 @@ void DropFileWidget::dropEvent(QDropEvent *event) {
     for (const QUrl &url : urls) {
       if (url.isLocalFile()) {
         QString filePath = url.toLocalFile();
-        // Basic check for image extensions, can be more robust
         QFileInfo fileInfo(filePath);
         QString ext = fileInfo.suffix().toLower();
         if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "webp" ||
@@ -192,41 +191,6 @@ void DropFileWidget::dropEvent(QDropEvent *event) {
   event->ignore();
   updateWidgetVisibility();
 }
-
-// void DropFileWidget::convertImage(const QString sourcePath) {
-//   QImage image(sourcePath);
-//   if (image.isNull()) {
-//     MessageBoxWidget messageBox("Error", QString("Failed to open image!"),
-//                                 MessageBoxWidget::Critical);
-//     messageBox.exec();
-//     return;
-//   }
-//   QString outputPath =
-//       QFileDialog::getSaveFileName(this, "Save Image", QDir::homePath());
-//   if (outputPath.isEmpty()) {
-//     MessageBoxWidget messageBox("Error", "No image selected!",
-//                                 MessageBoxWidget::Warning);
-//     messageBox.exec();
-//     return;
-//   }
-//   int lastDotIndex = outputPath.lastIndexOf(".");
-//   if (lastDotIndex != -1) {
-//     outputPath = outputPath.left(lastDotIndex);
-//   }
-
-//   int quality = m_qualityValue;
-//   if (!saveImage(&image, outputPath, quality, m_sourceExtension)) {
-//     MessageBoxWidget messageBox(
-//         "Error", QString("Failed to save image as " + *m_sourceExtension),
-//         MessageBoxWidget::Critical);
-//     messageBox.exec();
-//     return;
-//   }
-//   MessageBoxWidget messageBox(
-//       "Success", QString("Image converted successfully at " + outputPath),
-//       MessageBoxWidget::Information);
-//   messageBox.exec();
-// }
 
 void DropFileWidget::convertImage(const QString sourcePath) {
   QImage image(sourcePath);
@@ -251,21 +215,19 @@ void DropFileWidget::convertImage(const QString sourcePath) {
       this, "Save Image As", suggestedName, filter);
 
   if (outputPathWithExt.isEmpty()) {
-    // User cancelled
+    MessageBoxWidget messageBox("Error", "No output file selected!",
+                                MessageBoxWidget::Warning);
+    messageBox.exec();
     return;
   }
 
-  // Extract base path without extension, as saveImage appends it
   QString outputPathWithoutExt = outputPathWithExt;
   int lastDotIndex = outputPathWithExt.lastIndexOf('.');
   if (lastDotIndex != -1) {
-    // Check if the extension matches the target format, if not, strip it.
-    // Or, always strip it and let saveImage handle it. For simplicity, let's
-    // strip.
     outputPathWithoutExt = outputPathWithExt.left(lastDotIndex);
   }
 
-  int quality = m_qualityValue; // This is m_sliderWidget->getValue() or default
+  int quality = m_qualityValue;
   if (!saveImage(&image, outputPathWithoutExt, quality, m_sourceExtension)) {
     MessageBoxWidget messageBox(
         "Error", QString("Failed to save image as %1").arg(targetFormatString),
@@ -344,7 +306,7 @@ DropFileWidget::imageExtensionToString(const ImageExtension &extension) const {
   case JPG:
     return "JPG";
   case JPEG:
-    return "JPEG"; // Or "JPG" if Qt treats them identically for saving
+    return "JPEG";
   case PNG:
     return "PNG";
   case WEBP:
@@ -352,6 +314,7 @@ DropFileWidget::imageExtensionToString(const ImageExtension &extension) const {
   case TIFF:
     return "TIFF";
   default:
+    Q_UNREACHABLE();
     return QString();
   }
 }

@@ -76,7 +76,6 @@ void MainPage::onProcessButtonClicked() {
     for (const QString &sourcePath : sourcePaths) {
       QImage image(sourcePath);
       if (image.isNull()) {
-        qWarning() << "Failed to load image:" << sourcePath;
         failureCount++;
         continue;
       }
