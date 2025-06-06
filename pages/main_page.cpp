@@ -2,7 +2,7 @@
 
 MainPage::MainPage(QWidget *parent)
     : QWidget(parent), mainLayout(new QVBoxLayout(this)) {
-  mainLayout->setContentsMargins(32, 32, 32, 32);
+  mainLayout->setContentsMargins(16, 16, 16, 16);
   mainLayout->setSpacing(16);
   mainLayout->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
   m_sourceExtension = DropFileWidget::ImageExtension::JPG;
