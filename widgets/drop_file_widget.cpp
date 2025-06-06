@@ -48,7 +48,7 @@ void DropFileWidget::setupEmptyFileWidget() {
   m_emptyFieldWidget->setFixedSize(256, 256);
   m_icon = new QLabel(this);
   QLabel *label =
-      new QLabel("Chose your " + m_typeFile + "(s) or drag here...", this);
+      new QLabel("Choose your " + m_typeFile + "(s) or drag here...", this);
   QPixmap pixmap(":/icons/icons/upload.svg");
   QPixmap coloredIcon =
       createColoredIcon(":/icons/icons/upload.svg", Colors::Primary600, 40, 40);

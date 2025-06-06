@@ -10,13 +10,9 @@ PdfPage::PdfPage(QWidget *parent) : QWidget(parent) {
   ButtonAction *processButton = new ButtonAction(this, "Compress PDF", "no");
   processButton->setEnabled(true);
   m_qualitySlider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-  // QPushButton *browseButton = new QPushButton("Choose pdf file", this);
-  // connect(browseButton, &QPushButton::clicked, this,
-  // &PdfPage::setupImageInput);
   mainLayout->addWidget(dragWidget);
   mainLayout->addWidget(m_qualitySlider);
   mainLayout->addWidget(processButton);
-  // mainLayout->addWidget(browseButton);
   setLayout(mainLayout);
 }
 

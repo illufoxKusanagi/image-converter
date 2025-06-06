@@ -6,16 +6,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   QHBoxLayout *mainLayout = new QHBoxLayout(centralWidget);
   QTabWidget *tabWidget = new QTabWidget(this);
   mainLayout->setContentsMargins(32, 32, 32, 32);
-  // stackedWidget = new QStackedWidget(this);
-  // SidebarPanel *sidebarPanel = new SidebarPanel(this);
   MainPage *mainPage = new MainPage(this);
   PdfPage *pdfPage = new PdfPage(this);
-  // mainLayout->addWidget(sidebarPanel);
-  // stackedWidget->addWidget(mainPage);
-  // stackedWidget->addWidget(pdfPage);
-  // mainLayout->addWidget(stackedWidget);
   tabWidget->addTab(mainPage, "Convert Image");
   tabWidget->addTab(pdfPage, "Compress PDF");
+  // TODO : separating the styles to a specific method
   tabWidget->setStyleSheet(
       "QTabWidget::pane {"
       "  border: 1px solid #d1d5db;"
@@ -43,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
       ";"
       "  border-bottom: 1px solid #ffffff;"
       "}"
-      "QTabBar::tab:selected:hover {" // <--- Add this block
+      "QTabBar::tab:selected:hover {"
       "  background: #ffffff;" +
       TextStyle::BodyMediumBold() + " color: " + Colors::Secondary500.name() +
       ";"
@@ -57,16 +52,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
       ";"
       "}");
   mainLayout->addWidget(tabWidget);
-  // connect(sidebarPanel, &SidebarPanel::navigateToPage, this,
-  //         &MainWindow::navigateToPage);
   setCentralWidget(centralWidget);
-  // navigateToPage(0);
   setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint |
                  Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint);
 }
-
-// void MainWindow::navigateToPage(int pageIndex) {
-//   if (pageIndex >= 0 && pageIndex < stackedWidget->count()) {
-//     stackedWidget->setCurrentIndex(pageIndex);
-//   }
-// }
