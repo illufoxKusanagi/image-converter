@@ -12,9 +12,11 @@ class PdfPage : public QWidget {
 public:
   explicit PdfPage(QWidget *parent = nullptr);
 
+private slots:
+  void onProcessButtonClicked();
+
 private:
   QVBoxLayout *mainLayout;
-  void setupImageInput();
   SliderWidget *m_qualitySlider;
   void processPdfFiles(const QStringList &filePaths, int quality);
 };

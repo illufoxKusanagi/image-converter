@@ -13,7 +13,9 @@ PdfPage::PdfPage(QWidget *parent) : QWidget(parent) {
   mainLayout->addWidget(dragWidget);
   mainLayout->addWidget(m_qualitySlider);
   mainLayout->addWidget(processButton);
+  connect(processButton, &QPushButton::clicked, this,
+          &PdfPage::onProcessButtonClicked);
   setLayout(mainLayout);
 }
 
-void PdfPage::setupImageInput() { qDebug() << "Button clicked"; }
+void PdfPage::onProcessButtonClicked() {}
