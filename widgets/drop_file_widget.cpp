@@ -175,7 +175,7 @@ void DropFileWidget::dropEvent(QDropEvent *event) {
         QFileInfo fileInfo(filePath);
         QString ext = fileInfo.suffix().toLower();
         if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "webp" ||
-            ext == "tiff") {
+            ext == "tiff" || ext == "pdf") {
           newPaths.append(
               QDir::cleanPath(QDir::fromNativeSeparators(filePath)));
         }
@@ -243,9 +243,16 @@ void DropFileWidget::convertImage(const QString sourcePath) {
 }
 
 void DropFileWidget::onBrowseButtonPressed() {
-  QStringList fileNames = QFileDialog::getOpenFileNames(
-      this, "Select a file", QDir::homePath(),
-      "Images (*.png *.jpg *.jpeg *.webp *.tiff);;All Files (*)");
+  QStringList fileNames;
+  if (m_typeFile == "PDF") {
+    fileNames =
+        QFileDialog::getOpenFileNames(this, "Select a file", QDir::homePath(),
+                                      "Images (*.pdf);;All Files (*)");
+  } else {
+    fileNames = QFileDialog::getOpenFileNames(
+        this, "Select a file", QDir::homePath(),
+        "PDF Files (*.png *.jpg *.jpeg *.webp *.tiff);;All Files (*)");
+  }
   if (fileNames.isEmpty()) {
     MessageBoxWidget messageBox("Error", "No image selected!",
                                 MessageBoxWidget::Warning);

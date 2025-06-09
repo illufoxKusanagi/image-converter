@@ -4,25 +4,38 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
   QWidget *centralWidget = new QWidget(this);
   QHBoxLayout *mainLayout = new QHBoxLayout(centralWidget);
-  QTabWidget *tabWidget = new QTabWidget(this);
   mainLayout->setContentsMargins(32, 32, 32, 32);
+  m_tabWidget = new QTabWidget(this);
+  m_tabWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+  m_tabWidget->tabBar()->setUsesScrollButtons(false);
+  m_tabWidget->setFixedWidth(352);
   MainPage *mainPage = new MainPage(this);
   PdfPage *pdfPage = new PdfPage(this);
-  tabWidget->addTab(mainPage, "Convert Image");
-  tabWidget->addTab(pdfPage, "Compress PDF");
-  // TODO : separating the styles to a specific method
-  tabWidget->setStyleSheet(
+  m_tabWidget->addTab(mainPage, "Convert Image");
+  m_tabWidget->addTab(pdfPage, "Compress PDF");
+  setupTabStyle();
+  mainLayout->addWidget(m_tabWidget);
+  setCentralWidget(centralWidget);
+  setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint |
+                 Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint);
+}
+
+void MainWindow::setupTabStyle() {
+  m_tabWidget->setStyleSheet(
       "QTabWidget::pane {"
       "  border: 1px solid #d1d5db;"
       "  border-top: none;"
       "  border-radius: 0 0 8px 8px;"
       "  background: #ffffff;"
       "}"
+      "QTabBar::scroller {"
+      "  width: 0px;"
+      "}"
       "QTabBar::tab {"
       "  background: #f5f6fa;"
       "  border: 1px solid #d1d5db;"
       "  border-bottom: none;"
-      "  min-width: 135px;"
+      "  min-width: 133px;"
       "  min-height: 32px;"
       "  padding: 8px 20px;" +
       TextStyle::BodyMediumRegular() + "color:" + Colors::StandardBlack.name() +
@@ -51,8 +64,4 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
       " color: " + Colors::Secondary500.name() +
       ";"
       "}");
-  mainLayout->addWidget(tabWidget);
-  setCentralWidget(centralWidget);
-  setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint |
-                 Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint);
 }

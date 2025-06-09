@@ -17,7 +17,8 @@ public:
   MainWindow(QWidget *parent = nullptr);
 
 private:
-  QStackedWidget *stackedWidget;
+  QTabWidget *m_tabWidget;
+  void setupTabStyle();
 };
 
 #endif // MAINWINDOW_H
