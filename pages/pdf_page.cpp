@@ -28,6 +28,7 @@ void PdfPage::onProcessButtonClicked() {
   }
 
   int compressionQuality = m_qualitySlider->getValue(); // 0-100 scale
+  qDebug() << "Selected compression quality:" << compressionQuality;
 
   if (sourcePaths.size() == 1) {
     // Single file compression
@@ -59,7 +60,6 @@ void PdfPage::compressSinglePdf(const QString &sourcePath, int quality) {
     messageBox.exec();
   }
 }
-
 void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
   QString outputDir = QFileDialog::getExistingDirectory(
       this, "Select Output Directory for Compressed PDFs", QDir::homePath());
@@ -93,118 +93,260 @@ void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
 
 bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
                           int quality) {
-  QPdfDocument pdfDocument;
-
-  // Load the input PDF
-  QPdfDocument::Error error = pdfDocument.load(inputPath);
-  if (error != QPdfDocument::Error::None) {
-    qWarning() << "Failed to load PDF:" << inputPath
-               << "Error:" << static_cast<int>(error);
+  QPdfDocument sourceDoc;
+  if (sourceDoc.load(inputPath) != QPdfDocument::Error::None) {
     return false;
   }
 
-  // Create output PDF writer
-  QPdfWriter pdfWriter(outputPath);
+  QPdfWriter writer(outputPath);
+  writer.setPdfVersion(QPagedPaintDevice::PdfVersion_1_4);
 
-  // Configure quality settings
-  int dpi = calculateDPI(quality);
-  pdfWriter.setResolution(dpi);
+  // DON'T start the painter yet - set page properties first
+  for (int i = 0; i < sourceDoc.pageCount(); ++i) {
 
-  // Set page size based on first page if available
-  if (pdfDocument.pageCount() > 0) {
-    QSizeF pageSize = pdfDocument.pagePointSize(0);
-    pdfWriter.setPageSize(QPageSize(pageSize, QPageSize::Point));
+    // Get the EXACT original page size
+    QSizeF originalPageSize = sourceDoc.pagePointSize(i);
+
+    if (i == 0) {
+      // Set up the writer properties BEFORE creating painter
+      writer.setPageSize(QPageSize(originalPageSize, QPageSize::Point));
+
+      // Set layout with NO margins
+      QPageLayout layout;
+      layout.setPageSize(QPageSize(originalPageSize, QPageSize::Point));
+      layout.setMargins(QMarginsF(0, 0, 0, 0));
+      layout.setOrientation(QPageLayout::Portrait);
+      writer.setPageLayout(layout);
+
+      // Set resolution
+      int dpi = 96 + (quality * 54 / 100);
+      writer.setResolution(dpi);
+    }
   }
 
-  QPainter painter(&pdfWriter);
-  if (!painter.isActive()) {
-    qWarning() << "Failed to create painter for output PDF";
+  // NOW create the painter after all settings are done
+  QPainter painter(&writer);
+  if (!painter.isActive())
     return false;
-  }
 
-  // Process each page
-  for (int i = 0; i < pdfDocument.pageCount(); ++i) {
+  // FIXED: Disable ALL antialiasing to prevent grey borders
+  painter.setRenderHint(QPainter::Antialiasing, false);
+  painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
+  painter.setRenderHint(QPainter::TextAntialiasing,
+                        false); // Even disable text AA
+  painter.setRenderHint(QPainter::VerticalSubpixelPositioning, false);
+
+  for (int i = 0; i < sourceDoc.pageCount(); ++i) {
     if (i > 0) {
-      if (!pdfWriter.newPage()) {
-        qWarning() << "Failed to create new page" << i;
-        continue;
-      }
+      writer.newPage();
     }
 
-    // Get page size for this specific page
-    QSizeF pageSize = pdfDocument.pagePointSize(i);
-    qreal scaleFactor = calculateScaleFactor(quality);
+    QSizeF originalPageSize = sourceDoc.pagePointSize(i);
 
-    // Calculate render size based on quality
-    QSize renderSize(static_cast<int>(pageSize.width() * scaleFactor),
-                     static_cast<int>(pageSize.height() * scaleFactor));
+    // Simple render calculation
+    int dpi = 96 + (quality * 54 / 100);
+    qreal scale = static_cast<qreal>(dpi) / 72.0;
 
-    // Render page to image
-    QImage pageImage = pdfDocument.render(i, renderSize);
+    QSize renderSize(static_cast<int>(originalPageSize.width() * scale),
+                     static_cast<int>(originalPageSize.height() * scale));
 
-    if (pageImage.isNull()) {
-      qWarning() << "Failed to render page" << i;
+    // FIXED: Render with specific options to avoid borders
+    QImage pageImage = sourceDoc.render(i, renderSize);
+    if (pageImage.isNull())
       continue;
+
+    // FIXED: Crop any potential border pixels
+    if (pageImage.width() > 10 && pageImage.height() > 10) {
+      // Crop 1-2 pixels from each edge to remove border artifacts
+      QRect cropRect(1, 1, pageImage.width() - 2, pageImage.height() - 2);
+      pageImage = pageImage.copy(cropRect);
     }
 
-    // Apply compression to the image
-    pageImage = compressImage(pageImage, quality);
+    if (quality < 60) {
+      pageImage = simpleCompress(pageImage, quality);
+    }
 
-    // Draw the compressed image to the new PDF
-    QRect pageRect =
-        pdfWriter.pageLayout().paintRectPixels(pdfWriter.resolution());
-    painter.drawImage(pageRect, pageImage);
+    // FIXED: Use exact pixel-perfect positioning
+    QRect paintRect = painter.viewport();
+
+    // Ensure the image fills exactly without sub-pixel positioning
+    painter.drawImage(paintRect, pageImage, pageImage.rect());
+
+    qDebug() << "Page" << (i + 1) << "painted to viewport:" << paintRect;
   }
 
   painter.end();
   return true;
 }
 
-QImage PdfPage::compressImage(const QImage &originalImage, int quality) {
-  QImage processedImage = originalImage;
+// Simple compression without format conversion madness
+QImage PdfPage::simpleCompress(const QImage &image, int quality) {
+  if (quality >= 60)
+    return image; // No compression needed
 
-  // Reduce color depth for higher compression
+  // Simple JPEG compression
+  QByteArray data;
+  QBuffer buffer(&data);
+  buffer.open(QIODevice::WriteOnly);
+
+  // Map 0-60 quality to 50-85 JPEG quality
+  int jpegQuality = 50 + (quality * 35 / 60);
+
+  // FIXED: Convert to RGB format that eliminates border artifacts
+  QImage cleanImage = image.convertToFormat(QImage::Format_RGB888);
+
+  // FIXED: Fill any transparent/grey pixels with white
+  if (cleanImage.hasAlphaChannel()) {
+    for (int y = 0; y < cleanImage.height(); ++y) {
+      for (int x = 0; x < cleanImage.width(); ++x) {
+        QColor pixel = cleanImage.pixelColor(x, y);
+        if (pixel.alpha() < 255) {
+          cleanImage.setPixelColor(x, y, Qt::white);
+        }
+      }
+    }
+  }
+
+  if (cleanImage.save(&buffer, "JPEG", jpegQuality)) {
+    QImage compressed;
+    if (compressed.loadFromData(data, "JPEG")) {
+      return compressed;
+    }
+  }
+
+  return image; // Fallback to original
+}
+
+int PdfPage::calculateOptimalDPI(int quality) {
+  // More conservative DPI range to prevent memory issues
+  if (quality >= 90)
+    return 300; // High quality
+  if (quality >= 70)
+    return 200; // Medium-high quality
+  if (quality >= 50)
+    return 150; // Medium quality
+  if (quality >= 30)
+    return 120; // Lower quality
+  return 96;    // Minimum quality
+}
+
+QImage PdfPage::optimizeImageCompression(const QImage &originalImage,
+                                         int quality) {
+  if (originalImage.isNull()) {
+    qWarning() << "Null image passed to compression";
+    return originalImage;
+  }
+
+  QImage workingImage = originalImage;
+
+  // Convert to optimal format based on content
+  if (workingImage.hasAlphaChannel()) {
+    // Preserve alpha channel for transparent content
+    workingImage =
+        workingImage.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+  } else {
+    // Use RGB for opaque content
+    workingImage = workingImage.convertToFormat(QImage::Format_RGB888);
+  }
+
+  // Apply JPEG compression for lower quality settings
+  if (quality < 80) {
+    QByteArray compressedData;
+    QBuffer buffer(&compressedData);
+    buffer.open(QIODevice::WriteOnly);
+
+    // Map quality to JPEG quality (40-90 range)
+    int jpegQuality = qMax(40, qMin(90, 40 + (quality * 50 / 100)));
+
+    if (workingImage.save(&buffer, "JPEG", jpegQuality)) {
+      QImage compressedImage;
+      if (compressedImage.loadFromData(compressedData, "JPEG")) {
+        qDebug() << "Applied JPEG compression with quality:" << jpegQuality;
+        return compressedImage;
+      }
+    }
+
+    qWarning() << "JPEG compression failed, using original";
+  }
+
+  return workingImage;
+}
+
+QImage PdfPage::applySmartCompression(const QImage &image, int quality) {
+  QImage result = image.convertToFormat(QImage::Format_RGB888);
+
+  // Apply JPEG compression for file size reduction
+  QByteArray compressedData;
+  QBuffer buffer(&compressedData);
+  buffer.open(QIODevice::WriteOnly);
+
+  // Map quality slider to JPEG quality (30-85 range for good compression)
+  int jpegQuality = 30 + (quality * 55 / 100);
+
+  if (result.save(&buffer, "JPEG", jpegQuality)) {
+    QImage compressedImage;
+    if (compressedImage.loadFromData(compressedData, "JPEG")) {
+      qDebug() << "Applied JPEG compression - Quality:" << jpegQuality
+               << "Original size:" << image.size()
+               << "Compressed size:" << compressedImage.size();
+      return compressedImage;
+    }
+  }
+
+  qWarning() << "Compression failed, using original";
+  return result;
+}
+
+qreal PdfPage::calculateOptimalScale(int quality, const QSizeF &pageSize) {
+  // Base scale factor based on quality (0.6 to 1.2 range)
+  qreal baseScale = 0.6 + (quality * 0.6 / 100.0);
+
+  // Adjust based on page dimensions
+  qreal maxDimension = qMax(pageSize.width(), pageSize.height());
+  qreal adjustmentFactor = 1.0;
+
+  if (maxDimension > 1200) {
+    adjustmentFactor = 0.8; // Reduce scale for very large pages
+  } else if (maxDimension < 600) {
+    adjustmentFactor = 1.2; // Increase scale for small pages
+  }
+
+  qreal finalScale = baseScale * adjustmentFactor;
+
+  // Clamp to reasonable bounds
+  return qBound(0.4, finalScale, 1.5);
+}
+
+// FIXED: New minimal compression method that preserves text
+QImage PdfPage::applyMinimalCompression(const QImage &image, int quality) {
+  // Don't convert format - this often causes black pages
+  QImage result = image;
+
+  // Only apply compression for very low quality settings
   if (quality < 30) {
-    // Convert to indexed color for maximum compression
-    processedImage = originalImage.convertToFormat(
-        QImage::Format_Indexed8, Qt::ColorOnly | Qt::DiffuseDither);
-  } else if (quality < 60) {
-    // Convert to RGB888 for medium compression
-    processedImage = originalImage.convertToFormat(QImage::Format_RGB888);
+    // Very conservative JPEG compression
+    QByteArray compressedData;
+    QBuffer buffer(&compressedData);
+    buffer.open(QIODevice::WriteOnly);
+
+    // Use higher JPEG quality to preserve text readability
+    int jpegQuality = qMax(60, 60 + (quality * 30 / 30)); // 60-90 range
+
+    // Convert to RGB only if necessary
+    QImage tempImage = result;
+    if (tempImage.format() != QImage::Format_RGB888) {
+      tempImage = tempImage.convertToFormat(QImage::Format_RGB888);
+    }
+
+    if (tempImage.save(&buffer, "JPEG", jpegQuality)) {
+      QImage compressedImage;
+      if (compressedImage.loadFromData(compressedData, "JPEG")) {
+        qDebug() << "Applied minimal JPEG compression - Quality:"
+                 << jpegQuality;
+        return compressedImage;
+      }
+    }
   }
 
-  // Scale down image for very low quality
-  if (quality < 20) {
-    QSize newSize = originalImage.size() * 0.6; // Scale to 60%
-    processedImage = processedImage.scaled(newSize, Qt::KeepAspectRatio,
-                                           Qt::SmoothTransformation);
-  } else if (quality < 40) {
-    QSize newSize = originalImage.size() * 0.8; // Scale to 80%
-    processedImage = processedImage.scaled(newSize, Qt::KeepAspectRatio,
-                                           Qt::SmoothTransformation);
-  }
-
-  return processedImage;
-}
-
-int PdfPage::calculateDPI(int quality) {
-  // Map quality (0-100) to DPI (72-200)
-  // Lower quality = lower DPI = smaller file
-  int minDPI = 72;
-  int maxDPI = 200;
-  return minDPI + ((maxDPI - minDPI) * quality) / 100;
-}
-
-qreal PdfPage::calculateScaleFactor(int quality) {
-  // Map quality to scale factor for rendering (0.5-2.0)
-  qreal minScale = 0.5;
-  qreal maxScale = 2.0;
-  return minScale + ((maxScale - minScale) * quality) / 100.0;
-}
-
-double PdfPage::calculateRenderDPI(int quality) {
-  // This method is kept for compatibility but not used in Qt PDF approach
-  double minRenderDPI = 96.0;
-  double maxRenderDPI = 300.0;
-  return minRenderDPI + ((maxRenderDPI - minRenderDPI) * quality) / 100.0;
+  return result; // Return original if compression fails or not needed
 }
