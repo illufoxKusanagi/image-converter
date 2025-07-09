@@ -54,8 +54,8 @@ set(
         PROJECT_PAGES
         pages/main_page.cpp
         pages/main_page.h
-        pages/pdf_page.cpp
-        pages/pdf_page.h
+        # pages/pdf_page.cpp
+        # pages/pdf_page.h
 )
 
 set(PROJECT_SOURCES

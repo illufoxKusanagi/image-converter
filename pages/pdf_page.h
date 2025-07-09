@@ -12,6 +12,7 @@
 #include <QPageSize>
 #include <QPdfDocument>
 #include <QPdfWriter>
+#include <QProcess>
 #include <QProgressDialog>
 #include <QStackedWidget>
 
@@ -42,6 +43,19 @@ private:
   QImage simpleCompress(const QImage &image, int quality);
   QImage removeBorderArtifacts(const QImage &image, int quality);
   QImage cleanImageBorders(const QImage &image);
+  QImage cleanBordersOnly(const QImage &image);
+  bool testMutool(const QString &inputPath, const QString &outputPath,
+                  int quality);
+  bool tryMutoolStrategy(const QString &input, const QString &output,
+                         const QStringList &baseArgs);
+  bool compressPdfAdvanced(const QString &inputPath, const QString &outputPath,
+                           int quality);
+  QStringList getCompressionStrategies(int quality);
+  bool executeCompressionStrategy(const QString &input, const QString &output,
+                                  const QString &strategy);
+  bool fallbackCompression(const QString &inputPath, const QString &outputPath,
+                           int quality);
+  void cleanupTempFiles(const QString &outputPath, int maxIndex);
 };
 
 #endif // PDF_PAGE_H

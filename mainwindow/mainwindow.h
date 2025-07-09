@@ -19,6 +19,8 @@ public:
 private:
   QTabWidget *m_tabWidget;
   void setupTabStyle();
+  void setupAppDifferentOs();
+  void setupMainPageConstraint();
 };
 
 #endif // MAINWINDOW_H
