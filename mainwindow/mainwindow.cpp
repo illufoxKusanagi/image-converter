@@ -8,16 +8,29 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   m_tabWidget = new QTabWidget(this);
   m_tabWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
   m_tabWidget->tabBar()->setUsesScrollButtons(false);
-  m_tabWidget->setFixedWidth(352);
+  setupAppDifferentOs();
   MainPage *mainPage = new MainPage(this);
-  PdfPage *pdfPage = new PdfPage(this);
+  // PdfPage *pdfPage = new PdfPage(this);
   m_tabWidget->addTab(mainPage, "Convert Image");
-  m_tabWidget->addTab(pdfPage, "Compress PDF");
+  // m_tabWidget->addTab(pdfPage, "Compress PDF");
   setupTabStyle();
   mainLayout->addWidget(m_tabWidget);
   setCentralWidget(centralWidget);
+}
+
+void MainWindow::setupAppDifferentOs() {}
+
+void MainWindow::setupMainPageConstraint() {
+#ifdef Q_OS_ANDROID
+  m_tabWidget->setMinimumWidth(352);
+  showMaximized();
+#elif Q_OS_IOS
+  m_tabWidget->setMinimumWidth(352);
+#else
+  m_tabWidget->setFixedWidth(352);
   setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint |
                  Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint);
+#endif
 }
 
 void MainWindow::setupTabStyle() {
@@ -44,6 +57,15 @@ void MainWindow::setupTabStyle() {
       "  border-top-right-radius: 8px;"
       "  margin-right: 2px;"
       "  margin-bottom: -1px;"
+#ifdef Q_OS_ANDROID
+      + "  min-width: 120px;"
+        "  min-height: 48px;" // Larger touch target
+        "  padding: 12px 16px;" +
+#else
+      + "  min-width: 132px;"
+        "  min-height: 32px;"
+        "  padding: 8px 20px;" +
+#endif
       "}"
       "QTabBar::tab:selected {"
       "  background: #ffffff;" +

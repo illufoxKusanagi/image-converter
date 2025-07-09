@@ -53,6 +53,7 @@ void MainPage::setupImageLayout() {
 
 void MainPage::onProcessButtonClicked() {
   QStringList sourcePaths = m_dragWidget->getFilePaths();
+  QString outputDir;
   if (sourcePaths.isEmpty()) {
     MessageBoxWidget messageBox("Error", "No file selected!",
                                 MessageBoxWidget::Critical);
@@ -63,8 +64,16 @@ void MainPage::onProcessButtonClicked() {
   if (sourcePaths.size() == 1) {
     m_dragWidget->convertImage(sourcePaths.first());
   } else {
-    QString outputDir = QFileDialog::getExistingDirectory(
+#ifdef Q_OS_ANDROID
+    // Use app's external storage directory on Android
+    outputDir =
+        QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+#else
+    outputDir = QFileDialog::getExistingDirectory(
         this, "Select Output Directory", QDir::homePath());
+#endif
+    // QString outputDir = QFileDialog::getExistingDirectory(
+    //     this, "Select Output Directory", QDir::homePath());
     if (outputDir.isEmpty()) {
       MessageBoxWidget messageBox("Error", "No output directory selected!",
                                   MessageBoxWidget::Critical);
