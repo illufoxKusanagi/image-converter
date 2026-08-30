@@ -13,7 +13,10 @@ class SliderWidget : public QWidget {
   Q_OBJECT
 public:
   explicit SliderWidget(QWidget *parent = nullptr, QString originTitle = "");
-  int getValue();
+  int getValue() const;
+  int value() const { return getValue(); }
+  void setTitle(const QString &title);
+  void setEnabled(bool enabled);
 
 signals:
   void valueChanged();
@@ -33,4 +36,4 @@ private:
   static const QString s_sliderStyling;
 };
 
-#endif // INPUTWIDGET_H
+#endif // SLIDERWIDGET_H

@@ -37,12 +37,12 @@ PdfPage::PdfPage(QWidget *parent)
 
   m_processButton = new ButtonAction(this, "Compress PDF", "no");
   m_processButton->setEnabled(true);
-  m_processButton->setSize(256, 42);
+  m_processButton->setSize(320, 42);
   connect(m_processButton, &QPushButton::clicked, this,
           &PdfPage::onProcessButtonClicked);
 
   m_cancelButton = new ButtonAction(this, "Cancel", "no");
-  m_cancelButton->setSize(256, 42);
+  m_cancelButton->setSize(320, 42);
   m_cancelButton->setVisible(false);
   m_cancelButton->setStyleSheet(
       "QPushButton {"
@@ -151,7 +151,7 @@ void PdfPage::compressSinglePdf(const QString &sourcePath, int quality) {
 
     QMetaObject::invokeMethod(
         this,
-        [this, success, outputPath]() {
+        [this, sourcePath, success, outputPath]() {
           setProcessingState(false);
           m_cancelButton->setText("Cancel");
 
@@ -161,7 +161,21 @@ void PdfPage::compressSinglePdf(const QString &sourcePath, int quality) {
                 MessageBoxWidget::Information, this);
             messageBox.exec();
           } else if (success) {
-            MessageBoxWidget messageBox("Success", "PDF compressed successfully!",
+            qint64 origSize = QFileInfo(sourcePath).size();
+            qint64 outSize = QFileInfo(outputPath).size();
+            QString sizeStats;
+            if (origSize > 0 && outSize > 0) {
+              double diffPct = (1.0 - (static_cast<double>(outSize) / origSize)) * 100.0;
+              sizeStats = QString("\n\nOriginal: %1\nCompressed: %2 (%3% %4)")
+                              .arg(DropFileWidget::formatFileSize(origSize))
+                              .arg(DropFileWidget::formatFileSize(outSize))
+                              .arg(qAbs(diffPct), 0, 'f', 1)
+                              .arg(diffPct >= 0 ? "smaller" : "larger");
+            }
+
+            MessageBoxWidget messageBox("Success",
+                                        QString("PDF compressed successfully!%1")
+                                            .arg(sizeStats),
                                         MessageBoxWidget::Information, this);
             messageBox.exec();
           } else {
@@ -193,6 +207,9 @@ void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
   QFuture<void> future = QtConcurrent::run([this, sourcePaths, outputDir, quality, totalFiles]() {
     int successCount = 0;
     int failureCount = 0;
+    qint64 totalOrigBytes = 0;
+    qint64 totalOutputBytes = 0;
+    QSet<QString> usedBaseNames;
 
     for (int i = 0; i < totalFiles; ++i) {
       if (m_isCancelled) {
@@ -201,11 +218,22 @@ void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
 
       const QString &sourcePath = sourcePaths.at(i);
       QFileInfo fileInfo(sourcePath);
+      QString baseName = fileInfo.baseName() + "_compressed";
+      QString uniqueBaseName = baseName;
+      int suffix = 1;
+      while (usedBaseNames.contains(uniqueBaseName.toLower()) ||
+             QFile::exists(QDir(outputDir).filePath(uniqueBaseName + ".pdf"))) {
+        uniqueBaseName = QString("%1_%2").arg(baseName).arg(suffix++);
+      }
+      usedBaseNames.insert(uniqueBaseName.toLower());
+
       QString outputPath =
-          QDir(outputDir).filePath(fileInfo.baseName() + "_compressed.pdf");
+          QDir(outputDir).filePath(uniqueBaseName + ".pdf");
 
       if (compressPdf(sourcePath, outputPath, quality, nullptr)) {
         successCount++;
+        totalOrigBytes += fileInfo.size();
+        totalOutputBytes += QFileInfo(outputPath).size();
       } else {
         failureCount++;
       }
@@ -220,7 +248,7 @@ void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
 
     QMetaObject::invokeMethod(
         this,
-        [this, successCount, failureCount]() {
+        [this, successCount, failureCount, totalOrigBytes, totalOutputBytes]() {
           setProcessingState(false);
           m_cancelButton->setText("Cancel");
 
@@ -229,6 +257,17 @@ void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
           QString message = QString("%1 PDF(s) compressed successfully.\n%2 PDF(s) failed.")
                                 .arg(successCount)
                                 .arg(failureCount);
+
+          if (totalOrigBytes > 0 && totalOutputBytes > 0 && successCount > 0) {
+            double diffPct =
+                (1.0 - (static_cast<double>(totalOutputBytes) / totalOrigBytes)) * 100.0;
+            message += QString("\n\nTotal Original: %1\nTotal Compressed: %2 (%3% %4)")
+                           .arg(DropFileWidget::formatFileSize(totalOrigBytes))
+                           .arg(DropFileWidget::formatFileSize(totalOutputBytes))
+                           .arg(qAbs(diffPct), 0, 'f', 1)
+                           .arg(diffPct >= 0 ? "smaller" : "larger");
+          }
+
           if (m_isCancelled) {
             message += "\n(Operation was stopped early by user)";
           }
@@ -260,8 +299,11 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
     return false;
   }
 
+  // Use temporary output path to avoid overwriting or corrupting existing destination on failure/cancellation
+  QString tempOutputPath = outputPath + ".tmp";
+
   // Create output PDF writer
-  QPdfWriter pdfWriter(outputPath);
+  QPdfWriter pdfWriter(tempOutputPath);
 
   // Configure quality settings
   int dpi = calculateDPI(quality);
@@ -274,6 +316,7 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
   QPainter painter(&pdfWriter);
   if (!painter.isActive()) {
     qWarning() << "Failed to create painter for output PDF";
+    QFile::remove(tempOutputPath);
     return false;
   }
 
@@ -281,6 +324,7 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
   for (int i = 0; i < totalPages; ++i) {
     if (m_isCancelled) {
       painter.end();
+      QFile::remove(tempOutputPath);
       return false;
     }
 
@@ -290,7 +334,9 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
     if (i > 0) {
       if (!pdfWriter.newPage()) {
         qWarning() << "Failed to create new page" << i;
-        continue;
+        painter.end();
+        QFile::remove(tempOutputPath);
+        return false;
       }
     }
 
@@ -305,7 +351,9 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
 
     if (pageImage.isNull()) {
       qWarning() << "Failed to render page" << i;
-      continue;
+      painter.end();
+      QFile::remove(tempOutputPath);
+      return false;
     }
 
     // Apply compression to the image
@@ -322,6 +370,16 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
   }
 
   painter.end();
+
+  // Atomically move temporary file to final output path
+  if (QFile::exists(outputPath)) {
+    QFile::remove(outputPath);
+  }
+  if (!QFile::rename(tempOutputPath, outputPath)) {
+    QFile::remove(tempOutputPath);
+    return false;
+  }
+
   return true;
 }
 

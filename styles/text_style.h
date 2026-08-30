@@ -37,22 +37,21 @@ inline QString BodySmallBold() {
 inline QString BodySmallRegular() {
   return "font-family: 'Roboto'; font-size: 14px; font-weight: 400; ";
 }
-inline QString SubttileBig() {
+inline QString SubtitleBig() {
   return "font-family: 'Roboto'; font-size: 14px; font-weight: 400; ";
 }
-inline QString SubttileBigBold() {
+inline QString SubtitleBigBold() {
   return "font-family: 'Roboto'; font-size: 14px; font-weight: 600; ";
 }
-inline QString SubttileMediumRegular() {
+inline QString SubtitleMediumRegular() {
   return "font-family: 'Roboto'; font-size: 12px; font-weight: 400; ";
 }
-inline QString SubttileMediumBold() {
+inline QString SubtitleMediumBold() {
   return "font-family: 'Roboto'; font-size: 12px; font-weight: 600; ";
 }
-inline QString SubttileSmallBold() {
+inline QString SubtitleSmallBold() {
   return "font-family: 'Roboto'; font-size: 10px; font-weight: 600; ";
 }
-inline QString SubttileSmallRegular() {
   return "font-family: 'Roboto'; font-size: 10px; font-weight: 400; ";
 }
 } // namespace TextStyle

@@ -27,7 +27,7 @@ MainPage::~MainPage() {
 }
 
 void MainPage::setupExtensionButton() {
-  QStringList extensionOptions = {"jpg", "jpeg", "png", "webp", "tiff"};
+  QStringList extensionOptions = {"jpg", "jpeg", "png", "webp", "tiff", "bmp", "gif"};
   m_targetExtension =
       new InputWidget(this, InputType("dropdown", "Target"), extensionOptions);
   connect(m_targetExtension, &InputWidget::valueChanged, this,
@@ -72,12 +72,12 @@ void MainPage::setupImageLayout() {
 
   m_processButton = new ButtonAction(this, "Process Image", "no");
   m_processButton->setEnabled(true);
-  m_processButton->setSize(256, 42);
+  m_processButton->setSize(320, 42);
   connect(m_processButton, &QPushButton::clicked, this,
           &MainPage::onProcessButtonClicked);
 
   m_cancelButton = new ButtonAction(this, "Cancel", "no");
-  m_cancelButton->setSize(256, 42);
+  m_cancelButton->setSize(320, 42);
   m_cancelButton->setVisible(false);
   m_cancelButton->setStyleSheet(
       "QPushButton {"
@@ -110,9 +110,14 @@ void MainPage::setProcessingState(bool isProcessing) {
   m_cancelButton->setVisible(isProcessing);
   m_cancelButton->setEnabled(isProcessing);
   m_progressBar->setVisible(isProcessing);
-  m_qualitySlider->setEnabled(!isProcessing);
   m_targetExtension->setEnabled(!isProcessing);
   m_dragWidget->setEnabled(!isProcessing);
+
+  if (isProcessing) {
+    m_qualitySlider->setEnabled(false);
+  } else {
+    onImageTargetExtensionChanged();
+  }
 }
 
 void MainPage::onCancelButtonClicked() {
@@ -180,7 +185,7 @@ void MainPage::onProcessButtonClicked() {
 
       QMetaObject::invokeMethod(
           this,
-          [this, success, outputPathWithExt, targetFormatString]() {
+          [this, sourcePath, success, outputPathWithExt, targetFormatString]() {
             m_progressBar->setValue(1);
             setProcessingState(false);
             m_cancelButton->setText("Cancel");
@@ -191,9 +196,23 @@ void MainPage::onProcessButtonClicked() {
                   MessageBoxWidget::Information, this);
               messageBox.exec();
             } else if (success) {
+              qint64 origSize = QFileInfo(sourcePath).size();
+              qint64 outSize = QFileInfo(outputPathWithExt).size();
+              QString sizeStats;
+              if (origSize > 0 && outSize > 0) {
+                double diffPct = (1.0 - (static_cast<double>(outSize) / origSize)) * 100.0;
+                sizeStats = QString("\n\nOriginal: %1\nConverted: %2 (%3% %4)")
+                                .arg(DropFileWidget::formatFileSize(origSize))
+                                .arg(DropFileWidget::formatFileSize(outSize))
+                                .arg(qAbs(diffPct), 0, 'f', 1)
+                                .arg(diffPct >= 0 ? "smaller" : "larger");
+              }
+
               MessageBoxWidget messageBox(
                   "Success",
-                  QString("Image converted successfully to %1").arg(outputPathWithExt),
+                  QString("Image converted successfully to %1%2")
+                      .arg(outputPathWithExt)
+                      .arg(sizeStats),
                   MessageBoxWidget::Information, this);
               messageBox.exec();
             } else {
@@ -226,6 +245,10 @@ void MainPage::onProcessButtonClicked() {
                                               targetExt, totalFiles, dragWidget]() {
       int successCount = 0;
       int failureCount = 0;
+      qint64 totalOrigBytes = 0;
+      qint64 totalOutputBytes = 0;
+      QSet<QString> usedBaseNames;
+      QString ext = dragWidget->imageExtensionToString(targetExt).toLower();
 
       for (int i = 0; i < totalFiles; ++i) {
         if (m_isCancelled) {
@@ -238,9 +261,21 @@ void MainPage::onProcessButtonClicked() {
           failureCount++;
         } else {
           QFileInfo fileInfo(sourcePath);
-          QString baseOutputName = QDir(outputDir).filePath(fileInfo.baseName());
+          QString baseName = fileInfo.baseName();
+          QString uniqueBaseName = baseName;
+          int suffix = 1;
+          while (usedBaseNames.contains(uniqueBaseName.toLower()) ||
+                 QFile::exists(QDir(outputDir).filePath(uniqueBaseName + "." + ext))) {
+            uniqueBaseName = QString("%1_%2").arg(baseName).arg(suffix++);
+          }
+          usedBaseNames.insert(uniqueBaseName.toLower());
+
+          QString baseOutputName = QDir(outputDir).filePath(uniqueBaseName);
           if (dragWidget->saveImage(&image, baseOutputName, quality, &targetExt)) {
             successCount++;
+            totalOrigBytes += fileInfo.size();
+            QString outputFilePath = baseOutputName + "." + ext;
+            totalOutputBytes += QFileInfo(outputFilePath).size();
           } else {
             failureCount++;
           }
@@ -256,7 +291,7 @@ void MainPage::onProcessButtonClicked() {
 
       QMetaObject::invokeMethod(
           this,
-          [this, successCount, failureCount]() {
+          [this, successCount, failureCount, totalOrigBytes, totalOutputBytes]() {
             setProcessingState(false);
             m_cancelButton->setText("Cancel");
 
@@ -265,6 +300,17 @@ void MainPage::onProcessButtonClicked() {
             QString message = QString("%1 image(s) converted successfully.\n%2 image(s) failed.")
                                   .arg(successCount)
                                   .arg(failureCount);
+
+            if (totalOrigBytes > 0 && totalOutputBytes > 0 && successCount > 0) {
+              double diffPct =
+                  (1.0 - (static_cast<double>(totalOutputBytes) / totalOrigBytes)) * 100.0;
+              message += QString("\n\nTotal Original: %1\nTotal Converted: %2 (%3% %4)")
+                             .arg(DropFileWidget::formatFileSize(totalOrigBytes))
+                             .arg(DropFileWidget::formatFileSize(totalOutputBytes))
+                             .arg(qAbs(diffPct), 0, 'f', 1)
+                             .arg(diffPct >= 0 ? "smaller" : "larger");
+            }
+
             if (m_isCancelled) {
               message += "\n(Operation was stopped early by user)";
             }
@@ -283,13 +329,31 @@ void MainPage::onImageTargetExtensionChanged() {
   double value = m_targetExtension->getValue();
   if (value == 0) {
     m_targetImageExtension = DropFileWidget::ImageExtension::JPG;
+    m_qualitySlider->setEnabled(true);
+    m_qualitySlider->setTitle("Image Quality");
   } else if (value == 1) {
     m_targetImageExtension = DropFileWidget::ImageExtension::JPEG;
+    m_qualitySlider->setEnabled(true);
+    m_qualitySlider->setTitle("Image Quality");
   } else if (value == 2) {
     m_targetImageExtension = DropFileWidget::ImageExtension::PNG;
+    m_qualitySlider->setEnabled(false);
+    m_qualitySlider->setTitle("PNG (Lossless - Quality N/A)");
   } else if (value == 3) {
     m_targetImageExtension = DropFileWidget::ImageExtension::WEBP;
+    m_qualitySlider->setEnabled(true);
+    m_qualitySlider->setTitle("Image Quality");
   } else if (value == 4) {
     m_targetImageExtension = DropFileWidget::ImageExtension::TIFF;
+    m_qualitySlider->setEnabled(true);
+    m_qualitySlider->setTitle("Image Quality");
+  } else if (value == 5) {
+    m_targetImageExtension = DropFileWidget::ImageExtension::BMP;
+    m_qualitySlider->setEnabled(false);
+    m_qualitySlider->setTitle("BMP (Uncompressed)");
+  } else if (value == 6) {
+    m_targetImageExtension = DropFileWidget::ImageExtension::GIF;
+    m_qualitySlider->setEnabled(false);
+    m_qualitySlider->setTitle("GIF (Indexed Color)");
   }
 }

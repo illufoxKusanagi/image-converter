@@ -41,7 +41,19 @@ void SliderWidget::updateSpinBoxValue() {
   emit valueChanged();
 }
 
-int SliderWidget::getValue() { return m_value; }
+int SliderWidget::getValue() const { return m_value; }
+
+void SliderWidget::setTitle(const QString &title) {
+  if (m_label) {
+    m_label->setText(title);
+  }
+}
+
+void SliderWidget::setEnabled(bool enabled) {
+  QWidget::setEnabled(enabled);
+  if (m_slider) m_slider->setEnabled(enabled);
+  if (m_spinBox) m_spinBox->setEnabled(enabled);
+}
 
 const QString SliderWidget::s_labelStyling =
     "QLabel {"
