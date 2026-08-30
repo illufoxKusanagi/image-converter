@@ -52,8 +52,17 @@ inline QString SubtitleMediumBold() {
 inline QString SubtitleSmallBold() {
   return "font-family: 'Roboto'; font-size: 10px; font-weight: 600; ";
 }
+inline QString SubtitleSmallRegular() {
   return "font-family: 'Roboto'; font-size: 10px; font-weight: 400; ";
 }
+
+// Legacy aliases
+inline QString SubttileBig() { return SubtitleBig(); }
+inline QString SubttileBigBold() { return SubtitleBigBold(); }
+inline QString SubttileMediumRegular() { return SubtitleMediumRegular(); }
+inline QString SubttileMediumBold() { return SubtitleMediumBold(); }
+inline QString SubttileSmallBold() { return SubtitleSmallBold(); }
+inline QString SubttileSmallRegular() { return SubtitleSmallRegular(); }
 } // namespace TextStyle
 
 #endif // TEXTSTYLE_H

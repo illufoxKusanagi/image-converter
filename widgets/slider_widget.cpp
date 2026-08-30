@@ -43,6 +43,21 @@ void SliderWidget::updateSpinBoxValue() {
 
 int SliderWidget::getValue() const { return m_value; }
 
+void SliderWidget::setValue(int value) {
+  m_value = qBound(0, value, 100);
+  if (m_slider) {
+    m_slider->blockSignals(true);
+    m_slider->setValue(m_value);
+    m_slider->blockSignals(false);
+  }
+  if (m_spinBox) {
+    m_spinBox->blockSignals(true);
+    m_spinBox->setValue(m_value);
+    m_spinBox->blockSignals(false);
+  }
+  emit valueChanged();
+}
+
 void SliderWidget::setTitle(const QString &title) {
   if (m_label) {
     m_label->setText(title);

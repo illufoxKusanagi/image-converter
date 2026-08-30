@@ -3,6 +3,7 @@
 
 #include "widgets/button_action.h"
 #include "widgets/drop_file_widget.h"
+#include "widgets/input_widget.h"
 #include "widgets/slider_widget.h"
 #include <QFutureWatcher>
 #include <QPageSize>
@@ -25,10 +26,13 @@ public:
 private slots:
   void onProcessButtonClicked();
   void onCancelButtonClicked();
+  void onPresetChanged();
+  void onQualitySliderChanged();
 
 private:
   QVBoxLayout *mainLayout;
   SliderWidget *m_qualitySlider;
+  InputWidget *m_presetDropdown;
   DropFileWidget *m_dragWidget;
   QProgressBar *m_progressBar;
   ButtonAction *m_processButton;

@@ -16,6 +16,23 @@ PdfPage::PdfPage(QWidget *parent)
   m_qualitySlider = new SliderWidget(this, "PDF Quality");
   m_qualitySlider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
+  QHBoxLayout *attributeLayout = new QHBoxLayout();
+  attributeLayout->setContentsMargins(0, 0, 0, 0);
+  attributeLayout->setSpacing(16);
+
+  QStringList presetOptions = {
+      "Custom", "Web / Email (70-80% smaller)", "Balanced (40-50% smaller)",
+      "High Quality (15-25% smaller)"};
+  m_presetDropdown =
+      new InputWidget(this, InputType("dropdown", "Preset"), presetOptions);
+  connect(m_presetDropdown, &InputWidget::valueChanged, this,
+          &PdfPage::onPresetChanged);
+  connect(m_qualitySlider, &SliderWidget::valueChanged, this,
+          &PdfPage::onQualitySliderChanged);
+
+  attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignBottom);
+  attributeLayout->addWidget(m_presetDropdown, 1, Qt::AlignBottom);
+
   m_progressBar = new QProgressBar(this);
   m_progressBar->setFixedHeight(20);
   m_progressBar->setAlignment(Qt::AlignCenter);
@@ -63,7 +80,7 @@ PdfPage::PdfPage(QWidget *parent)
           &PdfPage::onCancelButtonClicked);
 
   mainLayout->addWidget(m_dragWidget);
-  mainLayout->addWidget(m_qualitySlider);
+  mainLayout->addLayout(attributeLayout);
   mainLayout->addWidget(m_progressBar);
   mainLayout->addWidget(m_processButton, 0, Qt::AlignCenter);
   mainLayout->addWidget(m_cancelButton, 0, Qt::AlignCenter);
@@ -77,6 +94,34 @@ PdfPage::~PdfPage() {
   }
 }
 
+void PdfPage::onPresetChanged() {
+  int val = static_cast<int>(m_presetDropdown->getValue());
+  m_qualitySlider->blockSignals(true);
+  if (val == 1) {
+    m_qualitySlider->setValue(20);
+  } else if (val == 2) {
+    m_qualitySlider->setValue(50);
+  } else if (val == 3) {
+    m_qualitySlider->setValue(80);
+  }
+  m_qualitySlider->blockSignals(false);
+}
+
+void PdfPage::onQualitySliderChanged() {
+  int val = m_qualitySlider->getValue();
+  m_presetDropdown->blockSignals(true);
+  if (val == 20) {
+    m_presetDropdown->setValue(1);
+  } else if (val == 50) {
+    m_presetDropdown->setValue(2);
+  } else if (val == 80) {
+    m_presetDropdown->setValue(3);
+  } else {
+    m_presetDropdown->setValue(0);
+  }
+  m_presetDropdown->blockSignals(false);
+}
+
 void PdfPage::setProcessingState(bool isProcessing) {
   m_isProcessing = isProcessing;
   m_processButton->setVisible(!isProcessing);
@@ -84,6 +129,7 @@ void PdfPage::setProcessingState(bool isProcessing) {
   m_cancelButton->setEnabled(isProcessing);
   m_progressBar->setVisible(isProcessing);
   m_qualitySlider->setEnabled(!isProcessing);
+  m_presetDropdown->setEnabled(!isProcessing);
   m_dragWidget->setEnabled(!isProcessing);
 }
 
@@ -371,13 +417,25 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
 
   painter.end();
 
-  // Atomically move temporary file to final output path
-  if (QFile::exists(outputPath)) {
-    QFile::remove(outputPath);
+  // Atomically move temporary file to final output path with backup preservation
+  const bool hadExisting = QFile::exists(outputPath);
+  const QString backupPath = outputPath + ".bak";
+  if (hadExisting) {
+    QFile::remove(backupPath);
+    if (!QFile::rename(outputPath, backupPath)) {
+      QFile::remove(tempOutputPath);
+      return false;
+    }
   }
   if (!QFile::rename(tempOutputPath, outputPath)) {
     QFile::remove(tempOutputPath);
+    if (hadExisting) {
+      QFile::rename(backupPath, outputPath);
+    }
     return false;
+  }
+  if (hadExisting) {
+    QFile::remove(backupPath);
   }
 
   return true;

@@ -15,6 +15,7 @@ public:
   explicit SliderWidget(QWidget *parent = nullptr, QString originTitle = "");
   int getValue() const;
   int value() const { return getValue(); }
+  void setValue(int value);
   void setTitle(const QString &title);
   void setEnabled(bool enabled);
 
