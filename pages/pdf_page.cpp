@@ -1,39 +1,118 @@
 #include "pdf_page.h"
+#include <QDebug>
+#include <QDir>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QtConcurrent/QtConcurrent>
 
-PdfPage::PdfPage(QWidget *parent) : QWidget(parent) {
-  mainLayout = new QVBoxLayout(this);
+PdfPage::PdfPage(QWidget *parent)
+    : QWidget(parent), mainLayout(new QVBoxLayout(this)),
+      m_futureWatcher(new QFutureWatcher<void>(this)) {
   mainLayout->setContentsMargins(16, 16, 16, 16);
-  mainLayout->setSpacing(16);
-  mainLayout->setAlignment(Qt::AlignHCenter);
+  mainLayout->setSpacing(12);
+  mainLayout->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
+
   m_dragWidget = new DropFileWidget(this, "PDF");
   m_qualitySlider = new SliderWidget(this, "PDF Quality");
-  ButtonAction *processButton = new ButtonAction(this, "Compress PDF", "no");
-  processButton->setEnabled(true);
   m_qualitySlider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+  m_progressBar = new QProgressBar(this);
+  m_progressBar->setFixedHeight(20);
+  m_progressBar->setAlignment(Qt::AlignCenter);
+  m_progressBar->setTextVisible(true);
+  m_progressBar->setVisible(false);
+  m_progressBar->setStyleSheet(
+      "QProgressBar {"
+      "  border: 1px solid " + Colors::Grey300.name() + ";"
+      "  border-radius: 8px;"
+      "  text-align: center;"
+      "  background-color: " + Colors::Grey100.name() + ";"
+      "  color: " + Colors::StandardBlack.name() + ";"
+      "  " + TextStyle::BodySmallBold() +
+      "}"
+      "QProgressBar::chunk {"
+      "  background-color: " + Colors::Primary500.name() + ";"
+      "  border-radius: 7px;"
+      "}");
+
+  m_processButton = new ButtonAction(this, "Compress PDF", "no");
+  m_processButton->setEnabled(true);
+  m_processButton->setSize(256, 42);
+  connect(m_processButton, &QPushButton::clicked, this,
+          &PdfPage::onProcessButtonClicked);
+
+  m_cancelButton = new ButtonAction(this, "Cancel", "no");
+  m_cancelButton->setSize(256, 42);
+  m_cancelButton->setVisible(false);
+  m_cancelButton->setStyleSheet(
+      "QPushButton {"
+      "    padding: 12px 4px;"
+      "    border: 0 solid;"
+      "    border-radius: 12px;"
+      "    background-color: " + Colors::Danger500.name() + ";"
+      "    color: " + Colors::StandardWhite.name() + ";"
+      "    " + TextStyle::BodyMediumBold() +
+      "}"
+      "QPushButton:hover {"
+      "    background-color: " + Colors::Danger600.name() + ";"
+      "}"
+      "QPushButton:pressed {"
+      "    background-color: " + Colors::Danger700.name() + ";"
+      "}");
+  connect(m_cancelButton, &QPushButton::clicked, this,
+          &PdfPage::onCancelButtonClicked);
+
   mainLayout->addWidget(m_dragWidget);
   mainLayout->addWidget(m_qualitySlider);
-  mainLayout->addWidget(processButton);
-  connect(processButton, &QPushButton::clicked, this,
-          &PdfPage::onProcessButtonClicked);
+  mainLayout->addWidget(m_progressBar);
+  mainLayout->addWidget(m_processButton, 0, Qt::AlignCenter);
+  mainLayout->addWidget(m_cancelButton, 0, Qt::AlignCenter);
   setLayout(mainLayout);
 }
 
+PdfPage::~PdfPage() {
+  m_isCancelled = true;
+  if (m_futureWatcher->isRunning()) {
+    m_futureWatcher->waitForFinished();
+  }
+}
+
+void PdfPage::setProcessingState(bool isProcessing) {
+  m_isProcessing = isProcessing;
+  m_processButton->setVisible(!isProcessing);
+  m_cancelButton->setVisible(isProcessing);
+  m_cancelButton->setEnabled(isProcessing);
+  m_progressBar->setVisible(isProcessing);
+  m_qualitySlider->setEnabled(!isProcessing);
+  m_dragWidget->setEnabled(!isProcessing);
+}
+
+void PdfPage::onCancelButtonClicked() {
+  if (m_isProcessing) {
+    m_isCancelled = true;
+    m_cancelButton->setEnabled(false);
+    m_cancelButton->setText("Cancelling...");
+  }
+}
+
 void PdfPage::onProcessButtonClicked() {
+  if (m_isProcessing) {
+    return;
+  }
+
   QStringList sourcePaths = m_dragWidget->getFilePaths();
   if (sourcePaths.isEmpty()) {
     MessageBoxWidget messageBox("Error", "No PDF file selected!",
-                                MessageBoxWidget::Critical);
+                                MessageBoxWidget::Critical, this);
     messageBox.exec();
     return;
   }
 
-  int compressionQuality = m_qualitySlider->getValue(); // 0-100 scale
+  int compressionQuality = m_qualitySlider->getValue();
 
   if (sourcePaths.size() == 1) {
-    // Single file compression
     compressSinglePdf(sourcePaths.first(), compressionQuality);
   } else {
-    // Batch compression
     compressBatchPdf(sourcePaths, compressionQuality);
   }
 }
@@ -46,53 +125,125 @@ void PdfPage::compressSinglePdf(const QString &sourcePath, int quality) {
           .filePath(QFileInfo(sourcePath).baseName() + "_compressed.pdf"),
       "PDF Files (*.pdf)");
 
-  if (outputPath.isEmpty())
+  if (outputPath.isEmpty()) {
     return;
-
-  if (compressPdf(sourcePath, outputPath, quality)) {
-    MessageBoxWidget messageBox("Success", "PDF compressed successfully!",
-                                MessageBoxWidget::Information);
-    messageBox.exec();
-  } else {
-    MessageBoxWidget messageBox("Error", "Failed to compress PDF!",
-                                MessageBoxWidget::Critical);
-    messageBox.exec();
   }
+
+  setProcessingState(true);
+  m_isCancelled = false;
+  m_progressBar->setRange(0, 100);
+  m_progressBar->setValue(0);
+  m_progressBar->setFormat("Compressing PDF... %p%");
+
+  QFuture<void> future = QtConcurrent::run([this, sourcePath, outputPath, quality]() {
+    auto progressCallback = [this](int current, int total) {
+      QMetaObject::invokeMethod(
+          this,
+          [this, current, total]() {
+            m_progressBar->setRange(0, total);
+            m_progressBar->setValue(current);
+            m_progressBar->setFormat(QString("Compressing page %v of %m (%p%)"));
+          },
+          Qt::QueuedConnection);
+    };
+
+    bool success = compressPdf(sourcePath, outputPath, quality, progressCallback);
+
+    QMetaObject::invokeMethod(
+        this,
+        [this, success, outputPath]() {
+          setProcessingState(false);
+          m_cancelButton->setText("Cancel");
+
+          if (m_isCancelled) {
+            MessageBoxWidget messageBox(
+                "Cancelled", "PDF compression was cancelled.",
+                MessageBoxWidget::Information, this);
+            messageBox.exec();
+          } else if (success) {
+            MessageBoxWidget messageBox("Success", "PDF compressed successfully!",
+                                        MessageBoxWidget::Information, this);
+            messageBox.exec();
+          } else {
+            MessageBoxWidget messageBox("Error", "Failed to compress PDF!",
+                                        MessageBoxWidget::Critical, this);
+            messageBox.exec();
+          }
+        },
+        Qt::QueuedConnection);
+  });
+  m_futureWatcher->setFuture(future);
 }
 
 void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
   QString outputDir = QFileDialog::getExistingDirectory(
       this, "Select Output Directory for Compressed PDFs", QDir::homePath());
 
-  if (outputDir.isEmpty())
+  if (outputDir.isEmpty()) {
     return;
-
-  int successCount = 0;
-  int failureCount = 0;
-
-  for (const QString &sourcePath : sourcePaths) {
-    QFileInfo fileInfo(sourcePath);
-    QString outputPath =
-        QDir(outputDir).filePath(fileInfo.baseName() + "_compressed.pdf");
-
-    if (compressPdf(sourcePath, outputPath, quality)) {
-      successCount++;
-    } else {
-      failureCount++;
-    }
   }
 
-  MessageBoxWidget messageBox(
-      "Batch Compression Complete",
-      QString("%1 PDF(s) compressed successfully.\n%2 PDF(s) failed.")
-          .arg(successCount)
-          .arg(failureCount),
-      MessageBoxWidget::Information);
-  messageBox.exec();
+  setProcessingState(true);
+  m_isCancelled = false;
+  int totalFiles = sourcePaths.size();
+  m_progressBar->setRange(0, totalFiles);
+  m_progressBar->setValue(0);
+  m_progressBar->setFormat(QString("Compressing %v of %m PDFs (%p%)"));
+
+  QFuture<void> future = QtConcurrent::run([this, sourcePaths, outputDir, quality, totalFiles]() {
+    int successCount = 0;
+    int failureCount = 0;
+
+    for (int i = 0; i < totalFiles; ++i) {
+      if (m_isCancelled) {
+        break;
+      }
+
+      const QString &sourcePath = sourcePaths.at(i);
+      QFileInfo fileInfo(sourcePath);
+      QString outputPath =
+          QDir(outputDir).filePath(fileInfo.baseName() + "_compressed.pdf");
+
+      if (compressPdf(sourcePath, outputPath, quality, nullptr)) {
+        successCount++;
+      } else {
+        failureCount++;
+      }
+
+      QMetaObject::invokeMethod(
+          this,
+          [this, i]() {
+            m_progressBar->setValue(i + 1);
+          },
+          Qt::QueuedConnection);
+    }
+
+    QMetaObject::invokeMethod(
+        this,
+        [this, successCount, failureCount]() {
+          setProcessingState(false);
+          m_cancelButton->setText("Cancel");
+
+          QString title = m_isCancelled ? "Batch Compression Cancelled"
+                                        : "Batch Compression Complete";
+          QString message = QString("%1 PDF(s) compressed successfully.\n%2 PDF(s) failed.")
+                                .arg(successCount)
+                                .arg(failureCount);
+          if (m_isCancelled) {
+            message += "\n(Operation was stopped early by user)";
+          }
+
+          MessageBoxWidget messageBox(title, message,
+                                      MessageBoxWidget::Information, this);
+          messageBox.exec();
+        },
+        Qt::QueuedConnection);
+  });
+  m_futureWatcher->setFuture(future);
 }
 
 bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
-                          int quality) {
+                          int quality, const std::function<void(int, int)> &onPageProgress) {
   QPdfDocument pdfDocument;
 
   // Load the input PDF
@@ -103,6 +254,12 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
     return false;
   }
 
+  int totalPages = pdfDocument.pageCount();
+  if (totalPages <= 0) {
+    qWarning() << "PDF has no pages:" << inputPath;
+    return false;
+  }
+
   // Create output PDF writer
   QPdfWriter pdfWriter(outputPath);
 
@@ -110,11 +267,9 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
   int dpi = calculateDPI(quality);
   pdfWriter.setResolution(dpi);
 
-  // Set page size based on first page if available
-  if (pdfDocument.pageCount() > 0) {
-    QSizeF pageSize = pdfDocument.pagePointSize(0);
-    pdfWriter.setPageSize(QPageSize(pageSize, QPageSize::Point));
-  }
+  // Set initial page size based on first page
+  QSizeF firstPageSize = pdfDocument.pagePointSize(0);
+  pdfWriter.setPageSize(QPageSize(firstPageSize, QPageSize::Point));
 
   QPainter painter(&pdfWriter);
   if (!painter.isActive()) {
@@ -123,7 +278,15 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
   }
 
   // Process each page
-  for (int i = 0; i < pdfDocument.pageCount(); ++i) {
+  for (int i = 0; i < totalPages; ++i) {
+    if (m_isCancelled) {
+      painter.end();
+      return false;
+    }
+
+    QSizeF pageSize = pdfDocument.pagePointSize(i);
+    pdfWriter.setPageSize(QPageSize(pageSize, QPageSize::Point));
+
     if (i > 0) {
       if (!pdfWriter.newPage()) {
         qWarning() << "Failed to create new page" << i;
@@ -131,8 +294,6 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
       }
     }
 
-    // Get page size for this specific page
-    QSizeF pageSize = pdfDocument.pagePointSize(i);
     qreal scaleFactor = calculateScaleFactor(quality);
 
     // Calculate render size based on quality
@@ -154,6 +315,10 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
     QRect pageRect =
         pdfWriter.pageLayout().paintRectPixels(pdfWriter.resolution());
     painter.drawImage(pageRect, pageImage);
+
+    if (onPageProgress) {
+      onPageProgress(i + 1, totalPages);
+    }
   }
 
   painter.end();
@@ -188,23 +353,13 @@ QImage PdfPage::compressImage(const QImage &originalImage, int quality) {
 }
 
 int PdfPage::calculateDPI(int quality) {
-  // Map quality (0-100) to DPI (72-200)
-  // Lower quality = lower DPI = smaller file
   int minDPI = 72;
   int maxDPI = 200;
   return minDPI + ((maxDPI - minDPI) * quality) / 100;
 }
 
 qreal PdfPage::calculateScaleFactor(int quality) {
-  // Map quality to scale factor for rendering (0.5-2.0)
   qreal minScale = 0.5;
   qreal maxScale = 2.0;
   return minScale + ((maxScale - minScale) * quality) / 100.0;
-}
-
-double PdfPage::calculateRenderDPI(int quality) {
-  // This method is kept for compatibility but not used in Qt PDF approach
-  double minRenderDPI = 96.0;
-  double maxRenderDPI = 300.0;
-  return minRenderDPI + ((maxRenderDPI - minRenderDPI) * quality) / 100.0;
 }

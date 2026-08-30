@@ -1,7 +1,9 @@
 #include "message_box_widget.h"
 
 MessageBoxWidget::MessageBoxWidget(const QString &windowTitle,
-                                   const QString &text, IconType iconType) {
+                                   const QString &text, IconType iconType,
+                                   QWidget *parent)
+    : QMessageBox(parent) {
   setWindowTitle(windowTitle);
   setText(text);
   setIcon(switchIcon(iconType));
@@ -15,7 +17,9 @@ MessageBoxWidget::MessageBoxWidget(const QString &windowTitle,
                 "    background-color: " +
                 Colors::Primary500.name() +
                 ";"
-                "    color: white;"
+                "    color: " +
+                Colors::StandardWhite.name() +
+                ";"
                 "    border: none;"
                 "    padding: 6px 12px;"
                 "    border-radius: 4px;"

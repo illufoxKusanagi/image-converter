@@ -5,10 +5,8 @@
 #include "pages/pdf_page.h"
 #include "styles/colors.h"
 #include "styles/text_style.h"
-#include <QFileDialog>
 #include <QMainWindow>
 #include <QTabWidget>
-#include <QVBoxLayout>
 
 class MainWindow : public QMainWindow {
   Q_OBJECT

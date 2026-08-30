@@ -1,11 +1,17 @@
 #include "main_page.h"
+#include <QDir>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QtConcurrent/QtConcurrent>
 
 MainPage::MainPage(QWidget *parent)
-    : QWidget(parent), mainLayout(new QVBoxLayout(this)) {
+    : QWidget(parent), mainLayout(new QVBoxLayout(this)),
+      m_futureWatcher(new QFutureWatcher<void>(this)),
+      m_targetImageExtension(DropFileWidget::ImageExtension::JPG) {
   mainLayout->setContentsMargins(16, 16, 16, 16);
-  mainLayout->setSpacing(16);
+  mainLayout->setSpacing(12);
   mainLayout->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
-  m_sourceExtension = DropFileWidget::ImageExtension::JPG;
+
   setupImageLayout();
   if (m_targetExtension) {
     onImageTargetExtensionChanged();
@@ -13,14 +19,19 @@ MainPage::MainPage(QWidget *parent)
   setLayout(mainLayout);
 }
 
-void MainPage::setupImageInput() {}
+MainPage::~MainPage() {
+  m_isCancelled = true;
+  if (m_futureWatcher->isRunning()) {
+    m_futureWatcher->waitForFinished();
+  }
+}
 
 void MainPage::setupExtensionButton() {
   QStringList extensionOptions = {"jpg", "jpeg", "png", "webp", "tiff"};
   m_targetExtension =
       new InputWidget(this, InputType("dropdown", "Target"), extensionOptions);
   connect(m_targetExtension, &InputWidget::valueChanged, this,
-          MainPage::onImageTargetExtensionChanged);
+          &MainPage::onImageTargetExtensionChanged);
   m_targetExtension->getValue();
 }
 
@@ -34,81 +45,251 @@ void MainPage::setupImageAttribute() {
   mainLayout->addLayout(attributeLayout);
 }
 
-void MainPage::setupQualitySlider() {}
-
 void MainPage::setupImageLayout() {
   m_qualitySlider = new SliderWidget(this, "Image Quality");
   m_qualitySlider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
   m_dragWidget =
-      new DropFileWidget(this, "Image", m_qualitySlider, &m_sourceExtension);
-  ButtonAction *processButton = new ButtonAction(this, "Process Image", "no");
-  processButton->setEnabled(true);
-  processButton->setSize(256, 42);
-  connect(processButton, &QPushButton::clicked, this,
-          MainPage::onProcessButtonClicked);
+      new DropFileWidget(this, "Image", m_qualitySlider, &m_targetImageExtension);
+
+  m_progressBar = new QProgressBar(this);
+  m_progressBar->setFixedHeight(20);
+  m_progressBar->setAlignment(Qt::AlignCenter);
+  m_progressBar->setTextVisible(true);
+  m_progressBar->setVisible(false);
+  m_progressBar->setStyleSheet(
+      "QProgressBar {"
+      "  border: 1px solid " + Colors::Grey300.name() + ";"
+      "  border-radius: 8px;"
+      "  text-align: center;"
+      "  background-color: " + Colors::Grey100.name() + ";"
+      "  color: " + Colors::StandardBlack.name() + ";"
+      "  " + TextStyle::BodySmallBold() +
+      "}"
+      "QProgressBar::chunk {"
+      "  background-color: " + Colors::Primary500.name() + ";"
+      "  border-radius: 7px;"
+      "}");
+
+  m_processButton = new ButtonAction(this, "Process Image", "no");
+  m_processButton->setEnabled(true);
+  m_processButton->setSize(256, 42);
+  connect(m_processButton, &QPushButton::clicked, this,
+          &MainPage::onProcessButtonClicked);
+
+  m_cancelButton = new ButtonAction(this, "Cancel", "no");
+  m_cancelButton->setSize(256, 42);
+  m_cancelButton->setVisible(false);
+  m_cancelButton->setStyleSheet(
+      "QPushButton {"
+      "    padding: 12px 4px;"
+      "    border: 0 solid;"
+      "    border-radius: 12px;"
+      "    background-color: " + Colors::Danger500.name() + ";"
+      "    color: " + Colors::StandardWhite.name() + ";"
+      "    " + TextStyle::BodyMediumBold() +
+      "}"
+      "QPushButton:hover {"
+      "    background-color: " + Colors::Danger600.name() + ";"
+      "}"
+      "QPushButton:pressed {"
+      "    background-color: " + Colors::Danger700.name() + ";"
+      "}");
+  connect(m_cancelButton, &QPushButton::clicked, this,
+          &MainPage::onCancelButtonClicked);
+
   mainLayout->addWidget(m_dragWidget);
   setupImageAttribute();
-  mainLayout->addWidget(processButton, 0, Qt::AlignCenter);
+  mainLayout->addWidget(m_progressBar);
+  mainLayout->addWidget(m_processButton, 0, Qt::AlignCenter);
+  mainLayout->addWidget(m_cancelButton, 0, Qt::AlignCenter);
+}
+
+void MainPage::setProcessingState(bool isProcessing) {
+  m_isProcessing = isProcessing;
+  m_processButton->setVisible(!isProcessing);
+  m_cancelButton->setVisible(isProcessing);
+  m_cancelButton->setEnabled(isProcessing);
+  m_progressBar->setVisible(isProcessing);
+  m_qualitySlider->setEnabled(!isProcessing);
+  m_targetExtension->setEnabled(!isProcessing);
+  m_dragWidget->setEnabled(!isProcessing);
+}
+
+void MainPage::onCancelButtonClicked() {
+  if (m_isProcessing) {
+    m_isCancelled = true;
+    m_cancelButton->setEnabled(false);
+    m_cancelButton->setText("Cancelling...");
+  }
 }
 
 void MainPage::onProcessButtonClicked() {
+  if (m_isProcessing) {
+    return;
+  }
+
   QStringList sourcePaths = m_dragWidget->getFilePaths();
   if (sourcePaths.isEmpty()) {
     MessageBoxWidget messageBox("Error", "No file selected!",
-                                MessageBoxWidget::Critical);
+                                MessageBoxWidget::Critical, this);
     messageBox.exec();
     return;
   }
+
   int quality = m_qualitySlider->getValue();
+  DropFileWidget::ImageExtension targetExt = m_targetImageExtension;
+  QString targetFormatString = m_dragWidget->imageExtensionToString(targetExt);
+
   if (sourcePaths.size() == 1) {
-    m_dragWidget->convertImage(sourcePaths.first());
+    QString sourcePath = sourcePaths.first();
+    QString filter = targetFormatString.toUpper() + " (*." +
+                     targetFormatString.toLower() + ")";
+    QString suggestedName =
+        QFileInfo(sourcePath)
+            .dir()
+            .filePath(QFileInfo(sourcePath).baseName() + "_converted");
+
+    QString outputPathWithExt = QFileDialog::getSaveFileName(
+        this, "Save Image As", suggestedName, filter);
+
+    if (outputPathWithExt.isEmpty()) {
+      return;
+    }
+
+    QString outputPathWithoutExt = outputPathWithExt;
+    int lastDotIndex = outputPathWithExt.lastIndexOf('.');
+    if (lastDotIndex != -1) {
+      outputPathWithoutExt = outputPathWithExt.left(lastDotIndex);
+    }
+
+    setProcessingState(true);
+    m_isCancelled = false;
+    m_progressBar->setRange(0, 1);
+    m_progressBar->setValue(0);
+    m_progressBar->setFormat("Converting image... %p%");
+
+    DropFileWidget *dragWidget = m_dragWidget;
+    QFuture<void> future = QtConcurrent::run([this, sourcePath, outputPathWithoutExt,
+                                              outputPathWithExt, quality, targetExt,
+                                              targetFormatString, dragWidget]() {
+      QImage image(sourcePath);
+      bool success = false;
+      if (!image.isNull() && !m_isCancelled) {
+        success = dragWidget->saveImage(&image, outputPathWithoutExt, quality, &targetExt);
+      }
+
+      QMetaObject::invokeMethod(
+          this,
+          [this, success, outputPathWithExt, targetFormatString]() {
+            m_progressBar->setValue(1);
+            setProcessingState(false);
+            m_cancelButton->setText("Cancel");
+
+            if (m_isCancelled) {
+              MessageBoxWidget messageBox(
+                  "Cancelled", "Image conversion was cancelled.",
+                  MessageBoxWidget::Information, this);
+              messageBox.exec();
+            } else if (success) {
+              MessageBoxWidget messageBox(
+                  "Success",
+                  QString("Image converted successfully to %1").arg(outputPathWithExt),
+                  MessageBoxWidget::Information, this);
+              messageBox.exec();
+            } else {
+              MessageBoxWidget messageBox(
+                  "Error",
+                  QString("Failed to save image as %1").arg(targetFormatString),
+                  MessageBoxWidget::Critical, this);
+              messageBox.exec();
+            }
+          },
+          Qt::QueuedConnection);
+    });
+    m_futureWatcher->setFuture(future);
   } else {
     QString outputDir = QFileDialog::getExistingDirectory(
         this, "Select Output Directory", QDir::homePath());
     if (outputDir.isEmpty()) {
-      MessageBoxWidget messageBox("Error", "No output directory selected!",
-                                  MessageBoxWidget::Critical);
-      messageBox.exec();
       return;
     }
-    int successCount = 0;
-    int failureCount = 0;
-    for (const QString &sourcePath : sourcePaths) {
-      QImage image(sourcePath);
-      if (image.isNull()) {
-        failureCount++;
-        continue;
+
+    setProcessingState(true);
+    m_isCancelled = false;
+    int totalFiles = sourcePaths.size();
+    m_progressBar->setRange(0, totalFiles);
+    m_progressBar->setValue(0);
+    m_progressBar->setFormat(QString("Converting %v of %m images (%p%)"));
+
+    DropFileWidget *dragWidget = m_dragWidget;
+    QFuture<void> future = QtConcurrent::run([this, sourcePaths, outputDir, quality,
+                                              targetExt, totalFiles, dragWidget]() {
+      int successCount = 0;
+      int failureCount = 0;
+
+      for (int i = 0; i < totalFiles; ++i) {
+        if (m_isCancelled) {
+          break;
+        }
+
+        const QString &sourcePath = sourcePaths.at(i);
+        QImage image(sourcePath);
+        if (image.isNull()) {
+          failureCount++;
+        } else {
+          QFileInfo fileInfo(sourcePath);
+          QString baseOutputName = QDir(outputDir).filePath(fileInfo.baseName());
+          if (dragWidget->saveImage(&image, baseOutputName, quality, &targetExt)) {
+            successCount++;
+          } else {
+            failureCount++;
+          }
+        }
+
+        QMetaObject::invokeMethod(
+            this,
+            [this, i]() {
+              m_progressBar->setValue(i + 1);
+            },
+            Qt::QueuedConnection);
       }
-      QFileInfo fileInfo(sourcePath);
-      QString baseOutputName = QDir(outputDir).filePath(fileInfo.baseName());
-      if (m_dragWidget->saveImage(&image, baseOutputName, quality,
-                                  &m_sourceExtension)) {
-        successCount++;
-      } else {
-        failureCount++;
-      }
-    }
-    MessageBoxWidget messageBox(
-        "Batch Conversion Complete",
-        QString("%1 image(s) converted successfully.\n%2 image(s) failed.")
-            .arg(successCount)
-            .arg(failureCount),
-        MessageBoxWidget::Information);
-    messageBox.exec();
+
+      QMetaObject::invokeMethod(
+          this,
+          [this, successCount, failureCount]() {
+            setProcessingState(false);
+            m_cancelButton->setText("Cancel");
+
+            QString title = m_isCancelled ? "Batch Conversion Cancelled"
+                                          : "Batch Conversion Complete";
+            QString message = QString("%1 image(s) converted successfully.\n%2 image(s) failed.")
+                                  .arg(successCount)
+                                  .arg(failureCount);
+            if (m_isCancelled) {
+              message += "\n(Operation was stopped early by user)";
+            }
+
+            MessageBoxWidget messageBox(title, message,
+                                        MessageBoxWidget::Information, this);
+            messageBox.exec();
+          },
+          Qt::QueuedConnection);
+    });
+    m_futureWatcher->setFuture(future);
   }
 }
 
 void MainPage::onImageTargetExtensionChanged() {
   double value = m_targetExtension->getValue();
   if (value == 0) {
-    m_sourceExtension = DropFileWidget::ImageExtension::JPG;
+    m_targetImageExtension = DropFileWidget::ImageExtension::JPG;
   } else if (value == 1) {
-    m_sourceExtension = DropFileWidget::ImageExtension::JPEG;
+    m_targetImageExtension = DropFileWidget::ImageExtension::JPEG;
   } else if (value == 2) {
-    m_sourceExtension = DropFileWidget::ImageExtension::PNG;
+    m_targetImageExtension = DropFileWidget::ImageExtension::PNG;
   } else if (value == 3) {
-    m_sourceExtension = DropFileWidget::ImageExtension::WEBP;
+    m_targetImageExtension = DropFileWidget::ImageExtension::WEBP;
   } else if (value == 4) {
-    m_sourceExtension = DropFileWidget::ImageExtension::TIFF;
+    m_targetImageExtension = DropFileWidget::ImageExtension::TIFF;
   }
 }
