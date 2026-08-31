@@ -8,11 +8,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   m_tabWidget = new QTabWidget(this);
   m_tabWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
   m_tabWidget->tabBar()->setUsesScrollButtons(false);
-  m_tabWidget->setFixedWidth(352);
+  m_tabWidget->setFixedWidth(460);
   MainPage *mainPage = new MainPage(this);
-  PdfPage *pdfPage = new PdfPage(this);
   m_tabWidget->addTab(mainPage, "Convert Image");
-  m_tabWidget->addTab(pdfPage, "Compress PDF");
+  // Temporarily hidden: Compress PDF feature
+  // PdfPage *pdfPage = new PdfPage(this);
+  // m_tabWidget->addTab(pdfPage, "Compress PDF");
   setupTabStyle();
   mainLayout->addWidget(m_tabWidget);
   setCentralWidget(centralWidget);
