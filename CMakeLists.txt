@@ -115,6 +115,35 @@ install(TARGETS ImageConverter
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+if(UNIX AND NOT APPLE)
+    install(FILES resources/image-converter.desktop
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    install(FILES resources/icons/icon-logo.png
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/128x128/apps
+        RENAME image-converter.png)
+endif()
+
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(ImageConverter)
 endif()
+
+# CPack Packaging Configuration
+set(CPACK_PACKAGE_NAME "image-converter")
+set(CPACK_PACKAGE_VENDOR "Illufox Kusanagi")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Fast offline image converter and PDF compressor built with Qt 6")
+set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+
+# Debian (.deb)
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Illufox Kusanagi")
+set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+
+# RPM (.rpm)
+set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+set(CPACK_RPM_PACKAGE_GROUP "Applications/Graphics")
+set(CPACK_RPM_PACKAGE_AUTOREQPROV ON)
+
+include(CPack)
+
