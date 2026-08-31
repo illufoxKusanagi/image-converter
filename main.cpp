@@ -1,12 +1,13 @@
 #include "mainwindow/mainwindow.h"
+#include "ui-kit/theme/theme.h"
 #include <QApplication>
-#include <QByteArray>
-#include <QCryptographicHash>
-#include <QInputDialog>
-#include <QString>
+#include <QIcon>
+#include <QStyleFactory>
 
 int main(int argc, char *argv[]) {
   QApplication app(argc, argv);
+  QApplication::setStyle(QStyleFactory::create("Fusion"));
+
   QCoreApplication::setOrganizationName("Illufox Kasunagi");
   QCoreApplication::setApplicationName("Image Converter");
   QIcon appIcon;

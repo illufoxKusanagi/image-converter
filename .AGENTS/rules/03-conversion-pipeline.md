@@ -5,13 +5,13 @@
 ### 1.1 Supported Formats
 The core image conversion logic is implemented in `DropFileWidget::saveImage()` and `MainPage::onProcessButtonClicked()`:
 
-| Format Token | File Suffix | Quality Support (0-100) | Implementation Detail |
-| :--- | :--- | :--- | :--- |
-| `JPG` | `.jpg` | Yes (0–100) | `image->save(path + ".jpg", "JPG", quality)` |
-| `JPEG` | `.jpeg` | Yes (0–100) | `image->save(path + ".jpeg", "JPEG", quality)` |
-| `PNG` | `.png` | No (-1 = lossless default) | `image->save(path + ".png", "PNG", -1)` |
-| `WEBP` | `.webp` | Yes (0–100) | `image->save(path + ".webp", "WEBP", quality)` |
-| `TIFF` | `.tiff` | Yes (0–100) | `image->save(path + ".tiff", "TIFF", quality)` |
+| Format Token | File Suffix | Quality Support (0-100)    | Implementation Detail                          |
+| :----------- | :---------- | :------------------------- | :--------------------------------------------- |
+| `JPG`        | `.jpg`      | Yes (0–100)                | `image->save(path + ".jpg", "JPG", quality)`   |
+| `JPEG`       | `.jpeg`     | Yes (0–100)                | `image->save(path + ".jpeg", "JPEG", quality)` |
+| `PNG`        | `.png`      | No (-1 = lossless default) | `image->save(path + ".png", "PNG", -1)`        |
+| `WEBP`       | `.webp`     | Yes (0–100)                | `image->save(path + ".webp", "WEBP", quality)` |
+| `TIFF`       | `.tiff`     | Yes (0–100)                | `image->save(path + ".tiff", "TIFF", quality)` |
 
 ### 1.2 Execution Lifecycle (Image)
 1. **Input Validation**:

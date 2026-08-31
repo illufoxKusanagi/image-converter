@@ -30,8 +30,8 @@ PdfPage::PdfPage(QWidget *parent)
   connect(m_qualitySlider, &SliderWidget::valueChanged, this,
           &PdfPage::onQualitySliderChanged);
 
-  attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignBottom);
-  attributeLayout->addWidget(m_presetDropdown, 1, Qt::AlignBottom);
+  attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignTop);
+  attributeLayout->addWidget(m_presetDropdown, 1, Qt::AlignTop);
 
   m_progressBar = new QProgressBar(this);
   m_progressBar->setFixedHeight(20);

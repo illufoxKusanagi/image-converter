@@ -1,8 +1,7 @@
 #ifndef SLIDERWIDGET_H
 #define SLIDERWIDGET_H
 
-#include "styles/colors.h"
-#include "styles/text_style.h"
+#include "ui-kit/theme/theme.h"
 #include <QLabel>
 #include <QSlider>
 #include <QSpinBox>
@@ -25,6 +24,7 @@ signals:
 private slots:
   void updateSliderValue();
   void updateSpinBoxValue();
+  void applyThemeStyles();
 
 private:
   QVBoxLayout *mainLayout;
@@ -32,9 +32,6 @@ private:
   QSlider *m_slider;
   QSpinBox *m_spinBox;
   int m_value;
-  static const QString s_labelStyling;
-  static const QString s_spinBoxStyling;
-  static const QString s_sliderStyling;
 };
 
 #endif // SLIDERWIDGET_H

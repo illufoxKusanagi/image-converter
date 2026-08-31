@@ -2,21 +2,32 @@
 #define MAINWINDOW_H
 
 #include "pages/main_page.h"
-#include "pages/pdf_page.h"
-#include "styles/colors.h"
-#include "styles/text_style.h"
+#include "ui-kit/components/button.h"
+#include "ui-kit/components/card.h"
+#include "ui-kit/components/tabs.h"
+#include "ui-kit/theme/theme.h"
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QMainWindow>
-#include <QTabWidget>
+#include <QVBoxLayout>
 
 class MainWindow : public QMainWindow {
   Q_OBJECT
 
 public:
-  MainWindow(QWidget *parent = nullptr);
+  explicit MainWindow(QWidget *parent = nullptr);
+  ~MainWindow() override = default;
+
+private slots:
+  void applyThemeStyles();
+  void onThemeToggleClicked();
 
 private:
-  QTabWidget *m_tabWidget;
-  void setupTabStyle();
+  ui::Tabs *m_tabs;
+  ui::Button *m_themeToggleBtn;
+  QLabel *m_titleLabel;
+  QWidget *m_centralWidget;
+  MainPage *m_mainPage;
 };
 
 #endif // MAINWINDOW_H

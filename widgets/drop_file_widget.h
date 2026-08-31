@@ -1,10 +1,10 @@
 #ifndef DROPFILEWIDGET_H
 #define DROPFILEWIDGET_H
 
-#include "styles/colors.h"
-#include "styles/text_style.h"
-#include "widgets/button_action.h"
-#include "widgets/message_box_widget.h"
+#include "ui-kit/components/badge.h"
+#include "ui-kit/components/button.h"
+#include "ui-kit/components/separator.h"
+#include "ui-kit/theme/theme.h"
 #include "widgets/slider_widget.h"
 #include <QDir>
 #include <QDragEnterEvent>
@@ -35,6 +35,8 @@ public:
   QStringList filePaths() const { return getFilePaths(); }
   void clearFiles();
   void removeFileAt(int index);
+  void moveFileUp(int index);
+  void moveFileDown(int index);
   QString imageExtensionToString(const ImageExtension &sourceExtension) const;
   bool saveImage(const QImage *image, const QString &outputPath,
                  const int quality, const ImageExtension *sourceExtension);
@@ -53,13 +55,17 @@ private slots:
   void onBrowseButtonPressed();
   void onSliderValueChanged();
   void onClearAllPressed();
+  void applyThemeStyles();
 
 private:
   QVBoxLayout *mainLayout;
   SliderWidget *m_sliderWidget;
   ImageExtension *m_sourceExtension;
-  ButtonAction *m_browseButton;
+  ui::Button *m_browseButton;
   QLabel *m_icon;
+  QLabel *m_emptyLabel;
+  QLabel *m_formatLabel;
+  QLabel *m_orLabel;
   int m_qualityValue;
   QString m_sourcePath;
   QStringList m_filePaths;
@@ -69,8 +75,8 @@ private:
   QWidget *m_emptyFieldWidget;
   QWidget *m_chosenFileWidget;
   QLabel *m_chosenHeaderLabel;
-  QPushButton *m_clearAllButton;
-  QPushButton *m_addMoreButton;
+  ui::Button *m_clearAllButton;
+  ui::Button *m_addMoreButton;
   QScrollArea *m_fileScrollArea;
   QWidget *m_fileListContainer;
   QVBoxLayout *m_fileListLayout;

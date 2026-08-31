@@ -1,4 +1,4 @@
-# ImageConverter — Improvement Roadmap & Audit Log (v3.2 — All Phases Complete)
+# ImageConverter — Improvement Roadmap & Audit Log (v3.2 — Core Product Complete)
 
 > Grounded in full codebase audit and reviewed against `qt-cpp-review` & `qt-ui-design` standards.
 
@@ -6,33 +6,33 @@
 
 ## 📊 Priority Matrix & Status
 
-| Phase | Milestone | Focus Areas | Complexity | Status |
-| :--- | :--- | :--- | :--- | :---: |
-| **Phase 0** | **Bug Fixes & Code Cleanup** | File dialog filters, hardcoded colors, dead code, uninitialized variables | Small | 🟢 **DONE** |
-| **Phase 1** | **Async Execution & Concurrency** | `QtConcurrent` workers, progress bar, cancel flag, const/API polish | Medium | 🟢 **DONE** |
-| **Phase 2** | **Format-Aware Quality & Formats** | PNG lossless handling, BMP/GIF support, compression stats toast | Small | 🟢 **DONE** |
-| **Phase 3** | **File List & UI Scalability** | Scrollable file list, drag hover states, High-DPI & WCAG contrast fix | Medium | 🟢 **DONE** |
-| **Phase 4** | **PDF ↔ Image Suite** | Images→PDF merge, PDF→Images extraction, PDF compression presets | Medium | 🟢 **DONE** |
-| **Phase 5** | **Advanced Power Tools** | Configurable DPI extraction, image reordering sequence controls | Medium | 🟢 **DONE** |
+| Phase       | Milestone                          | Focus Areas                                                               | Complexity |   Status   |
+| :---------- | :--------------------------------- | :------------------------------------------------------------------------ | :--------- | :--------: |
+| **Phase 0** | **Bug Fixes & Code Cleanup**       | File dialog filters, hardcoded colors, dead code, uninitialized variables | Small      | 🟢 **DONE** |
+| **Phase 1** | **Async Execution & Concurrency**  | `QtConcurrent` workers, progress bar, cancel flag, const/API polish       | Medium     | 🟢 **DONE** |
+| **Phase 2** | **Format-Aware Quality & Formats** | PNG lossless handling, BMP/GIF support, compression stats toast           | Small      | 🟢 **DONE** |
+| **Phase 3** | **File List & UI Scalability**     | Scrollable file list, drag hover states, High-DPI & WCAG contrast fix     | Medium     | 🟢 **DONE** |
+| **Phase 4** | **PDF ↔ Image Suite**              | Images→PDF merge, PDF→Images extraction, PDF compression presets          | Medium     | 🟢 **DONE** |
+| **Phase 5** | **Advanced Power Tools**           | Configurable DPI extraction, image reordering sequence controls           | Medium     | 🟢 **DONE** |
 
 ---
 
 ## 🔍 Audit & Review Findings Tracking
 
-| Issue ID | Domain | Finding / Warning | Status |
-| :--- | :--- | :--- | :---: |
-| **[D-001]** | `qt-cpp-review` | Synchronous batch and PDF processing on main GUI event loop | 🟢 **Resolved in 1.1** |
-| **[D-002]** | `qt-cpp-review` | Non-idiomatic getter prefixes (`getValue()`, `getFilePath()`, `getText()`) | 🟢 **Resolved in 1.4** |
-| **[D-003]** | `qt-cpp-review` | Missing `const` qualifiers on read-only accessor methods | 🟢 **Resolved in 1.4** |
-| **[D-004]** | `qt-cpp-review` | Pass-by-value `QString` in `convertImage()` | 🟢 **Resolved in 1.4** |
-| **[U-001]** | `qt-ui-design` | Doherty threshold: >400ms operations lack visual progress indicator | 🟢 **Resolved in 1.2** |
-| **[U-002]** | `qt-ui-design` | WCAG 2.2 AA Contrast: `Grey400` on white is ~3.2:1 (<4.5:1 required) | 🟢 **Resolved in 3.4** |
-| **[U-003]** | `qt-ui-design` | Fixed 352px width causes long filenames to wrap awkwardly under High-DPI | 🟢 **Resolved in 3.3** |
-| **[CR-01]** | `coderabbit` | Incomplete PDF file remaining on disk when cancelled / failed | 🟢 **Resolved in Review** |
-| **[CR-02]** | `coderabbit` | Batch conversion filename collisions overwriting earlier outputs | 🟢 **Resolved in Review** |
-| **[CR-03]** | `coderabbit` | Dotted directory path causing extension suffix stripping truncation | 🟢 **Resolved in Review** |
-| **[CR-04]** | `coderabbit` | Skewed batch reduction percentage on failed/corrupted files | 🟢 **Resolved in Review** |
-| **[CR-05]** | `coderabbit` | Pre-existing destination file destruction on cancel/failure | 🟢 **Resolved in Review** |
+| Issue ID    | Domain          | Finding / Warning                                                          |          Status          |
+| :---------- | :-------------- | :------------------------------------------------------------------------- | :----------------------: |
+| **[D-001]** | `qt-cpp-review` | Synchronous batch and PDF processing on main GUI event loop                |  🟢 **Resolved in 1.1**   |
+| **[D-002]** | `qt-cpp-review` | Non-idiomatic getter prefixes (`getValue()`, `getFilePath()`, `getText()`) |  🟢 **Resolved in 1.4**   |
+| **[D-003]** | `qt-cpp-review` | Missing `const` qualifiers on read-only accessor methods                   |  🟢 **Resolved in 1.4**   |
+| **[D-004]** | `qt-cpp-review` | Pass-by-value `QString` in `convertImage()`                                |  🟢 **Resolved in 1.4**   |
+| **[U-001]** | `qt-ui-design`  | Doherty threshold: >400ms operations lack visual progress indicator        |  🟢 **Resolved in 1.2**   |
+| **[U-002]** | `qt-ui-design`  | WCAG 2.2 AA Contrast: `Grey400` on white is ~3.2:1 (<4.5:1 required)       |  🟢 **Resolved in 3.4**   |
+| **[U-003]** | `qt-ui-design`  | Fixed 352px width causes long filenames to wrap awkwardly under High-DPI   |  🟢 **Resolved in 3.3**   |
+| **[CR-01]** | `coderabbit`    | Incomplete PDF file remaining on disk when cancelled / failed              | 🟢 **Resolved in Review** |
+| **[CR-02]** | `coderabbit`    | Batch conversion filename collisions overwriting earlier outputs           | 🟢 **Resolved in Review** |
+| **[CR-03]** | `coderabbit`    | Dotted directory path causing extension suffix stripping truncation        | 🟢 **Resolved in Review** |
+| **[CR-04]** | `coderabbit`    | Skewed batch reduction percentage on failed/corrupted files                | 🟢 **Resolved in Review** |
+| **[CR-05]** | `coderabbit`    | Pre-existing destination file destruction on cancel/failure                | 🟢 **Resolved in Review** |
 
 ---
 
@@ -113,3 +113,17 @@
   - Interactive Move Up `▲` and Move Down `▼` buttons on file cards in `DropFileWidget` to arrange the exact page sequence before merging into a multi-page PDF.
 - [x] **5.2 Configurable PDF Extraction Resolution**:
   - Dynamic resolution scaling ranging from `72 DPI (Web / Fast)` to `600 DPI (Ultra-HD / Archival)` controlled seamlessly via the quality slider.
+
+---
+
+## 🎨 UI-Kit Component Library Track (`ui-kit/`)
+
+| Phase          | Module                   | Components & Capabilities                                                                                   |     Status      |
+| :------------- | :----------------------- | :---------------------------------------------------------------------------------------------------------- | :-------------: |
+| **UI Phase 0** | **Foundation & Tooling** | `ui_kit` CMake target, `Theme` / `Tokens` system (Light/Dark), `Fusion` base style, Animation & SVG helpers | ✅ **Completed** |
+| **UI Phase 1** | **Core Primitives**      | `ui::Button` (variants/sizes/spinner), `ui::Badge`, `ui::Spinner`, `ui::Card` (drop shadow)                 | ✅ **Completed** |
+| **UI Phase 2** | **Inputs & Forms**       | `ui::Input` (leading/clear icon), `ui::Switch`, `ui::Slider`, `ui::Select`, `ui::FormField`                 | ✅ **Completed** |
+| **UI Phase 3** | **Layout & Navigation**  | `ui::Sidebar` (collapsible/animated), `ui::Tabs` (Underline/Segmented), `ui::Separator`, `ui::Accordion`    | ✅ **Completed** |
+| **UI Phase 4** | **Feedback & Overlays**  | `ui::Toast` (stacking queue), `ui::Dialog` (backdrop dim), `ui::Tooltip`                                    | ✅ **Completed** |
+| **UI Phase 5** | **Content & Data**       | `ui::Progress`, `ui::Avatar`, `ui::Table`                                                                   |  ⏳ **Planned**  |
+
