@@ -70,3 +70,32 @@ When analyzing, modifying, or creating code in this repository, follow these rul
    - Always check `QImage::isNull()` or `QPdfDocument::Error` before processing files.
 5. **Context Retention**:
    - Refer to detailed documentation in `.AGENTS/rules/`, `.AGENTS/skills/`, and `.AGENTS/references/` before making architectural decisions.
+
+## 5. Automated Code Review with CodeRabbit CLI
+
+### Exact Command
+```powershell
+cr review --agent --uncommitted
+```
+*(Alias for `coderabbit review --agent --uncommitted`)*
+
+### When You MUST Run CodeRabbit Review
+- **Feature Completion**: After implementing a new functional feature or significant capability.
+- **Bug Fixes & Refactoring**: After fixing bugs, race conditions, memory issues, or architectural refactors.
+- **Multi-Phase Milestones**: After completing multi-phase code changes before presenting final results to the user.
+
+### When You MUST NOT Run CodeRabbit Review
+- **File Renames / Moves**: Pure file renaming or reorganization without substantive logic changes.
+- **CI / GitHub Actions**: Edits to `.github/workflows/`, CI configurations, or build script metadata.
+- **Documentation Only**: Updating `.md` documents, comments, README files, or roadmap tracking logs.
+- **Trivial Tweaks**: Single-line typo corrections, whitespace formatting, or minor variable renames.
+
+### Review Execution & Fix Loop
+1. Launch `cr review --agent --uncommitted` as a background task.
+2. Check task progress periodically until complete.
+3. Review and validate findings:
+   - **Fix**: Critical / Major issues (data safety, memory leaks, invalid state handling).
+   - **Fix**: Recommended / Minor logic issues.
+   - **Skip**: Trivial nits or unnecessary changes with a brief rationale.
+4. Apply the fixes, re-compile, and re-run `cr review --agent --uncommitted` (up to 3 validation loops).
+5. Report the review outcome and verified fixes to the user.

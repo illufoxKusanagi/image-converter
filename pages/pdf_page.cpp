@@ -201,32 +201,37 @@ void PdfPage::compressSinglePdf(const QString &sourcePath, int quality) {
           setProcessingState(false);
           m_cancelButton->setText("Cancel");
 
-          if (m_isCancelled) {
+          if (success) {
+            qint64 origSize = QFileInfo(sourcePath).size();
+            qint64 compressedSize = QFileInfo(outputPath).size();
+            QString sizeStats;
+            if (origSize > 0 && compressedSize > 0) {
+              double diffPct =
+                  (1.0 - (static_cast<double>(compressedSize) / origSize)) * 100.0;
+              sizeStats =
+                  QString("\n\nOriginal: %1\nCompressed: %2 (%3% %4)")
+                      .arg(DropFileWidget::formatFileSize(origSize))
+                      .arg(DropFileWidget::formatFileSize(compressedSize))
+                      .arg(qAbs(diffPct), 0, 'f', 1)
+                      .arg(diffPct >= 0 ? "smaller" : "larger");
+            }
+
+            MessageBoxWidget messageBox(
+                "Success",
+                QString("PDF compressed successfully!\nSaved to: %1%2")
+                    .arg(outputPath)
+                    .arg(sizeStats),
+                MessageBoxWidget::Information, this);
+            messageBox.exec();
+          } else if (m_isCancelled) {
             MessageBoxWidget messageBox(
                 "Cancelled", "PDF compression was cancelled.",
                 MessageBoxWidget::Information, this);
             messageBox.exec();
-          } else if (success) {
-            qint64 origSize = QFileInfo(sourcePath).size();
-            qint64 outSize = QFileInfo(outputPath).size();
-            QString sizeStats;
-            if (origSize > 0 && outSize > 0) {
-              double diffPct = (1.0 - (static_cast<double>(outSize) / origSize)) * 100.0;
-              sizeStats = QString("\n\nOriginal: %1\nCompressed: %2 (%3% %4)")
-                              .arg(DropFileWidget::formatFileSize(origSize))
-                              .arg(DropFileWidget::formatFileSize(outSize))
-                              .arg(qAbs(diffPct), 0, 'f', 1)
-                              .arg(diffPct >= 0 ? "smaller" : "larger");
-            }
-
-            MessageBoxWidget messageBox("Success",
-                                        QString("PDF compressed successfully!%1")
-                                            .arg(sizeStats),
-                                        MessageBoxWidget::Information, this);
-            messageBox.exec();
           } else {
-            MessageBoxWidget messageBox("Error", "Failed to compress PDF!",
-                                        MessageBoxWidget::Critical, this);
+            MessageBoxWidget messageBox(
+                "Error", "Failed to compress PDF. Please try again.",
+                MessageBoxWidget::Critical, this);
             messageBox.exec();
           }
         },
@@ -234,6 +239,7 @@ void PdfPage::compressSinglePdf(const QString &sourcePath, int quality) {
   });
   m_futureWatcher->setFuture(future);
 }
+
 void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
   QString outputDir = QFileDialog::getExistingDirectory(
       this, "Select Output Directory for Compressed PDFs", QDir::homePath());
@@ -350,9 +356,10 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
   // Create output PDF writer
   QPdfWriter pdfWriter(tempOutputPath);
 
-    if (i == 0) {
-      // Set up the writer properties BEFORE creating painter
-      writer.setPageSize(QPageSize(originalPageSize, QPageSize::Point));
+  // Configure quality settings
+  int dpi = calculateDPI(quality);
+  pdfWriter.setResolution(dpi);
+  pdfWriter.setPageMargins(QMarginsF(0, 0, 0, 0));
 
   // Set initial page size based on first page
   QSizeF firstPageSize = pdfDocument.pagePointSize(0);
@@ -363,6 +370,9 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
     qWarning() << "Failed to create painter for output PDF";
     QFile::remove(tempOutputPath);
     return false;
+  }
+  painter.setRenderHint(QPainter::SmoothPixmapTransform);
+  painter.setRenderHint(QPainter::Antialiasing);
 
   // Process each page
   for (int i = 0; i < totalPages; ++i) {
@@ -386,12 +396,9 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
 
     qreal scaleFactor = calculateScaleFactor(quality);
 
-    // Simple render calculation
-    int dpi = 96 + (quality * 54 / 100);
-    qreal scale = static_cast<qreal>(dpi) / 72.0;
-
-    QSize renderSize(static_cast<int>(originalPageSize.width() * scale),
-                     static_cast<int>(originalPageSize.height() * scale));
+    // Calculate render size based on quality
+    QSize renderSize(static_cast<int>(pageSize.width() * scaleFactor),
+                     static_cast<int>(pageSize.height() * scaleFactor));
 
     // Render page to image
     QImage pageImage = pdfDocument.render(i, renderSize);
@@ -418,6 +425,11 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
 
   painter.end();
 
+  if (m_isCancelled) {
+    QFile::remove(tempOutputPath);
+    return false;
+  }
+
   // Atomically move temporary file to final output path with backup preservation
   const bool hadExisting = QFile::exists(outputPath);
   const QString backupPath = outputPath + ".bak";
@@ -442,97 +454,31 @@ bool PdfPage::compressPdf(const QString &inputPath, const QString &outputPath,
   return true;
 }
 
-// Simple compression without format conversion madness
-QImage PdfPage::simpleCompress(const QImage &image, int quality) {
-  if (quality >= 60)
-    return image; // No compression needed
+QImage PdfPage::compressImage(const QImage &originalImage, int quality) {
+  QImage processedImage = originalImage;
 
-  // Simple JPEG compression
-  QByteArray data;
-  QBuffer buffer(&data);
-  buffer.open(QIODevice::WriteOnly);
-
-  // Map 0-60 quality to 50-85 JPEG quality
-  int jpegQuality = 50 + (quality * 35 / 60);
-
-  // FIXED: Convert to RGB format that eliminates border artifacts
-  QImage cleanImage = image.convertToFormat(QImage::Format_RGB888);
-
-  // FIXED: Fill any transparent/grey pixels with white
-  if (cleanImage.hasAlphaChannel()) {
-    for (int y = 0; y < cleanImage.height(); ++y) {
-      for (int x = 0; x < cleanImage.width(); ++x) {
-        QColor pixel = cleanImage.pixelColor(x, y);
-        if (pixel.alpha() < 255) {
-          cleanImage.setPixelColor(x, y, Qt::white);
-        }
-      }
-    }
+  // Reduce color depth for higher compression
+  if (quality < 30) {
+    // Convert to indexed color for maximum compression
+    processedImage = originalImage.convertToFormat(
+        QImage::Format_Indexed8, Qt::ColorOnly | Qt::DiffuseDither);
+  } else if (quality < 60) {
+    // Convert to RGB888 for medium compression
+    processedImage = originalImage.convertToFormat(QImage::Format_RGB888);
   }
 
-  if (cleanImage.save(&buffer, "JPEG", jpegQuality)) {
-    QImage compressed;
-    if (compressed.loadFromData(data, "JPEG")) {
-      return compressed;
-    }
+  // Scale down image for very low quality
+  if (quality < 20) {
+    QSize newSize = originalImage.size() * 0.6; // Scale to 60%
+    processedImage = processedImage.scaled(newSize, Qt::KeepAspectRatio,
+                                           Qt::SmoothTransformation);
+  } else if (quality < 40) {
+    QSize newSize = originalImage.size() * 0.8; // Scale to 80%
+    processedImage = processedImage.scaled(newSize, Qt::KeepAspectRatio,
+                                           Qt::SmoothTransformation);
   }
 
-  return image; // Fallback to original
-}
-
-int PdfPage::calculateOptimalDPI(int quality) {
-  // More conservative DPI range to prevent memory issues
-  if (quality >= 90)
-    return 300; // High quality
-  if (quality >= 70)
-    return 200; // Medium-high quality
-  if (quality >= 50)
-    return 150; // Medium quality
-  if (quality >= 30)
-    return 120; // Lower quality
-  return 96;    // Minimum quality
-}
-
-QImage PdfPage::optimizeImageCompression(const QImage &originalImage,
-                                         int quality) {
-  if (originalImage.isNull()) {
-    qWarning() << "Null image passed to compression";
-    return originalImage;
-  }
-
-  QImage workingImage = originalImage;
-
-  // Convert to optimal format based on content
-  if (workingImage.hasAlphaChannel()) {
-    // Preserve alpha channel for transparent content
-    workingImage =
-        workingImage.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-  } else {
-    // Use RGB for opaque content
-    workingImage = workingImage.convertToFormat(QImage::Format_RGB888);
-  }
-
-  // Apply JPEG compression for lower quality settings
-  if (quality < 80) {
-    QByteArray compressedData;
-    QBuffer buffer(&compressedData);
-    buffer.open(QIODevice::WriteOnly);
-
-    // Map quality to JPEG quality (40-90 range)
-    int jpegQuality = qMax(40, qMin(90, 40 + (quality * 50 / 100)));
-
-    if (workingImage.save(&buffer, "JPEG", jpegQuality)) {
-      QImage compressedImage;
-      if (compressedImage.loadFromData(compressedData, "JPEG")) {
-        qDebug() << "Applied JPEG compression with quality:" << jpegQuality;
-        return compressedImage;
-      }
-    }
-
-    qWarning() << "JPEG compression failed, using original";
-  }
-
-  return workingImage;
+  return processedImage;
 }
 
 int PdfPage::calculateDPI(int quality) {
