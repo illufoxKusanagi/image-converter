@@ -17,7 +17,7 @@ public:
     Critical = 4
   };
   explicit MessageBoxWidget(const QString &windowTitle, const QString &text,
-                            IconType iconType);
+                            IconType iconType, QWidget *parent = nullptr);
 
 private:
   static constexpr QMessageBox::Icon

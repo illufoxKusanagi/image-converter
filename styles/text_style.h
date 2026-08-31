@@ -37,24 +37,32 @@ inline QString BodySmallBold() {
 inline QString BodySmallRegular() {
   return "font-family: 'Roboto'; font-size: 14px; font-weight: 400; ";
 }
-inline QString SubttileBig() {
+inline QString SubtitleBig() {
   return "font-family: 'Roboto'; font-size: 14px; font-weight: 400; ";
 }
-inline QString SubttileBigBold() {
+inline QString SubtitleBigBold() {
   return "font-family: 'Roboto'; font-size: 14px; font-weight: 600; ";
 }
-inline QString SubttileMediumRegular() {
+inline QString SubtitleMediumRegular() {
   return "font-family: 'Roboto'; font-size: 12px; font-weight: 400; ";
 }
-inline QString SubttileMediumBold() {
+inline QString SubtitleMediumBold() {
   return "font-family: 'Roboto'; font-size: 12px; font-weight: 600; ";
 }
-inline QString SubttileSmallBold() {
+inline QString SubtitleSmallBold() {
   return "font-family: 'Roboto'; font-size: 10px; font-weight: 600; ";
 }
-inline QString SubttileSmallRegular() {
+inline QString SubtitleSmallRegular() {
   return "font-family: 'Roboto'; font-size: 10px; font-weight: 400; ";
 }
+
+// Legacy aliases
+inline QString SubttileBig() { return SubtitleBig(); }
+inline QString SubttileBigBold() { return SubtitleBigBold(); }
+inline QString SubttileMediumRegular() { return SubtitleMediumRegular(); }
+inline QString SubttileMediumBold() { return SubtitleMediumBold(); }
+inline QString SubttileSmallBold() { return SubtitleSmallBold(); }
+inline QString SubttileSmallRegular() { return SubtitleSmallRegular(); }
 } // namespace TextStyle
 
 #endif // TEXTSTYLE_H

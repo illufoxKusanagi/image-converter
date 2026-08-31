@@ -1,38 +1,46 @@
 #ifndef MAIN_PAGE_H
 #define MAIN_PAGE_H
+
 #include "widgets/button_action.h"
 #include "widgets/drop_file_widget.h"
 #include "widgets/input_widget.h"
 #include "widgets/slider_widget.h"
-#include <QGridLayout>
-#include <QGroupBox>
-#include <QStackedWidget>
+#include <QFutureWatcher>
+#include <QProgressBar>
+#include <QVBoxLayout>
+#include <QWidget>
+#include <atomic>
 
 class MainPage : public QWidget {
   Q_OBJECT
 
-private slots:
-  void onProcessButtonClicked();
-  void onImageTargetExtensionChanged();
-
 public:
   explicit MainPage(QWidget *parent = nullptr);
+  ~MainPage() override;
+
+private slots:
+  void onProcessButtonClicked();
+  void onCancelButtonClicked();
+  void onImageTargetExtensionChanged();
 
 private:
   QVBoxLayout *mainLayout;
-  QVBoxLayout *m_imageLayout;
   SliderWidget *m_qualitySlider;
-  DropFileWidget *m_dropFileWidget;
-  QWidget *m_buttonWidget;
-  QVBoxLayout *m_buttonLayout;
   DropFileWidget *m_dragWidget;
   InputWidget *m_targetExtension;
-  DropFileWidget::ImageExtension m_sourceExtension;
-  void setupImageInput();
+  QProgressBar *m_progressBar;
+  ButtonAction *m_processButton;
+  ButtonAction *m_cancelButton;
+  DropFileWidget::ImageExtension m_targetImageExtension;
+
+  QFutureWatcher<void> *m_futureWatcher;
+  std::atomic<bool> m_isProcessing{false};
+  std::atomic<bool> m_isCancelled{false};
+
   void setupExtensionButton();
   void setupImageLayout();
-  void setupQualitySlider();
   void setupImageAttribute();
+  void setProcessingState(bool isProcessing);
 };
 
 #endif // MAIN_PAGE_H
