@@ -1,4 +1,6 @@
 #include "drop_file_widget.h"
+#include "ui-kit/components/badge.h"
+#include "ui-kit/components/separator.h"
 #include <QFontMetrics>
 #include <QScrollBar>
 
@@ -35,18 +37,6 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
 }
 
 void DropFileWidget::updateDropZoneStyle() {
-  QString borderColor = m_isDragHovered ? Colors::Primary500.name()
-                                        : Colors::Secondary400.name();
-  QString bgColor = m_isDragHovered ? Colors::Secondary50.name()
-                                    : Colors::StandardWhite.name();
-  setStyleSheet("QGroupBox#DropFileWidget {"
-                "  border: 2px dashed " + borderColor + ";"
-                "  border-radius: 12px;"
-                "  background-color: " + bgColor + ";"
-                "}"
-                "QLabel {"
-                "  background-color: transparent;"
-                "}");
 }
 
 void DropFileWidget::setupEmptyFileWidget() {
@@ -202,17 +192,8 @@ void DropFileWidget::setupOrSeparatorLayout(QVBoxLayout *layout) {
                           "}");
   optional->setAlignment(Qt::AlignCenter);
 
-  QFrame *lineAbove = new QFrame(this);
-  lineAbove->setFrameShape(QFrame::HLine);
-  lineAbove->setFrameShadow(QFrame::Plain);
-  lineAbove->setFixedHeight(1);
-  lineAbove->setStyleSheet("background-color: " + Colors::Grey300.name() + ";");
-
-  QFrame *lineBelow = new QFrame(this);
-  lineBelow->setFrameShape(QFrame::HLine);
-  lineBelow->setFrameShadow(QFrame::Plain);
-  lineBelow->setFixedHeight(1);
-  lineBelow->setStyleSheet("background-color: " + Colors::Grey300.name() + ";");
+  ui::Separator *lineAbove = new ui::Separator(Qt::Horizontal, this);
+  ui::Separator *lineBelow = new ui::Separator(Qt::Horizontal, this);
 
   orLayout->addWidget(lineAbove, 1);
   orLayout->addWidget(optional, 0);
@@ -280,10 +261,44 @@ void DropFileWidget::rebuildFileList() {
                              Colors::Grey900.name() + "; " +
                              TextStyle::SubtitleBigBold());
 
-    QLabel *sizeLabel = new QLabel(formatFileSize(size), card);
-    sizeLabel->setStyleSheet("border: none; background: transparent; color: " +
-                             Colors::Grey700.name() + "; " +
-                             TextStyle::SubtitleMediumRegular());
+    ui::Badge *sizeBadge =
+        new ui::Badge(formatFileSize(size), ui::BadgeVariant::Secondary, card);
+
+    QPushButton *upBtn = new QPushButton("▲", card);
+    upBtn->setFixedSize(18, 18);
+    upBtn->setCursor(Qt::PointingHandCursor);
+    upBtn->setToolTip("Move up");
+    upBtn->setEnabled(i > 0);
+    upBtn->setStyleSheet(
+        "QPushButton {"
+        "  background: transparent;"
+        "  border: none;"
+        "  color: " + (i > 0 ? Colors::Grey700.name() : Colors::Grey300.name()) + ";"
+        "  font-size: 10px;"
+        "  font-weight: bold;"
+        "}"
+        "QPushButton:hover {"
+        "  color: " + Colors::Primary600.name() + ";"
+        "}");
+    connect(upBtn, &QPushButton::clicked, this, [this, i]() { moveFileUp(i); });
+
+    QPushButton *downBtn = new QPushButton("▼", card);
+    downBtn->setFixedSize(18, 18);
+    downBtn->setCursor(Qt::PointingHandCursor);
+    downBtn->setToolTip("Move down");
+    downBtn->setEnabled(i < m_filePaths.size() - 1);
+    downBtn->setStyleSheet(
+        "QPushButton {"
+        "  background: transparent;"
+        "  border: none;"
+        "  color: " + (i < m_filePaths.size() - 1 ? Colors::Grey700.name() : Colors::Grey300.name()) + ";"
+        "  font-size: 10px;"
+        "  font-weight: bold;"
+        "}"
+        "QPushButton:hover {"
+        "  color: " + Colors::Primary600.name() + ";"
+        "}");
+    connect(downBtn, &QPushButton::clicked, this, [this, i]() { moveFileDown(i); });
 
     QPushButton *removeBtn = new QPushButton("✕", card);
     removeBtn->setFixedSize(18, 18);
@@ -305,7 +320,9 @@ void DropFileWidget::rebuildFileList() {
 
     cardLayout->addWidget(iconLabel, 0, Qt::AlignVCenter);
     cardLayout->addWidget(nameLabel, 1, Qt::AlignVCenter);
-    cardLayout->addWidget(sizeLabel, 0, Qt::AlignVCenter);
+    cardLayout->addWidget(sizeBadge, 0, Qt::AlignVCenter);
+    cardLayout->addWidget(upBtn, 0, Qt::AlignVCenter);
+    cardLayout->addWidget(downBtn, 0, Qt::AlignVCenter);
     cardLayout->addWidget(removeBtn, 0, Qt::AlignVCenter);
 
     m_fileListLayout->addWidget(card);
@@ -321,6 +338,20 @@ void DropFileWidget::removeFileAt(int index) {
   if (index >= 0 && index < m_filePaths.size()) {
     m_filePaths.removeAt(index);
     updateWidgetVisibility();
+  }
+}
+
+void DropFileWidget::moveFileUp(int index) {
+  if (index > 0 && index < m_filePaths.size()) {
+    m_filePaths.swapItemsAt(index, index - 1);
+    rebuildFileList();
+  }
+}
+
+void DropFileWidget::moveFileDown(int index) {
+  if (index >= 0 && index < m_filePaths.size() - 1) {
+    m_filePaths.swapItemsAt(index, index + 1);
+    rebuildFileList();
   }
 }
 

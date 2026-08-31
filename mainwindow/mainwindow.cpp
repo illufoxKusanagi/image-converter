@@ -1,68 +1,64 @@
 #include "mainwindow.h"
+#include "ui-kit/theme/style_helper.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
+  setWindowTitle("ImageConverter");
+  setMinimumSize(540, 680);
 
-  QWidget *centralWidget = new QWidget(this);
-  QHBoxLayout *mainLayout = new QHBoxLayout(centralWidget);
-  mainLayout->setContentsMargins(32, 32, 32, 32);
-  m_tabWidget = new QTabWidget(this);
-  m_tabWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-  m_tabWidget->tabBar()->setUsesScrollButtons(false);
-  m_tabWidget->setFixedWidth(460);
-  MainPage *mainPage = new MainPage(this);
-  m_tabWidget->addTab(mainPage, "Convert Image");
-  // Temporarily hidden: Compress PDF feature
-  // PdfPage *pdfPage = new PdfPage(this);
-  // m_tabWidget->addTab(pdfPage, "Compress PDF");
-  setupTabStyle();
-  mainLayout->addWidget(m_tabWidget);
-  setCentralWidget(centralWidget);
-  setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint |
-                 Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint);
+  m_centralWidget = new QWidget(this);
+  QVBoxLayout *rootLayout = new QVBoxLayout(m_centralWidget);
+  rootLayout->setContentsMargins(24, 16, 24, 24);
+  rootLayout->setSpacing(16);
+
+  // Top navigation & utility header
+  QWidget *headerWidget = new QWidget(m_centralWidget);
+  QHBoxLayout *headerLayout = new QHBoxLayout(headerWidget);
+  headerLayout->setContentsMargins(0, 0, 0, 0);
+  headerLayout->setSpacing(12);
+
+  m_titleLabel = new QLabel("ImageConverter", headerWidget);
+
+  m_themeToggleBtn = new ui::Button(ui::Theme::instance().isDark() ? "☀️ Light" : "🌙 Dark",
+                                    ui::ButtonVariant::Ghost,
+                                    ui::ButtonSize::Small,
+                                    headerWidget);
+  connect(m_themeToggleBtn, &QPushButton::clicked, this, &MainWindow::onThemeToggleClicked);
+
+  headerLayout->addWidget(m_titleLabel, 0, Qt::AlignVCenter);
+  headerLayout->addStretch(1);
+  headerLayout->addWidget(m_themeToggleBtn, 0, Qt::AlignVCenter);
+  rootLayout->addWidget(headerWidget);
+
+  // Main Tabs
+  m_tabs = new ui::Tabs(ui::TabVariant::Underline, m_centralWidget);
+  m_mainPage = new MainPage(m_tabs);
+  m_tabs->addTab("Convert Image", QIcon(), m_mainPage);
+
+  rootLayout->addWidget(m_tabs, 1);
+  setCentralWidget(m_centralWidget);
+
+  connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this, &MainWindow::applyThemeStyles);
+  applyThemeStyles();
 }
 
-void MainWindow::setupTabStyle() {
-  m_tabWidget->setStyleSheet(
-      "QTabWidget::pane {"
-      "  border: 1px solid #d1d5db;"
-      "  border-top: none;"
-      "  border-radius: 0 0 8px 8px;"
-      "  background: #ffffff;"
-      "}"
-      "QTabBar::scroller {"
-      "  width: 0px;"
-      "}"
-      "QTabBar::tab {"
-      "  background: #f5f6fa;"
-      "  border: 1px solid #d1d5db;"
-      "  border-bottom: none;"
-      "  min-width: 133px;"
-      "  min-height: 32px;"
-      "  padding: 8px 20px;" +
-      TextStyle::BodyMediumRegular() + "color:" + Colors::StandardBlack.name() +
-      ";"
-      "  border-top-left-radius: 8px;"
-      "  border-top-right-radius: 8px;"
-      "  margin-right: 2px;"
-      "  margin-bottom: -1px;"
-      "}"
-      "QTabBar::tab:selected {"
-      "  background: #ffffff;" +
-      TextStyle::BodyMediumBold() + " color: " + Colors::Secondary500.name() +
-      ";"
-      "  border-bottom: 1px solid #ffffff;"
-      "}"
-      "QTabBar::tab:selected:hover {"
-      "  background: #ffffff;" +
-      TextStyle::BodyMediumBold() + " color: " + Colors::Secondary500.name() +
-      ";"
-      "}"
-      "QTabBar::tab:!selected {"
-      "  margin-top: 2px;"
-      "}"
-      "QTabBar::tab:hover {" +
-      TextStyle::BodyMediumRegular() +
-      " color: " + Colors::Secondary500.name() +
-      ";"
-      "}");
+void MainWindow::onThemeToggleClicked() {
+  ui::Theme::instance().toggleMode();
+}
+
+void MainWindow::applyThemeStyles() {
+  const auto &c = ui::Theme::instance().colors();
+  const auto &t = ui::Theme::instance().typography();
+  bool isDark = ui::Theme::instance().isDark();
+
+  setStyleSheet(QString("QMainWindow { background-color: %1; }")
+                    .arg(ui::StyleHelper::toHexString(c.background)));
+
+  m_centralWidget->setStyleSheet(QString("background-color: %1;")
+                                     .arg(ui::StyleHelper::toHexString(c.background)));
+
+  m_titleLabel->setFont(t.font(t.sizeLg, QFont::Bold));
+  m_titleLabel->setStyleSheet(QString("color: %1; background: transparent;")
+                                  .arg(ui::StyleHelper::toHexString(c.foreground)));
+
+  m_themeToggleBtn->setText(isDark ? "☀️ Light" : "🌙 Dark");
 }

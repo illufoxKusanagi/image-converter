@@ -1,4 +1,8 @@
 #include "main_page.h"
+#include "ui-kit/components/dialog.h"
+#include "ui-kit/components/toast.h"
+#include "ui-kit/theme/style_helper.h"
+#include "ui-kit/theme/theme.h"
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -12,15 +16,18 @@ MainPage::MainPage(QWidget *parent)
     : QWidget(parent), mainLayout(new QVBoxLayout(this)),
       m_futureWatcher(new QFutureWatcher<void>(this)),
       m_targetImageExtension(DropFileWidget::ImageExtension::JPG) {
-  mainLayout->setContentsMargins(16, 16, 16, 16);
-  mainLayout->setSpacing(12);
+  mainLayout->setContentsMargins(0, 8, 0, 8);
+  mainLayout->setSpacing(14);
   mainLayout->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
 
   setupImageLayout();
-  if (m_targetExtension) {
+  if (m_targetExtensionSelect) {
     onImageTargetExtensionChanged();
   }
   setLayout(mainLayout);
+
+  connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this, &MainPage::applyThemeStyles);
+  applyThemeStyles();
 }
 
 MainPage::~MainPage() {
@@ -31,12 +38,11 @@ MainPage::~MainPage() {
 }
 
 void MainPage::setupExtensionButton() {
-  QStringList extensionOptions = {"jpg", "jpeg", "png", "webp", "tiff", "bmp", "gif", "pdf"};
-  m_targetExtension =
-      new InputWidget(this, InputType("dropdown", "Target"), extensionOptions);
-  connect(m_targetExtension, &InputWidget::valueChanged, this,
+  QStringList extensionOptions = {"JPG", "JPEG", "PNG", "WEBP", "TIFF", "BMP", "GIF", "PDF"};
+  m_targetExtensionSelect = new ui::Select(extensionOptions, this);
+  m_targetExtensionField = new ui::FormField("Target Format", m_targetExtensionSelect, this);
+  connect(m_targetExtensionSelect, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
           &MainPage::onImageTargetExtensionChanged);
-  m_targetExtension->getValue();
 }
 
 void MainPage::setupImageAttribute() {
@@ -45,7 +51,7 @@ void MainPage::setupImageAttribute() {
   attributeLayout->setSpacing(16);
   setupExtensionButton();
   attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignBottom);
-  attributeLayout->addWidget(m_targetExtension, 1, Qt::AlignBottom);
+  attributeLayout->addWidget(m_targetExtensionField, 1, Qt::AlignBottom);
   mainLayout->addLayout(attributeLayout);
 }
 
@@ -56,48 +62,19 @@ void MainPage::setupImageLayout() {
       new DropFileWidget(this, "Image", m_qualitySlider, &m_targetImageExtension);
 
   m_progressBar = new QProgressBar(this);
-  m_progressBar->setFixedHeight(20);
+  m_progressBar->setFixedHeight(22);
   m_progressBar->setAlignment(Qt::AlignCenter);
   m_progressBar->setTextVisible(true);
   m_progressBar->setVisible(false);
-  m_progressBar->setStyleSheet(
-      "QProgressBar {"
-      "  border: 1px solid " + Colors::Grey300.name() + ";"
-      "  border-radius: 8px;"
-      "  text-align: center;"
-      "  background-color: " + Colors::Grey100.name() + ";"
-      "  color: " + Colors::StandardBlack.name() + ";"
-      "  " + TextStyle::BodySmallBold() +
-      "}"
-      "QProgressBar::chunk {"
-      "  background-color: " + Colors::Primary500.name() + ";"
-      "  border-radius: 7px;"
-      "}");
 
-  m_processButton = new ButtonAction(this, "Convert", "no");
-  m_processButton->setEnabled(true);
-  m_processButton->setSize(320, 42);
+  m_processButton = new ui::Button("Convert Files", ui::ButtonVariant::Primary, ui::ButtonSize::Large, this);
+  m_processButton->setMinimumWidth(320);
   connect(m_processButton, &QPushButton::clicked, this,
           &MainPage::onProcessButtonClicked);
 
-  m_cancelButton = new ButtonAction(this, "Cancel", "no");
-  m_cancelButton->setSize(320, 42);
+  m_cancelButton = new ui::Button("Cancel Conversion", ui::ButtonVariant::Destructive, ui::ButtonSize::Large, this);
+  m_cancelButton->setMinimumWidth(320);
   m_cancelButton->setVisible(false);
-  m_cancelButton->setStyleSheet(
-      "QPushButton {"
-      "    padding: 12px 4px;"
-      "    border: 0 solid;"
-      "    border-radius: 12px;"
-      "    background-color: " + Colors::Danger500.name() + ";"
-      "    color: " + Colors::StandardWhite.name() + ";"
-      "    " + TextStyle::BodyMediumBold() +
-      "}"
-      "QPushButton:hover {"
-      "    background-color: " + Colors::Danger600.name() + ";"
-      "}"
-      "QPushButton:pressed {"
-      "    background-color: " + Colors::Danger700.name() + ";"
-      "}");
   connect(m_cancelButton, &QPushButton::clicked, this,
           &MainPage::onCancelButtonClicked);
 
@@ -108,13 +85,38 @@ void MainPage::setupImageLayout() {
   mainLayout->addWidget(m_cancelButton, 0, Qt::AlignCenter);
 }
 
+void MainPage::applyThemeStyles() {
+  const auto &c = ui::Theme::instance().colors();
+  const auto &r = ui::Theme::instance().radius();
+  const auto &t = ui::Theme::instance().typography();
+
+  m_progressBar->setFont(t.font(t.sizeXs, QFont::DemiBold));
+  m_progressBar->setStyleSheet(QString(
+      "QProgressBar {"
+      "  border: 1px solid %1;"
+      "  border-radius: %2px;"
+      "  text-align: center;"
+      "  background-color: %3;"
+      "  color: %4;"
+      "}"
+      "QProgressBar::chunk {"
+      "  background-color: %5;"
+      "  border-radius: %6px;"
+      "}")
+      .arg(ui::StyleHelper::toHexString(c.border))
+      .arg(r.md)
+      .arg(ui::StyleHelper::toHexString(c.muted))
+      .arg(ui::StyleHelper::toHexString(c.foreground))
+      .arg(ui::StyleHelper::toHexString(c.primary))
+      .arg(r.md > 2 ? r.md - 1 : 2));
+}
+
 void MainPage::setProcessingState(bool isProcessing) {
   m_isProcessing = isProcessing;
   m_processButton->setVisible(!isProcessing);
   m_cancelButton->setVisible(isProcessing);
   m_cancelButton->setEnabled(isProcessing);
   m_progressBar->setVisible(isProcessing);
-  m_targetExtension->setEnabled(!isProcessing);
   m_dragWidget->setEnabled(!isProcessing);
   if (isProcessing) {
     m_qualitySlider->setEnabled(false);
@@ -679,7 +681,7 @@ void MainPage::onProcessButtonClicked() {
 }
 
 void MainPage::onImageTargetExtensionChanged() {
-  double value = m_targetExtension->getValue();
+  int value = m_targetExtensionSelect ? m_targetExtensionSelect->currentIndex() : 0;
   if (value == 0) {
     m_targetImageExtension = DropFileWidget::ImageExtension::JPG;
     m_qualitySlider->setEnabled(true);

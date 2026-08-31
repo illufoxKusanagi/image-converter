@@ -35,6 +35,8 @@ public:
   QStringList filePaths() const { return getFilePaths(); }
   void clearFiles();
   void removeFileAt(int index);
+  void moveFileUp(int index);
+  void moveFileDown(int index);
   QString imageExtensionToString(const ImageExtension &sourceExtension) const;
   bool saveImage(const QImage *image, const QString &outputPath,
                  const int quality, const ImageExtension *sourceExtension);

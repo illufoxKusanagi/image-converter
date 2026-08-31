@@ -1,9 +1,11 @@
 #ifndef MAIN_PAGE_H
 #define MAIN_PAGE_H
 
-#include "widgets/button_action.h"
+#include "ui-kit/components/button.h"
+#include "ui-kit/components/form_field.h"
+#include "ui-kit/components/select.h"
+#include "ui-kit/theme/theme.h"
 #include "widgets/drop_file_widget.h"
-#include "widgets/input_widget.h"
 #include "widgets/slider_widget.h"
 #include <QFutureWatcher>
 #include <QProgressBar>
@@ -22,15 +24,17 @@ private slots:
   void onProcessButtonClicked();
   void onCancelButtonClicked();
   void onImageTargetExtensionChanged();
+  void applyThemeStyles();
 
 private:
   QVBoxLayout *mainLayout;
   SliderWidget *m_qualitySlider;
   DropFileWidget *m_dragWidget;
-  InputWidget *m_targetExtension;
+  ui::FormField *m_targetExtensionField;
+  ui::Select *m_targetExtensionSelect;
   QProgressBar *m_progressBar;
-  ButtonAction *m_processButton;
-  ButtonAction *m_cancelButton;
+  ui::Button *m_processButton;
+  ui::Button *m_cancelButton;
   DropFileWidget::ImageExtension m_targetImageExtension;
 
   QFutureWatcher<void> *m_futureWatcher;
