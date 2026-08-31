@@ -1,6 +1,7 @@
 #include "main_page.h"
 #include "ui-kit/components/dialog.h"
 #include "ui-kit/components/toast.h"
+#include "ui-kit/theme/icon_helper.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
 #include <QDir>
@@ -52,6 +53,8 @@ void MainPage::setupImageAttribute() {
   setupExtensionButton();
   attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignBottom);
   attributeLayout->addWidget(m_targetExtensionField, 1, Qt::AlignBottom);
+  attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignTop);
+  attributeLayout->addWidget(m_targetExtensionField, 1, Qt::AlignTop);
   mainLayout->addLayout(attributeLayout);
 }
 
@@ -109,6 +112,13 @@ void MainPage::applyThemeStyles() {
       .arg(ui::StyleHelper::toHexString(c.foreground))
       .arg(ui::StyleHelper::toHexString(c.primary))
       .arg(r.md > 2 ? r.md - 1 : 2));
+
+  if (m_processButton) {
+    m_processButton->setIcon(ui::Icon::get(":/icons/icons/lucide-refresh-cw.svg", c.primaryForeground, QSize(16, 16)));
+  }
+  if (m_cancelButton) {
+    m_cancelButton->setIcon(ui::Icon::get(":/icons/icons/lucide-x.svg", c.destructiveForeground, QSize(16, 16)));
+  }
 }
 
 void MainPage::setProcessingState(bool isProcessing) {

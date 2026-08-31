@@ -1,4 +1,4 @@
-﻿#include "select.h"
+#include "select.h"
 #include "../theme/style_helper.h"
 #include <QListView>
 
@@ -34,7 +34,7 @@ void Select::applyThemeStyles() {
       "  color: %2;"
       "  border: 1px solid %3;"
       "  border-radius: %4px;"
-      "  padding: 0px 12px;"
+      "  padding: 0px 32px 0px 12px;"
       "  min-height: 38px;"
       "}"
       "QComboBox:hover {"
@@ -48,6 +48,12 @@ void Select::applyThemeStyles() {
       "  subcontrol-position: top right;"
       "  width: 28px;"
       "  border-left: none;"
+      "}"
+      "QComboBox::down-arrow {"
+      "  image: url(:/icons/icons/lucide-chevron-down.svg);"
+      "  width: 14px;"
+      "  height: 14px;"
+      "  margin-right: 6px;"
       "}"
       "QComboBox QAbstractItemView {"
       "  background-color: %7;"

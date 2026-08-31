@@ -6,14 +6,14 @@ This file serves as the persistent root knowledge and instructions for Antigravi
 
 ## 1. Project Mission & Identity
 **ImageConverter** is a native, offline C++ desktop application built on the **Qt 6 / Qt 5** framework. Its core purposes are:
-1. **Image Conversion**: Fast, local conversion between common image formats (`JPG`, `JPEG`, `PNG`, `WEBP`, `TIFF`) with user-configurable quality compression.
+1. **Image Conversion**: Fast, local conversion between common image formats (`JPG`, `JPEG`, `PNG`, `WEBP`, `TIFF`, `BMP`, `GIF`, `PDF`) with user-configurable quality compression.
 2. **PDF Compression**: Local multi-page PDF compression through resolution reduction, downscaling, and indexed/RGB color quantization using `QPdfDocument` and `QPdfWriter`.
 
 ---
 
 ## 2. Core Tech Stack & Build Tooling
 - **Language**: C++17 (`CMAKE_CXX_STANDARD 17`)
-- **Framework**: Qt 6 (Widgets, Core, Pdf) with fallback support for Qt 5
+- **Framework**: Qt 6 (Widgets, Core, Pdf, Svg) with fallback support for Qt 5
 - **Build System**: CMake 3.16+ with Ninja / MinGW (LLVM-MinGW 17.0.6 64-bit or MinGW 64-bit)
 - **Asset Bundler**: Qt Resource System (`resources/icons.qrc` compiled via `CMAKE_AUTORCC`)
 - **No External Web Dependencies**: Strictly offline, zero tracking, lightweight.
@@ -27,9 +27,11 @@ ImageConverter/
 │   ├── rules/                # Hierarchical domain rules (architecture, UI, pipeline, coding standards)
 │   ├── skills/               # Interactive procedures and developer workflows
 │   └── references/           # Complete codebase map, symbol registry, and reasoning context
+├── ui-kit/                   # Qt C++ "Shadcn-Style" component library (static library)
+│   ├── theme/                # Tokens, Theme manager, StyleHelper, AnimationHelper, Icon helper
+│   └── components/           # Button, Badge, Spinner, Card, Input, Switch, Slider, Select, FormField, Tabs, etc.
 ├── mainwindow/               # Shell window & tab management
-│   ├── mainwindow.h/.cpp     # Main application window with customized QTabWidget
-│   └── mainwindow_dummy.*    # Legacy prototype (for reference only)
+│   └── mainwindow.h/.cpp     # Main application window with ui::Tabs and theme switch
 ├── pages/                    # Main application view pages
 │   ├── main_page.h/.cpp      # Image conversion UI & batch orchestration
 │   └── pdf_page.h/.cpp       # PDF compression UI & rasterization engine
@@ -38,28 +40,44 @@ ImageConverter/
 │   ├── slider_widget.*       # Synchronized slider + spinbox quality selector
 │   ├── button_action.*       # Primary styled CTA buttons
 │   ├── input_widget.*        # Compound input containers
-│   ├── input_dropdown.*      # Styled dropdown format picker
-│   ├── message_box_widget.*  # Styled modal alert dialogs
-│   └── sidebar_panel.*       # Collapsible navigation drawer
-├── styles/                   # Centralized design tokens
-│   ├── colors.h              # HSL-based palette (Primary, Secondary, Grey, Danger, Warning)
-│   └── text_style.h          # Roboto typography helper methods
+│   └── message_box_widget.*  # Styled modal alert dialogs
 ├── resources/                # Assets and icon definitions
-│   ├── icons.qrc             # Resource manifest
-│   ├── icon_type.h           # Icon name-to-path resolution map
-│   └── input_type.h          # Type descriptor for dynamic input widgets
+│   ├── icons.qrc             # Resource manifest (includes official Lucide SVGs)
+│   └── icons/                # Lucide SVG vector assets
 ├── CMakeLists.txt            # CMake build definition
 └── main.cpp                  # Application entry point & Qt event loop
 ```
 
 ---
 
-## 4. Key Agent Directives & Rules
-When analyzing, modifying, or creating code in this repository, follow these rules:
+## 4. Strict Agent Behavioral Guardrails & Anti-Autopilot Policy
+These rules are non-negotiable and take absolute precedence over default model behaviors:
+
+1. **Strict Single-Task Scope Lock**:
+   - **NEVER** modify or create files that were not explicitly named or requested in the user's prompt.
+   - **NEVER** advance to the next roadmap milestone, phase, or unrequested component automatically.
+   - **NEVER** batch multiple unrelated features or files in one turn. Execute *only* the immediate task and stop.
+2. **Zero-Tolerance for Faked or Assumed Status**:
+   - **NEVER** claim a build compiled or tests passed without actually executing `cmake --build` via `run_command` and verifying exit code `0`.
+   - **NEVER** claim CodeRabbit review passed without actually running `cr review --agent --uncommitted` and inspecting the real JSON output (`findings: 0`).
+   - **ALWAYS** provide dual validation: verify programmatic execution internally AND present the raw terminal exit code / proof in the user response.
+3. **Non-Zero File Size Verification**:
+   - Every file created or edited MUST be audited to ensure its byte length is greater than zero (`Length > 0`). Empty or truncated files are strictly unacceptable.
+4. **No Presumptive Approvals**:
+   - Conversational approvals like *"ok"*, *"go ahead"*, or *"proceed"* apply **ONLY** to the immediate single task under discussion. Never interpret them as blanket permission to start future roadmap phases.
+5. **Clarify-Before-Action on Ambiguity**:
+   - If a user prompt is underspecified, ambiguous, or lacks an exact file/function target, **STOP** and ask 1 brief clarifying question. Do not guess, assume intent, or write speculative code.
+6. **Mandatory Immediate Tool Stop**:
+   - After completing the single requested edit, verifying non-zero file sizes, and confirming the build, **STOP calling tools immediately** and summarize the result concisely. Do not ask leading questions to push the roadmap forward.
+
+---
+
+## 5. Key Agent Technical Directives & Rules
+When analyzing, modifying, or creating code in this repository, follow these technical standards:
 
 1. **Design System Adherence**:
    - Never hardcode arbitrary colors or fonts in CSS/QSS strings.
-   - Always reference `Colors::*` (from [styles/colors.h](file:///d:/matkul/sem_6/AppProject/ImageConverter/styles/colors.h)) and `TextStyle::*` (from [styles/text_style.h](file:///d:/matkul/sem_6/AppProject/ImageConverter/styles/text_style.h)).
+   - Always reference `ui::Theme::instance().colors()` or `ui::StyleHelper`.
 2. **Memory & Qt Hierarchy**:
    - Always pass `parent` pointers to `QObject` and `QWidget` constructors to allow Qt's parent-child ownership tree to handle automatic memory cleanup.
 3. **Signal/Slot Discipline**:
@@ -71,7 +89,9 @@ When analyzing, modifying, or creating code in this repository, follow these rul
 5. **Context Retention**:
    - Refer to detailed documentation in `.AGENTS/rules/`, `.AGENTS/skills/`, and `.AGENTS/references/` before making architectural decisions.
 
-## 5. Automated Code Review with CodeRabbit CLI
+---
+
+## 6. Automated Code Review with CodeRabbit CLI
 
 ### Exact Command
 ```powershell
@@ -98,4 +118,4 @@ cr review --agent --uncommitted
    - **Fix**: Recommended / Minor logic issues.
    - **Skip**: Trivial nits or unnecessary changes with a brief rationale.
 4. Apply the fixes, re-compile, and re-run `cr review --agent --uncommitted` (up to 3 validation loops).
-5. Report the review outcome and verified fixes to the user.
+5. Report the review outcome and verified fixes to the user with raw JSON proof.

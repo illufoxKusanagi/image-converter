@@ -5,8 +5,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets Svg)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets Svg)
 
 set(UI_KIT_THEME_SOURCES
     theme/tokens.h
@@ -14,6 +14,8 @@ set(UI_KIT_THEME_SOURCES
     theme/theme.cpp
     theme/style_helper.h
     theme/animation_helper.h
+    theme/icon_helper.h
+    theme/icon_helper.cpp
 )
 
 set(UI_KIT_COMPONENT_SOURCES
@@ -43,6 +45,18 @@ set(UI_KIT_COMPONENT_SOURCES
     components/accordion.cpp
     components/sidebar.h
     components/sidebar.cpp
+    components/toast.h
+    components/toast.cpp
+    components/dialog.h
+    components/dialog.cpp
+    components/tooltip.h
+    components/tooltip.cpp
+    components/progress.h
+    components/progress.cpp
+    components/avatar.h
+    components/avatar.cpp
+    components/table.h
+    components/table.cpp
 )
 
 add_library(ui_kit STATIC
@@ -57,5 +71,5 @@ target_include_directories(ui_kit PUBLIC
 target_link_libraries(ui_kit PUBLIC
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Widgets
+    Qt${QT_VERSION_MAJOR}::Svg
 )
-

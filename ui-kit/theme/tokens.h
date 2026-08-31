@@ -1,4 +1,4 @@
-﻿#ifndef UI_TOKENS_H
+#ifndef UI_TOKENS_H
 #define UI_TOKENS_H
 
 #include <QColor>
@@ -92,24 +92,26 @@ inline ColorTokens lightColorTokens() {
   t.popover = QColor("#ffffff");
   t.popoverForeground = QColor("#09090b");
 
-  t.primary = QColor("#18181b");
-  t.primaryForeground = QColor("#fafafa");
+  // Primary: Brand Violet/Purple
+  t.primary = QColor("#9b44f9");
+  t.primaryForeground = QColor("#ffffff");
 
+  // Secondary: Light Surface Tint
   t.secondary = QColor("#f4f4f5");
-  t.secondaryForeground = QColor("#18181b");
+  t.secondaryForeground = QColor("#09090b");
 
   t.muted = QColor("#f4f4f5");
   t.mutedForeground = QColor("#71717a");
 
   t.accent = QColor("#f4f4f5");
-  t.accentForeground = QColor("#18181b");
+  t.accentForeground = QColor("#09090b");
 
   t.destructive = QColor("#ef4444");
-  t.destructiveForeground = QColor("#fafafa");
+  t.destructiveForeground = QColor("#ffffff");
 
   t.border = QColor("#e4e4e7");
   t.input = QColor("#e4e4e7");
-  t.ring = QColor("#18181b");
+  t.ring = QColor("#9b44f9");
   return t;
 }
 
@@ -124,9 +126,11 @@ inline ColorTokens darkColorTokens() {
   t.popover = QColor("#18181b");
   t.popoverForeground = QColor("#fafafa");
 
-  t.primary = QColor("#fafafa");
-  t.primaryForeground = QColor("#18181b");
+  // Primary: Vibrant Violet in Dark Mode
+  t.primary = QColor("#a78bfa");
+  t.primaryForeground = QColor("#09090b");
 
+  // Secondary: Dark Elevated Slate
   t.secondary = QColor("#27272a");
   t.secondaryForeground = QColor("#fafafa");
 
@@ -137,11 +141,11 @@ inline ColorTokens darkColorTokens() {
   t.accentForeground = QColor("#fafafa");
 
   t.destructive = QColor("#ef4444");
-  t.destructiveForeground = QColor("#fafafa");
+  t.destructiveForeground = QColor("#ffffff");
 
   t.border = QColor("#27272a");
   t.input = QColor("#27272a");
-  t.ring = QColor("#d4d4d8");
+  t.ring = QColor("#a78bfa");
   return t;
 }
 

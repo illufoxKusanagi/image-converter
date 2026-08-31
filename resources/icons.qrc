@@ -13,5 +13,23 @@
         <file>icons/image.svg</file>
         <file>icons/arrow-up-black.svg</file>
         <file>icons/icon-logo.png</file>
+        <file>icons/lucide-sun.svg</file>
+        <file>icons/lucide-moon.svg</file>
+        <file>icons/lucide-image.svg</file>
+        <file>icons/lucide-file-text.svg</file>
+        <file>icons/lucide-upload.svg</file>
+        <file>icons/lucide-upload-cloud.svg</file>
+        <file>icons/lucide-folder-open.svg</file>
+        <file>icons/lucide-chevron-up.svg</file>
+        <file>icons/lucide-chevron-down.svg</file>
+        <file>icons/lucide-x.svg</file>
+        <file>icons/lucide-trash-2.svg</file>
+        <file>icons/lucide-check.svg</file>
+        <file>icons/lucide-alert-triangle.svg</file>
+        <file>icons/lucide-info.svg</file>
+        <file>icons/lucide-sliders.svg</file>
+        <file>icons/lucide-refresh-cw.svg</file>
+        <file>icons/lucide-plus.svg</file>
+        <file>icons/lucide-minus.svg</file>
     </qresource>
 </RCC>

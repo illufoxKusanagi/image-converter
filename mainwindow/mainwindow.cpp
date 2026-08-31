@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "ui-kit/theme/icon_helper.h"
 #include "ui-kit/theme/style_helper.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
@@ -18,7 +19,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
   m_titleLabel = new QLabel("ImageConverter", headerWidget);
 
-  m_themeToggleBtn = new ui::Button(ui::Theme::instance().isDark() ? "☀️ Light" : "🌙 Dark",
+  m_themeToggleBtn = new ui::Button(ui::Theme::instance().isDark() ? "Light" : "Dark",
                                     ui::ButtonVariant::Ghost,
                                     ui::ButtonSize::Small,
                                     headerWidget);
@@ -32,7 +33,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   // Main Tabs
   m_tabs = new ui::Tabs(ui::TabVariant::Underline, m_centralWidget);
   m_mainPage = new MainPage(m_tabs);
-  m_tabs->addTab("Convert Image", QIcon(), m_mainPage);
+  m_tabs->addTab("Convert Image", ui::Icon::get(":/icons/icons/lucide-image.svg", ui::Theme::instance().colors().foreground, QSize(16, 16)), m_mainPage);
 
   rootLayout->addWidget(m_tabs, 1);
   setCentralWidget(m_centralWidget);
@@ -60,5 +61,11 @@ void MainWindow::applyThemeStyles() {
   m_titleLabel->setStyleSheet(QString("color: %1; background: transparent;")
                                   .arg(ui::StyleHelper::toHexString(c.foreground)));
 
-  m_themeToggleBtn->setText(isDark ? "☀️ Light" : "🌙 Dark");
+  if (isDark) {
+    m_themeToggleBtn->setText("Light");
+    m_themeToggleBtn->setIcon(ui::Icon::get(":/icons/icons/lucide-sun.svg", c.foreground, QSize(16, 16)));
+  } else {
+    m_themeToggleBtn->setText("Dark");
+    m_themeToggleBtn->setIcon(ui::Icon::get(":/icons/icons/lucide-moon.svg", c.foreground, QSize(16, 16)));
+  }
 }
