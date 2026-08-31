@@ -3,8 +3,7 @@
 
 namespace ui {
 
-FormField::FormField(QWidget *parent)
-    : FormField("", nullptr, parent) {}
+FormField::FormField(QWidget *parent) : FormField("", nullptr, parent) {}
 
 FormField::FormField(const QString &label, QWidget *control, QWidget *parent)
     : QWidget(parent) {
@@ -12,7 +11,7 @@ FormField::FormField(const QString &label, QWidget *control, QWidget *parent)
 
   m_layout = new QVBoxLayout(this);
   m_layout->setContentsMargins(0, 0, 0, 0);
-  m_layout->setSpacing(6);
+  m_layout->setSpacing(Theme::instance().spacing().space2);
 
   m_labelLayout = new QHBoxLayout();
   m_labelLayout->setContentsMargins(0, 0, 0, 0);
@@ -47,31 +46,26 @@ FormField::FormField(const QString &label, QWidget *control, QWidget *parent)
   m_layout->addWidget(m_descLabel);
   m_layout->addWidget(m_errorLabel);
 
-  connect(&Theme::instance(), &Theme::themeChanged, this, &FormField::applyThemeStyles);
+  connect(&Theme::instance(), &Theme::themeChanged, this,
+          &FormField::applyThemeStyles);
   applyThemeStyles();
 }
 
-QString FormField::label() const {
-  return m_label->text();
-}
+QString FormField::label() const { return m_label->text(); }
 
 void FormField::setLabel(const QString &label) {
   m_label->setText(label);
   m_label->setVisible(!label.isEmpty());
 }
 
-bool FormField::isRequired() const {
-  return m_isRequired;
-}
+bool FormField::isRequired() const { return m_isRequired; }
 
 void FormField::setRequired(bool required) {
   m_isRequired = required;
   m_requiredIndicator->setVisible(m_isRequired && !m_label->text().isEmpty());
 }
 
-QString FormField::description() const {
-  return m_descLabel->text();
-}
+QString FormField::description() const { return m_descLabel->text(); }
 
 void FormField::setDescription(const QString &description) {
   m_descLabel->setText(description);
@@ -90,17 +84,11 @@ void FormField::setError(const QString &errorMessage) {
   }
 }
 
-void FormField::clearError() {
-  setError("");
-}
+void FormField::clearError() { setError(""); }
 
-bool FormField::hasError() const {
-  return m_hasError;
-}
+bool FormField::hasError() const { return m_hasError; }
 
-QString FormField::error() const {
-  return m_errorLabel->text();
-}
+QString FormField::error() const { return m_errorLabel->text(); }
 
 void FormField::setControl(QWidget *control) {
   if (m_control == control) {
@@ -116,32 +104,38 @@ void FormField::setControl(QWidget *control) {
   }
 }
 
-QWidget *FormField::control() const {
-  return m_control;
-}
+QWidget *FormField::control() const { return m_control; }
 
 void FormField::applyThemeStyles() {
   const auto &c = Theme::instance().colors();
   const auto &t = Theme::instance().typography();
 
-  m_label->setStyleSheet(QString("color: %1; background: transparent; font-size: %2px; font-weight: 600; font-family: '%3';")
-                             .arg(StyleHelper::toHexString(c.foreground))
-                             .arg(t.sizeBase)
-                             .arg(t.fontFamily));
+  m_label->setStyleSheet(
+      QString("color: %1; background: transparent; font-size: %2px; "
+              "font-weight: 600; font-family: '%3';")
+          .arg(StyleHelper::toHexString(c.foreground))
+          .arg(t.sizeBase)
+          .arg(t.fontFamily));
 
-  m_requiredIndicator->setStyleSheet(QString("color: %1; background: transparent; font-size: %2px; font-weight: bold;")
-                                         .arg(StyleHelper::toHexString(c.destructive))
-                                         .arg(t.sizeBase));
+  m_requiredIndicator->setStyleSheet(
+      QString("color: %1; background: transparent; font-size: %2px; "
+              "font-weight: bold;")
+          .arg(StyleHelper::toHexString(c.destructive))
+          .arg(t.sizeBase));
 
-  m_descLabel->setStyleSheet(QString("color: %1; background: transparent; font-size: %2px; font-family: '%3';")
-                                 .arg(StyleHelper::toHexString(c.mutedForeground))
-                                 .arg(t.sizeXs)
-                                 .arg(t.fontFamily));
+  m_descLabel->setStyleSheet(
+      QString("color: %1; background: transparent; font-size: %2px; "
+              "font-family: '%3';")
+          .arg(StyleHelper::toHexString(c.mutedForeground))
+          .arg(t.sizeXs)
+          .arg(t.fontFamily));
 
-  m_errorLabel->setStyleSheet(QString("color: %1; background: transparent; font-size: %2px; font-weight: 600; font-family: '%3';")
-                                  .arg(StyleHelper::toHexString(c.destructive))
-                                  .arg(t.sizeXs)
-                                  .arg(t.fontFamily));
+  m_errorLabel->setStyleSheet(
+      QString("color: %1; background: transparent; font-size: %2px; "
+              "font-weight: 600; font-family: '%3';")
+          .arg(StyleHelper::toHexString(c.destructive))
+          .arg(t.sizeXs)
+          .arg(t.fontFamily));
 }
 
 } // namespace ui

@@ -5,7 +5,7 @@ SliderWidget::SliderWidget(QWidget *parent, QString originTitle)
     : QWidget(parent), m_value(100) {
   mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(0, 0, 0, 0);
-  mainLayout->setSpacing(10);
+  mainLayout->setSpacing(ui::Theme::instance().spacing().space2);
 
   m_label = new QLabel(originTitle, this);
 
@@ -31,7 +31,8 @@ SliderWidget::SliderWidget(QWidget *parent, QString originTitle)
   mainLayout->addWidget(m_slider);
   setLayout(mainLayout);
 
-  connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this, &SliderWidget::applyThemeStyles);
+  connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,
+          &SliderWidget::applyThemeStyles);
   applyThemeStyles();
 }
 
@@ -76,8 +77,10 @@ void SliderWidget::setTitle(const QString &title) {
 
 void SliderWidget::setEnabled(bool enabled) {
   QWidget::setEnabled(enabled);
-  if (m_slider) m_slider->setEnabled(enabled);
-  if (m_spinBox) m_spinBox->setEnabled(enabled);
+  if (m_slider)
+    m_slider->setEnabled(enabled);
+  if (m_spinBox)
+    m_spinBox->setEnabled(enabled);
 }
 
 void SliderWidget::applyThemeStyles() {
@@ -86,15 +89,18 @@ void SliderWidget::applyThemeStyles() {
   const auto &t = ui::Theme::instance().typography();
   bool isDark = ui::Theme::instance().isDark();
 
-  m_label->setStyleSheet(QString("color: %1; background: transparent; font-size: %2px; font-weight: 600; font-family: '%3';")
-                             .arg(ui::StyleHelper::toHexString(c.foreground))
-                             .arg(t.sizeBase)
-                             .arg(t.fontFamily));
+  m_label->setStyleSheet(
+      QString("color: %1; background: transparent; font-size: %2px; "
+              "font-weight: 600; font-family: '%3';")
+          .arg(ui::StyleHelper::toHexString(c.foreground))
+          .arg(t.sizeBase)
+          .arg(t.fontFamily));
 
   QString cardHex = ui::StyleHelper::toHexString(c.card);
   QString fgHex = ui::StyleHelper::toHexString(c.foreground);
   QString borderHex = ui::StyleHelper::toHexString(c.primary);
-  QString hoverBorderHex = ui::StyleHelper::toHexString(ui::StyleHelper::hoverColor(c.primary, isDark));
+  QString hoverBorderHex = ui::StyleHelper::toHexString(
+      ui::StyleHelper::hoverColor(c.primary, isDark));
   QString mutedFgHex = ui::StyleHelper::toHexString(c.mutedForeground);
   QString mutedHex = ui::StyleHelper::toHexString(c.muted);
   QString secondaryHex = ui::StyleHelper::toHexString(c.secondary);
@@ -102,46 +108,80 @@ void SliderWidget::applyThemeStyles() {
   QString compartmentBgHex = isDark ? "#27272a" : "#ede9fe";
   QString compartmentHoverHex = isDark ? "#3f3f46" : "#ddd6fe";
   QString compartmentPressedHex = isDark ? "#52525b" : "#c4b5fd";
-  QString upIcon = isDark ? ":/icons/icons/arrow-up.svg" : ":/icons/icons/arrow-up-black.svg";
-  QString downIcon = isDark ? ":/icons/icons/arrow-down.svg" : ":/icons/icons/arrow-down-black.svg";
+  QString upIcon = isDark ? ":/icons/icons/arrow-up.svg"
+                          : ":/icons/icons/arrow-up-black.svg";
+  QString downIcon = isDark ? ":/icons/icons/arrow-down.svg"
+                            : ":/icons/icons/arrow-down-black.svg";
 
   m_spinBox->setFont(t.font(t.sizeBase, QFont::Normal));
   m_spinBox->setStyleSheet(
       "QSpinBox {"
-      "  background-color: " + cardHex + ";"
-      "  color: " + fgHex + ";"
-      "  border: 1px solid " + borderHex + ";"
-      "  border-radius: " + QString::number(r.md) + "px;"
+      "  background-color: " +
+      cardHex +
+      ";"
+      "  color: " +
+      fgHex +
+      ";"
+      "  border: 1px solid " +
+      borderHex +
+      ";"
+      "  border-radius: " +
+      QString::number(r.md) +
+      "px;"
       "  padding: 0px 36px 0px 12px;"
-      "  font-size: " + QString::number(t.sizeBase) + "px;"
+      "  font-size: " +
+      QString::number(t.sizeBase) +
+      "px;"
       "}"
       "QSpinBox:hover, QSpinBox:focus {"
-      "  border-color: " + hoverBorderHex + ";"
+      "  border-color: " +
+      hoverBorderHex +
+      ";"
       "}"
       "QSpinBox:disabled {"
-      "  color: " + mutedFgHex + ";"
-      "  background-color: " + mutedHex + ";"
-      "  border-color: " + borderHex + ";"
+      "  color: " +
+      mutedFgHex +
+      ";"
+      "  background-color: " +
+      mutedHex +
+      ";"
+      "  border-color: " +
+      borderHex +
+      ";"
       "}"
       "QSpinBox::up-button {"
       "  subcontrol-origin: border;"
       "  subcontrol-position: top right;"
       "  width: 32px;"
-      "  border: 1px solid " + borderHex + ";"
-      "  border-top-right-radius: " + QString::number(r.md - 1) + "px;"
-      "  background-color: " + compartmentBgHex + ";"
+      "  border: 1px solid " +
+      borderHex +
+      ";"
+      "  border-top-right-radius: " +
+      QString::number(r.md - 1) +
+      "px;"
+      "  background-color: " +
+      compartmentBgHex +
+      ";"
       "}"
       "QSpinBox:hover::up-button, QSpinBox:focus::up-button {"
-      "  border-color: " + hoverBorderHex + ";"
+      "  border-color: " +
+      hoverBorderHex +
+      ";"
       "}"
       "QSpinBox::up-button:hover {"
-      "  background-color: " + compartmentHoverHex + ";"
+      "  background-color: " +
+      compartmentHoverHex +
+      ";"
       "}"
       "QSpinBox::up-button:pressed {"
-      "  background-color: " + compartmentPressedHex + ";"
+      "  background-color: " +
+      compartmentPressedHex +
+      ";"
       "}"
       "QSpinBox::up-arrow {"
-      "  image: url(" + upIcon + ");"
+      "  image: url(" +
+      upIcon +
+      ");"
       "  width: 10px;"
       "  height: 10px;"
       "}"
@@ -149,52 +189,81 @@ void SliderWidget::applyThemeStyles() {
       "  subcontrol-origin: border;"
       "  subcontrol-position: bottom right;"
       "  width: 32px;"
-      "  border: 1px solid " + borderHex + ";"
-      "  border-bottom-right-radius: " + QString::number(r.md - 1) + "px;"
-      "  background-color: " + compartmentBgHex + ";"
+      "  border: 1px solid " +
+      borderHex +
+      ";"
+      "  border-bottom-right-radius: " +
+      QString::number(r.md - 1) +
+      "px;"
+      "  background-color: " +
+      compartmentBgHex +
+      ";"
       "}"
       "QSpinBox:hover::down-button, QSpinBox:focus::down-button {"
-      "  border-color: " + hoverBorderHex + ";"
+      "  border-color: " +
+      hoverBorderHex +
+      ";"
       "}"
       "QSpinBox::down-button:hover {"
-      "  background-color: " + compartmentHoverHex + ";"
+      "  background-color: " +
+      compartmentHoverHex +
+      ";"
       "}"
       "QSpinBox::down-button:pressed {"
-      "  background-color: " + compartmentPressedHex + ";"
+      "  background-color: " +
+      compartmentPressedHex +
+      ";"
       "}"
       "QSpinBox::down-arrow {"
-      "  image: url(" + downIcon + ");"
+      "  image: url(" +
+      downIcon +
+      ");"
       "  width: 10px;"
       "  height: 10px;"
       "}");
 
-  m_slider->setStyleSheet(
-      "QSlider::groove:horizontal {"
-      "  border: none;"
-      "  height: 6px;"
-      "  background-color: " + secondaryHex + ";"
-      "  border-radius: 3px;"
-      "}"
-      "QSlider::sub-page:horizontal {"
-      "  background-color: " + borderHex + ";"
-      "  border-radius: 3px;"
-      "}"
-      "QSlider::handle:horizontal {"
-      "  background-color: " + bgHex + ";"
-      "  border: 2px solid " + borderHex + ";"
-      "  width: 16px;"
-      "  margin: -6px 0px;"
-      "  height: 16px;"
-      "  border-radius: 9px;"
-      "}"
-      "QSlider::handle:horizontal:hover {"
-      "  background-color: " + borderHex + ";"
-      "}"
-      "QSlider::sub-page:horizontal:disabled {"
-      "  background-color: " + mutedFgHex + ";"
-      "}"
-      "QSlider::handle:horizontal:disabled {"
-      "  border: 2px solid " + mutedFgHex + ";"
-      "  background-color: " + bgHex + ";"
-      "}");
+  m_slider->setStyleSheet("QSlider::groove:horizontal {"
+                          "  border: none;"
+                          "  height: 6px;"
+                          "  background-color: " +
+                          secondaryHex +
+                          ";"
+                          "  border-radius: 3px;"
+                          "}"
+                          "QSlider::sub-page:horizontal {"
+                          "  background-color: " +
+                          borderHex +
+                          ";"
+                          "  border-radius: 3px;"
+                          "}"
+                          "QSlider::handle:horizontal {"
+                          "  background-color: " +
+                          bgHex +
+                          ";"
+                          "  border: 2px solid " +
+                          borderHex +
+                          ";"
+                          "  width: 16px;"
+                          "  margin: -6px 0px;"
+                          "  height: 16px;"
+                          "  border-radius: 9px;"
+                          "}"
+                          "QSlider::handle:horizontal:hover {"
+                          "  background-color: " +
+                          borderHex +
+                          ";"
+                          "}"
+                          "QSlider::sub-page:horizontal:disabled {"
+                          "  background-color: " +
+                          mutedFgHex +
+                          ";"
+                          "}"
+                          "QSlider::handle:horizontal:disabled {"
+                          "  border: 2px solid " +
+                          mutedFgHex +
+                          ";"
+                          "  background-color: " +
+                          bgHex +
+                          ";"
+                          "}");
 }
