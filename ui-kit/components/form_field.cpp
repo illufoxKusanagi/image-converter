@@ -1,4 +1,4 @@
-﻿#include "form_field.h"
+#include "form_field.h"
 #include "../theme/style_helper.h"
 
 namespace ui {
@@ -66,16 +66,16 @@ bool FormField::isRequired() const {
 
 void FormField::setRequired(bool required) {
   m_isRequired = required;
-  m_requiredIndicator->setVisible(required && !m_label->text().isEmpty());
+  m_requiredIndicator->setVisible(m_isRequired && !m_label->text().isEmpty());
+}
+
+QString FormField::description() const {
+  return m_descLabel->text();
 }
 
 void FormField::setDescription(const QString &description) {
   m_descLabel->setText(description);
   m_descLabel->setVisible(!description.isEmpty() && !m_hasError);
-}
-
-QString FormField::description() const {
-  return m_descLabel->text();
 }
 
 void FormField::setError(const QString &errorMessage) {
@@ -124,21 +124,24 @@ void FormField::applyThemeStyles() {
   const auto &c = Theme::instance().colors();
   const auto &t = Theme::instance().typography();
 
-  m_label->setFont(t.font(t.sizeSm, QFont::DemiBold));
-  m_label->setStyleSheet(QString("color: %1; background: transparent;")
-                             .arg(StyleHelper::toHexString(c.foreground)));
+  m_label->setStyleSheet(QString("color: %1; background: transparent; font-size: %2px; font-weight: 600; font-family: '%3';")
+                             .arg(StyleHelper::toHexString(c.foreground))
+                             .arg(t.sizeBase)
+                             .arg(t.fontFamily));
 
-  m_requiredIndicator->setFont(t.font(t.sizeSm, QFont::Bold));
-  m_requiredIndicator->setStyleSheet(QString("color: %1; background: transparent;")
-                                         .arg(StyleHelper::toHexString(c.destructive)));
+  m_requiredIndicator->setStyleSheet(QString("color: %1; background: transparent; font-size: %2px; font-weight: bold;")
+                                         .arg(StyleHelper::toHexString(c.destructive))
+                                         .arg(t.sizeBase));
 
-  m_descLabel->setFont(t.font(t.sizeXs, QFont::Normal));
-  m_descLabel->setStyleSheet(QString("color: %1; background: transparent;")
-                                 .arg(StyleHelper::toHexString(c.mutedForeground)));
+  m_descLabel->setStyleSheet(QString("color: %1; background: transparent; font-size: %2px; font-family: '%3';")
+                                 .arg(StyleHelper::toHexString(c.mutedForeground))
+                                 .arg(t.sizeXs)
+                                 .arg(t.fontFamily));
 
-  m_errorLabel->setFont(t.font(t.sizeXs, QFont::DemiBold));
-  m_errorLabel->setStyleSheet(QString("color: %1; background: transparent;")
-                                  .arg(StyleHelper::toHexString(c.destructive)));
+  m_errorLabel->setStyleSheet(QString("color: %1; background: transparent; font-size: %2px; font-weight: 600; font-family: '%3';")
+                                  .arg(StyleHelper::toHexString(c.destructive))
+                                  .arg(t.sizeXs)
+                                  .arg(t.fontFamily));
 }
 
 } // namespace ui

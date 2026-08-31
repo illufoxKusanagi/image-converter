@@ -96,8 +96,7 @@ void DropFileWidget::setupChosenFileWidget() {
   headerLayout->setContentsMargins(4, 0, 4, 0);
   m_chosenHeaderLabel = new QLabel("Selected Files", this);
 
-  m_clearAllButton = new QPushButton("Clear All", this);
-  m_clearAllButton->setCursor(Qt::PointingHandCursor);
+  m_clearAllButton = new ui::Button("Clear All", ui::ButtonVariant::Ghost, ui::ButtonSize::Small, this);
   connect(m_clearAllButton, &QPushButton::clicked, this,
           &DropFileWidget::onClearAllPressed);
 
@@ -520,7 +519,23 @@ bool DropFileWidget::saveImage(const QImage *image, const QString &outputPath,
 }
 
 void DropFileWidget::convertImage(const QString &sourcePath) {
-  Q_UNUSED(sourcePath);
+  if (sourcePath.isEmpty() || !m_sourceExtension) {
+    return;
+  }
+  QImage img(sourcePath);
+  if (img.isNull()) {
+    return;
+  }
+  QFileInfo fi(sourcePath);
+  QString targetExtStr = imageExtensionToString(*m_sourceExtension).toLower();
+  QString defaultPath = fi.dir().filePath(fi.completeBaseName() + "." + targetExtStr);
+  QString filter = QString("%1 Files (*.%2);;All Files (*)").arg(targetExtStr.toUpper(), targetExtStr);
+  QString outputPath = QFileDialog::getSaveFileName(this, "Save Converted Image", defaultPath, filter);
+  if (outputPath.isEmpty()) {
+    return;
+  }
+  int quality = m_sliderWidget ? m_sliderWidget->getValue() : 100;
+  saveImage(&img, outputPath, quality, m_sourceExtension);
 }
 
 void DropFileWidget::onBrowseButtonPressed() {

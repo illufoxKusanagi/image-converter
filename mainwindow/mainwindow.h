@@ -2,7 +2,6 @@
 #define MAINWINDOW_H
 
 #include "pages/main_page.h"
-#include "pages/pdf_page.h"
 #include "ui-kit/components/button.h"
 #include "ui-kit/components/card.h"
 #include "ui-kit/components/tabs.h"

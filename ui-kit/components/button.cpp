@@ -1,4 +1,4 @@
-﻿#include "button.h"
+#include "button.h"
 #include "../theme/style_helper.h"
 
 namespace ui {

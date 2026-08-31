@@ -75,7 +75,7 @@ private:
   QWidget *m_emptyFieldWidget;
   QWidget *m_chosenFileWidget;
   QLabel *m_chosenHeaderLabel;
-  QPushButton *m_clearAllButton;
+  ui::Button *m_clearAllButton;
   ui::Button *m_addMoreButton;
   QScrollArea *m_fileScrollArea;
   QWidget *m_fileListContainer;

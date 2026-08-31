@@ -1,4 +1,4 @@
-﻿#ifndef UI_INPUT_H
+#ifndef UI_INPUT_H
 #define UI_INPUT_H
 
 #include "../theme/theme.h"
@@ -52,6 +52,7 @@ private:
   QLabel *m_prefixLabel;
   QLabel *m_suffixLabel;
   QPushButton *m_clearButton;
+  bool m_clearButtonEnabled{false};
   bool m_hasError{false};
 };
 

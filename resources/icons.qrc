@@ -31,5 +31,6 @@
         <file>icons/lucide-refresh-cw.svg</file>
         <file>icons/lucide-plus.svg</file>
         <file>icons/lucide-minus.svg</file>
+        <file>icons/lucide-monitor.svg</file>
     </qresource>
 </RCC>

@@ -9,14 +9,14 @@ All styling in ImageConverter is centralized in two headers:
 
 ## 2. Color Palette Catalog
 
-| Palette Group | Key Tokens | Usage |
-| :--- | :--- | :--- |
-| **Standard** | `Colors::StandardWhite`, `Colors::StandardBlack` | Base canvas background, high-contrast text |
-| **Primary** (Purple) | `Primary50` (`#EBDAFE`) to `Primary900` (`#341753`) | Primary CTA buttons (`Primary600`), focus states (`Primary700`), hover states (`Primary400`), slider handles (`Primary500`) |
-| **Secondary** (Blue) | `Secondary50` (`#D4E7FA`) to `Secondary900` (`#0D2C4D`) | Tab highlights (`Secondary500`), container borders (`Secondary400`), sidebar background (`Secondary600`) |
-| **Grey** (Neutrals) | `Grey100` (`#E2E3E2`) to `Grey900` (`#161719`) | Disabled buttons (`Grey400`), slider groove (`Grey200`), text captions (`Grey700`, `Grey900`) |
-| **Danger** (Red) | `Danger100` (`#FCDAD9`) to `Danger900` (`#300E0D`) | Error labels (`Danger600`), error borders |
-| **Warning** (Yellow) | `Warning100` (`#FFEECC`) to `Warning900` (`#332200`) | Warnings & cautions |
+| Palette Group        | Key Tokens                                              | Usage                                                                                                                       |
+| :------------------- | :------------------------------------------------------ | :-------------------------------------------------------------------------------------------------------------------------- |
+| **Standard**         | `Colors::StandardWhite`, `Colors::StandardBlack`        | Base canvas background, high-contrast text                                                                                  |
+| **Primary** (Purple) | `Primary50` (`#EBDAFE`) to `Primary900` (`#341753`)     | Primary CTA buttons (`Primary600`), focus states (`Primary700`), hover states (`Primary400`), slider handles (`Primary500`) |
+| **Secondary** (Blue) | `Secondary50` (`#D4E7FA`) to `Secondary900` (`#0D2C4D`) | Tab highlights (`Secondary500`), container borders (`Secondary400`), sidebar background (`Secondary600`)                    |
+| **Grey** (Neutrals)  | `Grey100` (`#E2E3E2`) to `Grey900` (`#161719`)          | Disabled buttons (`Grey400`), slider groove (`Grey200`), text captions (`Grey700`, `Grey900`)                               |
+| **Danger** (Red)     | `Danger100` (`#FCDAD9`) to `Danger900` (`#300E0D`)      | Error labels (`Danger600`), error borders                                                                                   |
+| **Warning** (Yellow) | `Warning100` (`#FFEECC`) to `Warning900` (`#332200`)    | Warnings & cautions                                                                                                         |
 
 ---
 
@@ -24,20 +24,20 @@ All styling in ImageConverter is centralized in two headers:
 
 Font Family: **Roboto** (Google Font)
 
-| Token Method | CSS Output Properties | Typical Usage |
-| :--- | :--- | :--- |
-| `TextStyle::Heading1()` | `font-size: 48px; font-weight: 600;` | Major titles |
-| `TextStyle::Heading2()` | `font-size: 40px; font-weight: 600;` | Section headers |
-| `TextStyle::Heading3()` | `font-size: 32px; font-weight: 600;` | Page headers |
-| `TextStyle::Heading4()` | `font-size: 28px; font-weight: 600;` | Card headers |
-| `TextStyle::Heading5()` | `font-size: 24px; font-weight: 600;` | Subheaders |
-| `TextStyle::BodyBigBold()` | `font-size: 18px; font-weight: 600;` | Prominent button labels, dropzone headers |
-| `TextStyle::BodyBigRegular()` | `font-size: 18px; font-weight: 400;` | Long body descriptions |
-| `TextStyle::BodyMediumBold()` | `font-size: 16px; font-weight: 600;` | Active tabs, standard CTA button text |
+| Token Method                     | CSS Output Properties                | Typical Usage                                |
+| :------------------------------- | :----------------------------------- | :------------------------------------------- |
+| `TextStyle::Heading1()`          | `font-size: 48px; font-weight: 600;` | Major titles                                 |
+| `TextStyle::Heading2()`          | `font-size: 40px; font-weight: 600;` | Section headers                              |
+| `TextStyle::Heading3()`          | `font-size: 32px; font-weight: 600;` | Page headers                                 |
+| `TextStyle::Heading4()`          | `font-size: 28px; font-weight: 600;` | Card headers                                 |
+| `TextStyle::Heading5()`          | `font-size: 24px; font-weight: 600;` | Subheaders                                   |
+| `TextStyle::BodyBigBold()`       | `font-size: 18px; font-weight: 600;` | Prominent button labels, dropzone headers    |
+| `TextStyle::BodyBigRegular()`    | `font-size: 18px; font-weight: 400;` | Long body descriptions                       |
+| `TextStyle::BodyMediumBold()`    | `font-size: 16px; font-weight: 600;` | Active tabs, standard CTA button text        |
 | `TextStyle::BodyMediumRegular()` | `font-size: 16px; font-weight: 400;` | Inactive tabs, form labels, message box text |
-| `TextStyle::BodySmallBold()` | `font-size: 14px; font-weight: 600;` | Badge text, separator text ("or") |
-| `TextStyle::BodySmallRegular()` | `font-size: 14px; font-weight: 400;` | Input field text, spinbox text |
-| `TextStyle::Subttile*()` | `font-size: 10px–14px;` | Metadata, helper descriptions, upload status |
+| `TextStyle::BodySmallBold()`     | `font-size: 14px; font-weight: 600;` | Badge text, separator text ("or")            |
+| `TextStyle::BodySmallRegular()`  | `font-size: 14px; font-weight: 400;` | Input field text, spinbox text               |
+| `TextStyle::Subtitle*()`         | `font-size: 10px–14px;`              | Metadata, helper descriptions, upload status |
 
 ---
 

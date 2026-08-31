@@ -61,10 +61,11 @@ int Tabs::insertTab(int index, const QString &text, const QIcon &icon, QWidget *
   m_tabs.insert(targetIndex, item);
   m_tabBarLayout->insertWidget(targetIndex, btn);
 
-  if (page) {
-    m_stackedWidget->insertWidget(targetIndex, page);
-    m_stackedWidget->setVisible(true);
+  QWidget *pageWidget = page;
+  if (!pageWidget) {
+    pageWidget = new QWidget(m_stackedWidget);
   }
+  m_stackedWidget->insertWidget(targetIndex, pageWidget);
 
   connect(btn, &QPushButton::clicked, this, [this, btn]() {
     for (int i = 0; i < m_tabs.size(); ++i) {
@@ -93,8 +94,12 @@ void Tabs::removeTab(int index) {
   m_tabBarLayout->removeWidget(item.button);
   item.button->deleteLater();
 
-  if (item.page) {
-    m_stackedWidget->removeWidget(item.page);
+  QWidget *stackedPage = m_stackedWidget->widget(index);
+  if (stackedPage) {
+    m_stackedWidget->removeWidget(stackedPage);
+    if (!item.page) {
+      stackedPage->deleteLater();
+    }
   }
 
   if (m_tabs.isEmpty()) {
@@ -119,6 +124,7 @@ void Tabs::setCurrentIndex(int index) {
   if (m_stackedWidget->count() > index) {
     m_stackedWidget->setCurrentIndex(index);
   }
+  m_stackedWidget->setVisible(m_tabs[index].page != nullptr);
 
   applyThemeStyles();
   emit currentChanged(m_currentIndex);

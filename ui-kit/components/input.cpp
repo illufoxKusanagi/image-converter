@@ -1,4 +1,4 @@
-﻿#include "input.h"
+#include "input.h"
 #include "../theme/style_helper.h"
 
 namespace ui {
@@ -26,7 +26,7 @@ Input::Input(const QString &placeholder, QWidget *parent)
   m_suffixLabel = new QLabel(this);
   m_suffixLabel->setVisible(false);
 
-  m_clearButton = new QPushButton("âœ•", this);
+  m_clearButton = new QPushButton(QString::fromUtf8("\u2715"), this);
   m_clearButton->setFixedSize(18, 18);
   m_clearButton->setCursor(Qt::PointingHandCursor);
   m_clearButton->setToolTip("Clear");
@@ -39,7 +39,7 @@ Input::Input(const QString &placeholder, QWidget *parent)
   m_layout->addWidget(m_clearButton);
 
   connect(m_lineEdit, &QLineEdit::textChanged, this, [this](const QString &text) {
-    if (m_clearButton->isEnabled()) {
+    if (m_clearButtonEnabled) {
       m_clearButton->setVisible(!text.isEmpty());
     }
     emit textChanged(text);
@@ -78,11 +78,11 @@ void Input::setSuffixText(const QString &suffix) {
 }
 
 bool Input::isClearButtonEnabled() const {
-  return m_clearButton->isEnabled();
+  return m_clearButtonEnabled;
 }
 
 void Input::setClearButtonEnabled(bool enable) {
-  m_clearButton->setEnabled(enable);
+  m_clearButtonEnabled = enable;
   m_clearButton->setVisible(enable && !m_lineEdit->text().isEmpty());
 }
 

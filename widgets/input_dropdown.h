@@ -1,8 +1,7 @@
 #ifndef INPUTDROPDOWN_H
 #define INPUTDROPDOWN_H
 
-#include "styles/colors.h"
-#include "styles/text_style.h"
+#include "ui-kit/theme/theme.h"
 #include <QAbstractItemView>
 #include <QComboBox>
 #include <QHBoxLayout>
@@ -24,6 +23,9 @@ public:
   void setCurrentText(const QString &text);
   void setSize(int width, int height);
   double getValue();
+
+private slots:
+  void applyThemeStyles();
 
 private:
   QComboBox *m_dropdown;

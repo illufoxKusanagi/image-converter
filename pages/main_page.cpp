@@ -51,8 +51,6 @@ void MainPage::setupImageAttribute() {
   attributeLayout->setContentsMargins(0, 0, 0, 0);
   attributeLayout->setSpacing(16);
   setupExtensionButton();
-  attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignBottom);
-  attributeLayout->addWidget(m_targetExtensionField, 1, Qt::AlignBottom);
   attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignTop);
   attributeLayout->addWidget(m_targetExtensionField, 1, Qt::AlignTop);
   mainLayout->addLayout(attributeLayout);

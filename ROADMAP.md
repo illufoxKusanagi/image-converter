@@ -1,4 +1,4 @@
-# ImageConverter — Improvement Roadmap & Audit Log (v3.2 — All Phases Complete)
+# ImageConverter — Improvement Roadmap & Audit Log (v3.2 — Core Product Complete)
 
 > Grounded in full codebase audit and reviewed against `qt-cpp-review` & `qt-ui-design` standards.
 
@@ -116,14 +116,14 @@
 
 ---
 
-## 🎨 Future Track: Qt C++ "Shadcn-Style" Component Library (`ui-kit/`)
+## 🎨 UI-Kit Component Library Track (`ui-kit/`)
 
-| Phase       | Module                          | Components & Capabilities                                                                                                      |    Status     |
-| :---------- | :------------------------------ | :----------------------------------------------------------------------------------------------------------------------------- | :-----------: |
-| **Phase 0** | **Foundation & Tooling (P0)**   | `ui_kit` CMake target, `Theme` / `Tokens` system (Light/Dark), `Fusion` base style, Animation & SVG helpers, Storybook Gallery | ⏳ **Planned** |
-| **Phase 1** | **Core Primitives (P1)**        | `ui::Button` (variants/sizes/spinner), `ui::Badge`, `ui::Spinner`, `ui::Card` (drop shadow)                                    | ⏳ **Planned** |
-| **Phase 2** | **Inputs & Forms (P2)**         | `ui::Input` (leading/clear icon), `ui::Switch`, `ui::Slider`, `ui::Checkbox`/`ui::Radio`, `ui::Select`                         | ⏳ **Planned** |
-| **Phase 3** | **Layout & Navigation (P2/P3)** | `ui::Sidebar` (collapsible/animated), `ui::Navbar`, `ui::Tabs`, `ui::Breadcrumb`, `ui::Accordion`                              | ⏳ **Planned** |
-| **Phase 4** | **Feedback & Overlays (P3)**    | `ui::Toast` (stacking queue), `ui::Dialog` (backdrop dim), `ui::ProgressBar`, `ui::Skeleton` (shimmer sweep)                   | ⏳ **Planned** |
-| **Phase 5** | **Content & Data (P4)**         | `ui::Avatar`, `ui::ItemDelegate`, `ui::DatePicker`                                                                             | ⏳ **Planned** |
+| Phase          | Module                   | Components & Capabilities                                                                                   |     Status      |
+| :------------- | :----------------------- | :---------------------------------------------------------------------------------------------------------- | :-------------: |
+| **UI Phase 0** | **Foundation & Tooling** | `ui_kit` CMake target, `Theme` / `Tokens` system (Light/Dark), `Fusion` base style, Animation & SVG helpers | ✅ **Completed** |
+| **UI Phase 1** | **Core Primitives**      | `ui::Button` (variants/sizes/spinner), `ui::Badge`, `ui::Spinner`, `ui::Card` (drop shadow)                 | ✅ **Completed** |
+| **UI Phase 2** | **Inputs & Forms**       | `ui::Input` (leading/clear icon), `ui::Switch`, `ui::Slider`, `ui::Select`, `ui::FormField`                 | ✅ **Completed** |
+| **UI Phase 3** | **Layout & Navigation**  | `ui::Sidebar` (collapsible/animated), `ui::Tabs` (Underline/Segmented), `ui::Separator`, `ui::Accordion`    | ✅ **Completed** |
+| **UI Phase 4** | **Feedback & Overlays**  | `ui::Toast` (stacking queue), `ui::Dialog` (backdrop dim), `ui::Tooltip`                                    | ✅ **Completed** |
+| **UI Phase 5** | **Content & Data**       | `ui::Progress`, `ui::Avatar`, `ui::Table`                                                                   |  ⏳ **Planned**  |
 

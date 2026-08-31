@@ -19,6 +19,8 @@ QPixmap Icon::pixmap(const QString &resourcePath, const QColor &color, int width
   svgData.replace("currentColor", hexColor.toUtf8());
   svgData.replace("stroke=\"#000000\"", ("stroke=\"" + hexColor + "\"").toUtf8());
   svgData.replace("stroke=\"#000\"", ("stroke=\"" + hexColor + "\"").toUtf8());
+  svgData.replace("fill=\"#000000\"", ("fill=\"" + hexColor + "\"").toUtf8());
+  svgData.replace("fill=\"#000\"", ("fill=\"" + hexColor + "\"").toUtf8());
 
   QSvgRenderer renderer(svgData);
   if (!renderer.isValid()) {

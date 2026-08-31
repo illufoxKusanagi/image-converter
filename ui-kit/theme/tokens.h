@@ -9,7 +9,8 @@ namespace ui {
 
 enum class ThemeMode {
   Light,
-  Dark
+  Dark,
+  System
 };
 
 struct ColorTokens {

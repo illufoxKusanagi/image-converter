@@ -14,6 +14,7 @@ public:
 
   ThemeMode mode() const;
   bool isDark() const;
+  bool isSystemDark() const;
 
   void setMode(ThemeMode mode);
   void toggleMode();
@@ -35,7 +36,7 @@ private:
   Theme(const Theme &) = delete;
   Theme &operator=(const Theme &) = delete;
 
-  ThemeMode m_mode{ThemeMode::Light};
+  ThemeMode m_mode{ThemeMode::System};
   ColorTokens m_lightColors{lightColorTokens()};
   ColorTokens m_darkColors{darkColorTokens()};
   RadiusTokens m_radius{};
@@ -46,4 +47,3 @@ private:
 } // namespace ui
 
 #endif // UI_THEME_H
-

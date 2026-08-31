@@ -2,26 +2,27 @@
 #include "ui-kit/theme/icon_helper.h"
 #include "ui-kit/theme/style_helper.h"
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent) {
+  setMinimumSize(460, 620);
   setWindowTitle("ImageConverter");
-  setMinimumSize(540, 680);
 
   m_centralWidget = new QWidget(this);
   QVBoxLayout *rootLayout = new QVBoxLayout(m_centralWidget);
-  rootLayout->setContentsMargins(24, 16, 24, 24);
-  rootLayout->setSpacing(16);
+  rootLayout->setContentsMargins(20, 18, 20, 20);
+  rootLayout->setSpacing(18);
 
-  // Top navigation & utility header
+  // Header: Title & Theme Toggle
   QWidget *headerWidget = new QWidget(m_centralWidget);
   QHBoxLayout *headerLayout = new QHBoxLayout(headerWidget);
   headerLayout->setContentsMargins(0, 0, 0, 0);
-  headerLayout->setSpacing(12);
 
   m_titleLabel = new QLabel("ImageConverter", headerWidget);
+  m_titleLabel->setFont(ui::Theme::instance().typography().font(
+      ui::Theme::instance().typography().sizeXl, QFont::Bold));
 
   m_themeToggleBtn = new ui::Button(ui::Theme::instance().isDark() ? "Light" : "Dark",
-                                    ui::ButtonVariant::Ghost,
-                                    ui::ButtonSize::Small,
+                                    ui::ButtonVariant::Ghost, ui::ButtonSize::Small,
                                     headerWidget);
   connect(m_themeToggleBtn, &QPushButton::clicked, this, &MainWindow::onThemeToggleClicked);
 
@@ -57,15 +58,11 @@ void MainWindow::applyThemeStyles() {
   m_centralWidget->setStyleSheet(QString("background-color: %1;")
                                      .arg(ui::StyleHelper::toHexString(c.background)));
 
-  m_titleLabel->setFont(t.font(t.sizeLg, QFont::Bold));
-  m_titleLabel->setStyleSheet(QString("color: %1; background: transparent;")
+  m_titleLabel->setStyleSheet(QString("color: %1;")
                                   .arg(ui::StyleHelper::toHexString(c.foreground)));
 
-  if (isDark) {
-    m_themeToggleBtn->setText("Light");
-    m_themeToggleBtn->setIcon(ui::Icon::get(":/icons/icons/lucide-sun.svg", c.foreground, QSize(16, 16)));
-  } else {
-    m_themeToggleBtn->setText("Dark");
-    m_themeToggleBtn->setIcon(ui::Icon::get(":/icons/icons/lucide-moon.svg", c.foreground, QSize(16, 16)));
-  }
+  m_themeToggleBtn->setText(isDark ? "Light" : "Dark");
+  m_themeToggleBtn->setIcon(ui::Icon::get(
+      isDark ? ":/icons/icons/lucide-sun.svg" : ":/icons/icons/lucide-moon.svg",
+      c.foreground, QSize(16, 16)));
 }
