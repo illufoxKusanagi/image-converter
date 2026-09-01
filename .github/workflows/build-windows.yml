@@ -1,18 +1,8 @@
 name: Build Windows Executable
 
 on:
-  push:
-    branches:
-      - master
-      - main
-    tags:
-      - "v*"
-  pull_request:
-    branches:
-      - master
-      - main
-  workflow_dispatch:
   workflow_call:
+  workflow_dispatch:
 
 permissions:
   contents: write

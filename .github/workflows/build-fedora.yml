@@ -1,23 +1,8 @@
 name: Build Linux RPM
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - "v*"
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
-      - ".gitignore"
-      - ".AGENTS/**"
-      - "LICENSE"
-  workflow_dispatch:
   workflow_call:
-
-concurrency:
-  group: build-fedora-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_dispatch:
 
 jobs:
   build-rpm:
