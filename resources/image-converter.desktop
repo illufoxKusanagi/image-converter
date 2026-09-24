@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Image Converter
+Comment=Fast offline image converter and PDF compressor
+Exec=ImageConverter
+Icon=image-converter
+Terminal=false
+Type=Application
+Categories=Graphics;Utility;
+StartupNotify=true
+

@@ -1,0 +1,63 @@
+name: Build Windows Executable
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.7.2"
+          host: "windows"
+          target: "desktop"
+          arch: "win64_msvc2019_64"
+          modules: "qtpdf qtsvg"
+          cache: true
+
+      - name: Configure CMake
+        shell: powershell
+        run: |
+          $QtRoot = $env:QT_ROOT_DIR
+          if (-not $QtRoot) { $QtRoot = Split-Path (Split-Path $env:Qt6_DIR -Parent) -Parent }
+
+          cmake -B build -G "Ninja" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_PREFIX_PATH="$QtRoot"
+
+      - name: Build
+        shell: powershell
+        run: |
+          cmake --build build --config Release
+
+      - name: Deploy Qt Dependencies (windeployqt)
+        shell: powershell
+        run: |
+          $QtRoot = $env:QT_ROOT_DIR
+          if (-not $QtRoot) { $QtRoot = Split-Path (Split-Path $env:Qt6_DIR -Parent) -Parent }
+
+          New-Item -ItemType Directory -Force -Path "dist" | Out-Null
+          Copy-Item "build/ImageConverter.exe" -Destination "dist/"
+
+          & "$QtRoot/bin/windeployqt.exe" --release --no-translations --compiler-runtime "dist/ImageConverter.exe"
+
+          Compress-Archive -Path "dist/*" -DestinationPath "build/ImageConverter-windows-x64.zip" -Force
+
+      - name: Upload Windows Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-converter-windows-x64
+          path: build/ImageConverter-windows-x64.zip

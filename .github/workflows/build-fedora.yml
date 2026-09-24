@@ -1,0 +1,51 @@
+name: Build Linux RPM
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:40
+    permissions:
+      contents: write
+
+    steps:
+      - name: Install Build Dependencies
+        run: |
+          dnf update -y
+          dnf install -y \
+            git \
+            gcc-c++ \
+            cmake \
+            ninja-build \
+            rpm-build \
+            qt6-qtbase-devel \
+            qt6-qtsvg-devel \
+            qt6-qtpdf-devel \
+            mesa-libGL-devel
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+          cmake --build build --config Release
+
+      - name: Create RPM Package (.rpm)
+        run: |
+          cd build
+          cpack -G RPM
+
+      - name: Upload RPM Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-converter-fedora-rpm
+          path: build/*.rpm
