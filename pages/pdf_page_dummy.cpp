@@ -1,4 +1,6 @@
 #include "pdf_page.h"
+#include "widgets/message_box_widget.h"
+#include <qobject.h>
 
 PdfPage::PdfPage(QWidget *parent) : QWidget(parent) {
   mainLayout = new QVBoxLayout(this);

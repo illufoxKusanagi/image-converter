@@ -57,6 +57,8 @@ set(
         pages/main_page.h
         pages/pdf_page.cpp
         pages/pdf_page.h
+        pages/gallery_page.cpp
+        pages/gallery_page.h
 )
 
 set(PROJECT_SOURCES

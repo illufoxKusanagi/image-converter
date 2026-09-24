@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "pages/gallery_page.h"
 #include "pages/main_page.h"
 #include "ui-kit/components/button.h"
 #include "ui-kit/components/card.h"
@@ -23,11 +24,12 @@ private slots:
   void onThemeToggleClicked();
 
 private:
-  ui::Tabs *m_tabs;
-  ui::Button *m_themeToggleBtn;
-  QLabel *m_titleLabel;
-  QWidget *m_centralWidget;
-  MainPage *m_mainPage;
+  ui::Tabs *m_tabs{nullptr};
+  ui::Button *m_themeToggleBtn{nullptr};
+  QLabel *m_titleLabel{nullptr};
+  QWidget *m_centralWidget{nullptr};
+  MainPage *m_mainPage{nullptr};
+  GalleryPage *m_galleryPage{nullptr};
 };
 
 #endif // MAINWINDOW_H
