@@ -35,25 +35,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   m_tabs = new ui::Tabs(ui::TabVariant::Underline, m_centralWidget);
 
   m_mainPage = new MainPage(m_tabs);
-  m_tabs->addTab("Convert Image",
-                 ui::Icon::get(":/icons/icons/lucide-image.svg",
-                               ui::Theme::instance().colors().foreground,
-                               QSize(16, 16)),
-                 m_mainPage);
+  m_tabs->addTab("Convert Image", QString(":/icons/icons/lucide-image.svg"), m_mainPage);
 
   m_pdfPage = new PdfPage(m_tabs);
-  m_tabs->addTab("Compress PDF",
-                 ui::Icon::get(":/icons/icons/lucide-file-text.svg",
-                               ui::Theme::instance().colors().foreground,
-                               QSize(16, 16)),
-                 m_pdfPage);
+  m_tabs->addTab("Compress PDF", QString(":/icons/icons/lucide-file-text.svg"), m_pdfPage);
 
   m_galleryPage = new GalleryPage(m_tabs);
-  m_tabs->addTab("UI Components",
-                 ui::Icon::get(":/icons/icons/lucide-sliders.svg",
-                               ui::Theme::instance().colors().foreground,
-                               QSize(16, 16)),
-                 m_galleryPage);
+  m_tabs->addTab("UI Components", QString(":/icons/icons/lucide-sliders.svg"), m_galleryPage);
 
   rootLayout->addWidget(m_tabs, 1);
   setCentralWidget(m_centralWidget);

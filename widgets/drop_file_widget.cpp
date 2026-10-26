@@ -67,15 +67,15 @@ void DropFileWidget::setupEmptyFileWidget() {
   emptyFieldLayout->setSpacing(8);
   emptyFieldLayout->setAlignment(Qt::AlignCenter);
 
-  m_icon = new QLabel(this);
-  m_emptyLabel = new QLabel("Choose your " + m_typeFile + "(s) or drag here...", this);
+  m_icon = new QLabel(m_emptyFieldWidget);
+  m_emptyLabel = new QLabel("Choose your " + m_typeFile + "(s) or drag here...", m_emptyFieldWidget);
 
-  m_browseButton = new ui::Button("Browse Files", ui::ButtonVariant::Outline, ui::ButtonSize::Default, this);
+  m_browseButton = new ui::Button("Browse Files", ui::ButtonVariant::Outline, ui::ButtonSize::Default, m_emptyFieldWidget);
   m_browseButton->setMinimumWidth(140);
 
   m_icon->setAlignment(Qt::AlignCenter);
   m_emptyLabel->setAlignment(Qt::AlignCenter);
-  m_emptyLabel->setWordWrap(true);
+  m_emptyLabel->setWordWrap(false);
 
   emptyFieldLayout->addWidget(m_icon, 0, Qt::AlignCenter);
   emptyFieldLayout->addWidget(m_emptyLabel, 0, Qt::AlignCenter);
@@ -134,20 +134,20 @@ void DropFileWidget::setupOrSeparatorLayout(QVBoxLayout *layout) {
       m_typeFile == "PDF"
           ? "Supports .pdf documents"
           : "Supports .png, .jpg, .jpeg, .webp, .tiff, .bmp, .gif, .pdf",
-      this);
+      m_emptyFieldWidget);
   m_formatLabel->setAlignment(Qt::AlignCenter);
 
-  QWidget *orWidget = new QWidget(this);
+  QWidget *orWidget = new QWidget(m_emptyFieldWidget);
   QHBoxLayout *orLayout = new QHBoxLayout(orWidget);
   orLayout->setAlignment(Qt::AlignCenter);
   orLayout->setSpacing(8);
   orLayout->setContentsMargins(40, 0, 40, 0);
 
-  m_orLabel = new QLabel("or", this);
+  m_orLabel = new QLabel("or", orWidget);
   m_orLabel->setAlignment(Qt::AlignCenter);
 
-  ui::Separator *lineAbove = new ui::Separator(Qt::Horizontal, this);
-  ui::Separator *lineBelow = new ui::Separator(Qt::Horizontal, this);
+  ui::Separator *lineAbove = new ui::Separator(Qt::Horizontal, orWidget);
+  ui::Separator *lineBelow = new ui::Separator(Qt::Horizontal, orWidget);
 
   orLayout->addWidget(lineAbove, 1);
   orLayout->addWidget(m_orLabel, 0);

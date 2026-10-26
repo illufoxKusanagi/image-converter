@@ -16,6 +16,9 @@ class Slider;
 class Input;
 }
 
+/**
+ * @brief Interactive showcase gallery of UI kit components with dynamic theme reactivity.
+ */
 class GalleryPage : public QWidget {
   Q_OBJECT
 

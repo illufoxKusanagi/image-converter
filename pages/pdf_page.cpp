@@ -72,10 +72,11 @@ PdfPage::PdfPage(QWidget *parent)
   attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignTop);
   attributeLayout->addWidget(m_presetField, 1, Qt::AlignTop);
 
-  m_progressBar = new QProgressBar(this);
-  m_progressBar->setFixedHeight(22);
-  m_progressBar->setAlignment(Qt::AlignCenter);
-  m_progressBar->setTextVisible(true);
+  m_progressLabel = new QLabel(this);
+  m_progressLabel->setAlignment(Qt::AlignCenter);
+  m_progressLabel->setVisible(false);
+
+  m_progressBar = new ui::Progress(0, this);
   m_progressBar->setVisible(false);
 
   m_processButton = new ui::Button("Compress PDF", ui::ButtonVariant::Primary,
@@ -94,6 +95,7 @@ PdfPage::PdfPage(QWidget *parent)
 
   mainLayout->addWidget(m_dragWidget);
   mainLayout->addLayout(attributeLayout);
+  mainLayout->addWidget(m_progressLabel);
   mainLayout->addWidget(m_progressBar);
   mainLayout->addWidget(m_processButton, 0, Qt::AlignCenter);
   mainLayout->addWidget(m_cancelButton, 0, Qt::AlignCenter);
@@ -113,28 +115,14 @@ PdfPage::~PdfPage() {
 
 void PdfPage::applyThemeStyles() {
   const auto &c = ui::Theme::instance().colors();
-  const auto &r = ui::Theme::instance().radius();
   const auto &t = ui::Theme::instance().typography();
 
-  m_progressBar->setFont(t.font(t.sizeXs, QFont::DemiBold));
-  m_progressBar->setStyleSheet(
-      QString("QProgressBar {"
-              "  border: 1px solid %1;"
-              "  border-radius: %2px;"
-              "  text-align: center;"
-              "  background-color: %3;"
-              "  color: %4;"
-              "}"
-              "QProgressBar::chunk {"
-              "  background-color: %5;"
-              "  border-radius: %6px;"
-              "}")
-          .arg(ui::StyleHelper::toHexString(c.border))
-          .arg(r.md)
-          .arg(ui::StyleHelper::toHexString(c.muted))
-          .arg(ui::StyleHelper::toHexString(c.foreground))
-          .arg(ui::StyleHelper::toHexString(c.primary))
-          .arg(r.md > 2 ? r.md - 1 : 2));
+  if (m_progressLabel) {
+    m_progressLabel->setFont(t.font(t.sizeXs, QFont::DemiBold));
+    m_progressLabel->setStyleSheet(
+        QString("color: %1; background: transparent;")
+            .arg(ui::StyleHelper::toHexString(c.mutedForeground)));
+  }
 
   if (m_processButton) {
     m_processButton->setIcon(ui::Icon::get(":/icons/icons/lucide-file-text.svg",
@@ -180,7 +168,12 @@ void PdfPage::setProcessingState(bool isProcessing) {
   m_processButton->setVisible(!isProcessing);
   m_cancelButton->setVisible(isProcessing);
   m_cancelButton->setEnabled(isProcessing);
-  m_progressBar->setVisible(isProcessing);
+  if (m_progressLabel) {
+    m_progressLabel->setVisible(isProcessing);
+  }
+  if (m_progressBar) {
+    m_progressBar->setVisible(isProcessing);
+  }
   m_qualitySlider->setEnabled(!isProcessing);
   if (m_presetSelect) {
     m_presetSelect->setEnabled(!isProcessing);
@@ -203,9 +196,8 @@ void PdfPage::onProcessButtonClicked() {
 
   QStringList sourcePaths = m_dragWidget->getFilePaths();
   if (sourcePaths.isEmpty()) {
-    MessageBoxWidget messageBox("Error", "Please select at least one PDF file.",
-                                MessageBoxWidget::Warning, this);
-    messageBox.exec();
+    ui::Toast::show(this, "No PDF Selected", "Please select at least one PDF file.",
+                    ui::ToastVariant::Warning);
     return;
   }
 
@@ -234,7 +226,7 @@ void PdfPage::compressSinglePdf(const QString &sourcePath, int quality) {
   m_isCancelled = false;
   m_progressBar->setRange(0, 100);
   m_progressBar->setValue(0);
-  m_progressBar->setFormat("Compressing PDF... %p%");
+  m_progressLabel->setText("Compressing PDF...");
 
   QFuture<void> future =
       QtConcurrent::run([this, sourcePath, outputPath, quality]() {
@@ -244,8 +236,8 @@ void PdfPage::compressSinglePdf(const QString &sourcePath, int quality) {
               [this, current, total]() {
                 m_progressBar->setRange(0, total);
                 m_progressBar->setValue(current);
-                m_progressBar->setFormat(
-                    QString("Compressing page %v of %m (%p%)"));
+                m_progressLabel->setText(
+                    QString("Compressing page %1 of %2...").arg(current).arg(total));
               },
               Qt::QueuedConnection);
         };
@@ -275,23 +267,17 @@ void PdfPage::compressSinglePdf(const QString &sourcePath, int quality) {
                           .arg(diffPct >= 0 ? "smaller" : "larger");
                 }
 
-                MessageBoxWidget messageBox(
-                    "Success",
+                ui::Dialog::info(
+                    this, "Success",
                     QString("PDF compressed successfully!\nSaved to: %1%2")
                         .arg(outputPath)
-                        .arg(sizeStats),
-                    MessageBoxWidget::Information, this);
-                messageBox.exec();
+                        .arg(sizeStats));
               } else if (m_isCancelled) {
-                MessageBoxWidget messageBox(
-                    "Cancelled", "PDF compression was cancelled.",
-                    MessageBoxWidget::Information, this);
-                messageBox.exec();
+                ui::Toast::show(this, "Cancelled", "PDF compression was cancelled.",
+                                ui::ToastVariant::Default);
               } else {
-                MessageBoxWidget messageBox(
-                    "Error", "Failed to compress PDF. Please try again.",
-                    MessageBoxWidget::Critical, this);
-                messageBox.exec();
+                ui::Toast::show(this, "Error", "Failed to compress PDF. Please try again.",
+                                ui::ToastVariant::Destructive);
               }
             },
             Qt::QueuedConnection);
@@ -312,7 +298,7 @@ void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
   int totalFiles = sourcePaths.size();
   m_progressBar->setRange(0, totalFiles);
   m_progressBar->setValue(0);
-  m_progressBar->setFormat(QString("Compressing %v of %m PDFs (%p%)"));
+  m_progressLabel->setText(QString("Compressing 0 of %1 PDFs...").arg(totalFiles));
 
   QFuture<void> future = QtConcurrent::run(
       [this, sourcePaths, outputDir, quality, totalFiles]() {
@@ -351,7 +337,12 @@ void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
           }
 
           QMetaObject::invokeMethod(
-              this, [this, i]() { m_progressBar->setValue(i + 1); },
+              this,
+              [this, i, totalFiles]() {
+                m_progressBar->setValue(i + 1);
+                m_progressLabel->setText(
+                    QString("Compressing %1 of %2 PDFs...").arg(i + 1).arg(totalFiles));
+              },
               Qt::QueuedConnection);
         }
 
@@ -385,11 +376,10 @@ void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
 
               if (m_isCancelled) {
                 message += "\n(Operation was stopped early by user)";
+                ui::Toast::show(this, "Cancelled", message, ui::ToastVariant::Default);
+              } else {
+                ui::Dialog::info(this, title, message);
               }
-
-              MessageBoxWidget messageBox(title, message,
-                                          MessageBoxWidget::Information, this);
-              messageBox.exec();
             },
             Qt::QueuedConnection);
       });

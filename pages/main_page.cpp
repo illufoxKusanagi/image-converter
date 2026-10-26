@@ -63,10 +63,11 @@ void MainPage::setupImageLayout() {
   m_dragWidget =
       new DropFileWidget(this, "Image", m_qualitySlider, &m_targetImageExtension);
 
-  m_progressBar = new QProgressBar(this);
-  m_progressBar->setFixedHeight(22);
-  m_progressBar->setAlignment(Qt::AlignCenter);
-  m_progressBar->setTextVisible(true);
+  m_progressLabel = new QLabel(this);
+  m_progressLabel->setAlignment(Qt::AlignCenter);
+  m_progressLabel->setVisible(false);
+
+  m_progressBar = new ui::Progress(0, this);
   m_progressBar->setVisible(false);
 
   m_processButton = new ui::Button("Convert Files", ui::ButtonVariant::Primary, ui::ButtonSize::Large, this);
@@ -82,6 +83,7 @@ void MainPage::setupImageLayout() {
 
   mainLayout->addWidget(m_dragWidget);
   setupImageAttribute();
+  mainLayout->addWidget(m_progressLabel);
   mainLayout->addWidget(m_progressBar);
   mainLayout->addWidget(m_processButton, 0, Qt::AlignCenter);
   mainLayout->addWidget(m_cancelButton, 0, Qt::AlignCenter);
@@ -89,28 +91,14 @@ void MainPage::setupImageLayout() {
 
 void MainPage::applyThemeStyles() {
   const auto &c = ui::Theme::instance().colors();
-  const auto &r = ui::Theme::instance().radius();
   const auto &t = ui::Theme::instance().typography();
 
-  m_progressBar->setFont(t.font(t.sizeXs, QFont::DemiBold));
-  m_progressBar->setStyleSheet(QString(
-      "QProgressBar {"
-      "  border: 1px solid %1;"
-      "  border-radius: %2px;"
-      "  text-align: center;"
-      "  background-color: %3;"
-      "  color: %4;"
-      "}"
-      "QProgressBar::chunk {"
-      "  background-color: %5;"
-      "  border-radius: %6px;"
-      "}")
-      .arg(ui::StyleHelper::toHexString(c.border))
-      .arg(r.md)
-      .arg(ui::StyleHelper::toHexString(c.muted))
-      .arg(ui::StyleHelper::toHexString(c.foreground))
-      .arg(ui::StyleHelper::toHexString(c.primary))
-      .arg(r.md > 2 ? r.md - 1 : 2));
+  if (m_progressLabel) {
+    m_progressLabel->setFont(t.font(t.sizeXs, QFont::DemiBold));
+    m_progressLabel->setStyleSheet(
+        QString("color: %1; background: transparent;")
+            .arg(ui::StyleHelper::toHexString(c.mutedForeground)));
+  }
 
   if (m_processButton) {
     m_processButton->setIcon(ui::Icon::get(":/icons/icons/lucide-refresh-cw.svg", c.primaryForeground, QSize(16, 16)));
@@ -125,7 +113,12 @@ void MainPage::setProcessingState(bool isProcessing) {
   m_processButton->setVisible(!isProcessing);
   m_cancelButton->setVisible(isProcessing);
   m_cancelButton->setEnabled(isProcessing);
-  m_progressBar->setVisible(isProcessing);
+  if (m_progressLabel) {
+    m_progressLabel->setVisible(isProcessing);
+  }
+  if (m_progressBar) {
+    m_progressBar->setVisible(isProcessing);
+  }
   m_dragWidget->setEnabled(!isProcessing);
   if (isProcessing) {
     m_qualitySlider->setEnabled(false);
@@ -149,9 +142,8 @@ void MainPage::onProcessButtonClicked() {
 
   QStringList sourcePaths = m_dragWidget->getFilePaths();
   if (sourcePaths.isEmpty()) {
-    MessageBoxWidget messageBox("Error", "Please select at least one file.",
-                                MessageBoxWidget::Warning, this);
-    messageBox.exec();
+    ui::Toast::show(this, "No Files Selected", "Please select at least one file.",
+                    ui::ToastVariant::Warning);
     return;
   }
 
@@ -183,8 +175,8 @@ void MainPage::onProcessButtonClicked() {
     int totalFiles = sourcePaths.size();
     m_progressBar->setRange(0, totalFiles);
     m_progressBar->setValue(0);
-    m_progressBar->setFormat(sourcePaths.size() == 1 ? "Converting to PDF... %p%"
-                                                     : "Merging into PDF... %p%");
+    m_progressLabel->setText(sourcePaths.size() == 1 ? "Converting to PDF..."
+                                                     : "Merging into PDF...");
 
     QFuture<void> future =
         QtConcurrent::run([this, sourcePaths, outputPath, quality, totalFiles]() {
@@ -214,7 +206,13 @@ void MainPage::onProcessButtonClicked() {
             if (origImage.isNull()) {
               skippedCount++;
               QMetaObject::invokeMethod(
-                  this, [this, i]() { m_progressBar->setValue(i + 1); },
+                  this, [this, i, totalFiles]() {
+                    m_progressBar->setValue(i + 1);
+                    if (totalFiles > 1) {
+                      m_progressLabel->setText(
+                          QString("Merging images (%1 of %2)...").arg(i + 1).arg(totalFiles));
+                    }
+                  },
                   Qt::QueuedConnection);
               continue;
             }
@@ -266,8 +264,12 @@ void MainPage::onProcessButtonClicked() {
 
             QMetaObject::invokeMethod(
                 this,
-                [this, i]() {
+                [this, i, totalFiles]() {
                   m_progressBar->setValue(i + 1);
+                  if (totalFiles > 1) {
+                    m_progressLabel->setText(
+                        QString("Merging images (%1 of %2)...").arg(i + 1).arg(totalFiles));
+                  }
                 },
                 Qt::QueuedConnection);
           }
@@ -307,10 +309,8 @@ void MainPage::onProcessButtonClicked() {
                 m_cancelButton->setText("Cancel Conversion");
 
                 if (m_isCancelled) {
-                  MessageBoxWidget messageBox(
-                      "Cancelled", "PDF creation was cancelled.",
-                      MessageBoxWidget::Information, this);
-                  messageBox.exec();
+                  ui::Toast::show(this, "Cancelled", "PDF creation was cancelled.",
+                                  ui::ToastVariant::Default);
                 } else if (ok && successCount > 0) {
                   qint64 outSize = QFileInfo(outputPath).size();
                   QString sizeStats =
@@ -327,13 +327,10 @@ void MainPage::onProcessButtonClicked() {
                   if (skippedCount > 0) {
                     msg += QString("\n(%1 invalid image(s) skipped)").arg(skippedCount);
                   }
-                  MessageBoxWidget messageBox("Success", msg,
-                                              MessageBoxWidget::Information, this);
-                  messageBox.exec();
+                  ui::Dialog::info(this, "Success", msg);
                 } else {
-                  MessageBoxWidget messageBox("Error", "Failed to create PDF!",
-                                              MessageBoxWidget::Critical, this);
-                  messageBox.exec();
+                  ui::Toast::show(this, "Error", "Failed to create PDF!",
+                                  ui::ToastVariant::Destructive);
                 }
               },
               Qt::QueuedConnection);
@@ -370,11 +367,11 @@ void MainPage::onProcessButtonClicked() {
     m_isCancelled = false;
     m_progressBar->setRange(0, estimatedTotalPages > 0 ? estimatedTotalPages : 1);
     m_progressBar->setValue(0);
-    m_progressBar->setFormat("Extracting PDF pages (%v of %m)... %p%");
+    m_progressLabel->setText("Extracting PDF pages...");
 
     DropFileWidget *dragWidget = m_dragWidget;
     QFuture<void> future = QtConcurrent::run(
-        [this, sourcePaths, outputDir, quality, targetExt, dragWidget]() {
+        [this, sourcePaths, outputDir, quality, targetExt, dragWidget, estimatedTotalPages]() {
           int totalExtracted = 0;
           int failedCount = 0;
           int processedItems = 0;
@@ -391,7 +388,14 @@ void MainPage::onProcessButtonClicked() {
                 failedCount++;
                 processedItems++;
                 QMetaObject::invokeMethod(
-                    this, [this, processedItems]() { m_progressBar->setValue(processedItems); },
+                    this,
+                    [this, processedItems, estimatedTotalPages]() {
+                      m_progressBar->setValue(processedItems);
+                      m_progressLabel->setText(
+                          QString("Extracting PDF pages (%1 of %2)...")
+                              .arg(processedItems)
+                              .arg(estimatedTotalPages));
+                    },
                     Qt::QueuedConnection);
                 continue;
               }
@@ -413,7 +417,14 @@ void MainPage::onProcessButtonClicked() {
                   failedCount++;
                   processedItems++;
                   QMetaObject::invokeMethod(
-                      this, [this, processedItems]() { m_progressBar->setValue(processedItems); },
+                      this,
+                      [this, processedItems, estimatedTotalPages]() {
+                        m_progressBar->setValue(processedItems);
+                        m_progressLabel->setText(
+                            QString("Extracting PDF pages (%1 of %2)...")
+                                .arg(processedItems)
+                                .arg(estimatedTotalPages));
+                      },
                       Qt::QueuedConnection);
                   continue;
                 }
@@ -440,7 +451,14 @@ void MainPage::onProcessButtonClicked() {
 
                 processedItems++;
                 QMetaObject::invokeMethod(
-                    this, [this, processedItems]() { m_progressBar->setValue(processedItems); },
+                    this,
+                    [this, processedItems, estimatedTotalPages]() {
+                      m_progressBar->setValue(processedItems);
+                      m_progressLabel->setText(
+                          QString("Extracting PDF pages (%1 of %2)...")
+                              .arg(processedItems)
+                              .arg(estimatedTotalPages));
+                    },
                     Qt::QueuedConnection);
               }
             } else {
@@ -449,7 +467,14 @@ void MainPage::onProcessButtonClicked() {
                 failedCount++;
                 processedItems++;
                 QMetaObject::invokeMethod(
-                    this, [this, processedItems]() { m_progressBar->setValue(processedItems); },
+                    this,
+                    [this, processedItems, estimatedTotalPages]() {
+                      m_progressBar->setValue(processedItems);
+                      m_progressLabel->setText(
+                          QString("Extracting PDF pages (%1 of %2)...")
+                              .arg(processedItems)
+                              .arg(estimatedTotalPages));
+                    },
                     Qt::QueuedConnection);
                 continue;
               }
@@ -475,7 +500,14 @@ void MainPage::onProcessButtonClicked() {
 
               processedItems++;
               QMetaObject::invokeMethod(
-                  this, [this, processedItems]() { m_progressBar->setValue(processedItems); },
+                  this,
+                  [this, processedItems, estimatedTotalPages]() {
+                    m_progressBar->setValue(processedItems);
+                    m_progressLabel->setText(
+                        QString("Extracting PDF pages (%1 of %2)...")
+                            .arg(processedItems)
+                            .arg(estimatedTotalPages));
+                  },
                   Qt::QueuedConnection);
             }
           }
@@ -487,10 +519,8 @@ void MainPage::onProcessButtonClicked() {
                 m_cancelButton->setText("Cancel Conversion");
 
                 if (m_isCancelled) {
-                  MessageBoxWidget messageBox(
-                      "Cancelled", "Extraction was cancelled.",
-                      MessageBoxWidget::Information, this);
-                  messageBox.exec();
+                  ui::Toast::show(this, "Cancelled", "Extraction was cancelled.",
+                                  ui::ToastVariant::Default);
                 } else if (totalExtracted > 0) {
                   QString msg =
                       QString("Extracted %1 image(s) to:\n%2\n\nTotal Size: %3")
@@ -500,14 +530,10 @@ void MainPage::onProcessButtonClicked() {
                   if (failedCount > 0) {
                     msg += QString("\n(%1 failed)").arg(failedCount);
                   }
-                  MessageBoxWidget messageBox("Success", msg,
-                                              MessageBoxWidget::Information, this);
-                  messageBox.exec();
+                  ui::Dialog::info(this, "Success", msg);
                 } else {
-                  MessageBoxWidget messageBox(
-                      "Error", "Failed to extract images from PDF!",
-                      MessageBoxWidget::Critical, this);
-                  messageBox.exec();
+                  ui::Toast::show(this, "Error", "Failed to extract images from PDF!",
+                                  ui::ToastVariant::Destructive);
                 }
               },
               Qt::QueuedConnection);
@@ -545,7 +571,7 @@ void MainPage::onProcessButtonClicked() {
     m_isCancelled = false;
     m_progressBar->setRange(0, 1);
     m_progressBar->setValue(0);
-    m_progressBar->setFormat("Converting image... %p%");
+    m_progressLabel->setText("Converting image...");
 
     DropFileWidget *dragWidget = m_dragWidget;
     QFuture<void> future = QtConcurrent::run(
@@ -567,10 +593,8 @@ void MainPage::onProcessButtonClicked() {
                 m_cancelButton->setText("Cancel Conversion");
 
                 if (m_isCancelled) {
-                  MessageBoxWidget messageBox(
-                      "Cancelled", "Image conversion was cancelled.",
-                      MessageBoxWidget::Information, this);
-                  messageBox.exec();
+                  ui::Toast::show(this, "Cancelled", "Image conversion was cancelled.",
+                                  ui::ToastVariant::Default);
                 } else if (success) {
                   qint64 origSize = QFileInfo(sourcePath).size();
                   qint64 outSize = QFileInfo(outputPathWithExt).size();
@@ -586,20 +610,17 @@ void MainPage::onProcessButtonClicked() {
                             .arg(diffPct >= 0 ? "smaller" : "larger");
                   }
 
-                  MessageBoxWidget messageBox(
-                      "Success",
+                  ui::Dialog::info(
+                      this, "Success",
                       QString("Image converted successfully to %1%2")
                           .arg(outputPathWithExt)
-                          .arg(sizeStats),
-                      MessageBoxWidget::Information, this);
-                  messageBox.exec();
+                          .arg(sizeStats));
                 } else {
-                  MessageBoxWidget messageBox(
-                      "Error",
+                  ui::Toast::show(
+                      this, "Error",
                       QString("Failed to save image as %1")
                           .arg(targetFormatString),
-                      MessageBoxWidget::Critical, this);
-                  messageBox.exec();
+                      ui::ToastVariant::Destructive);
                 }
               },
               Qt::QueuedConnection);
@@ -617,7 +638,7 @@ void MainPage::onProcessButtonClicked() {
     int totalFiles = sourcePaths.size();
     m_progressBar->setRange(0, totalFiles);
     m_progressBar->setValue(0);
-    m_progressBar->setFormat(QString("Converting %v of %m images (%p%)"));
+    m_progressLabel->setText(QString("Converting 0 of %1 images...").arg(totalFiles));
 
     DropFileWidget *dragWidget = m_dragWidget;
     QFuture<void> future = QtConcurrent::run(
@@ -664,8 +685,10 @@ void MainPage::onProcessButtonClicked() {
 
             QMetaObject::invokeMethod(
                 this,
-                [this, i]() {
+                [this, i, totalFiles]() {
                   m_progressBar->setValue(i + 1);
+                  m_progressLabel->setText(
+                      QString("Converting %1 of %2 images...").arg(i + 1).arg(totalFiles));
                 },
                 Qt::QueuedConnection);
           }
@@ -700,11 +723,10 @@ void MainPage::onProcessButtonClicked() {
 
                 if (m_isCancelled) {
                   message += "\n(Operation was stopped early by user)";
+                  ui::Toast::show(this, "Cancelled", message, ui::ToastVariant::Default);
+                } else {
+                  ui::Dialog::info(this, title, message);
                 }
-
-                MessageBoxWidget messageBox(title, message,
-                                            MessageBoxWidget::Information, this);
-                messageBox.exec();
               },
               Qt::QueuedConnection);
         });

@@ -3,13 +3,13 @@
 
 #include "ui-kit/components/button.h"
 #include "ui-kit/components/form_field.h"
+#include "ui-kit/components/progress.h"
 #include "ui-kit/components/select.h"
 #include "ui-kit/theme/theme.h"
 #include "widgets/drop_file_widget.h"
-#include "widgets/message_box_widget.h"
 #include "widgets/slider_widget.h"
 #include <QFutureWatcher>
-#include <QProgressBar>
+#include <QLabel>
 #include <QVBoxLayout>
 #include <QWidget>
 #include <atomic>
@@ -33,7 +33,8 @@ private:
   SliderWidget *m_qualitySlider;
   ui::Select *m_targetExtensionSelect{nullptr};
   ui::FormField *m_targetExtensionField{nullptr};
-  QProgressBar *m_progressBar;
+  ui::Progress *m_progressBar{nullptr};
+  QLabel *m_progressLabel{nullptr};
   ui::Button *m_processButton;
   ui::Button *m_cancelButton;
   QFutureWatcher<void> *m_futureWatcher;

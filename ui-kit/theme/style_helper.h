@@ -1,4 +1,4 @@
-﻿#ifndef UI_STYLE_HELPER_H
+#ifndef UI_STYLE_HELPER_H
 #define UI_STYLE_HELPER_H
 
 #include <QColor>
@@ -42,6 +42,14 @@ public:
 
   static QColor hoverColor(const QColor &c, bool isDark) {
     return isDark ? c.lighter(120) : c.darker(108);
+  }
+
+  static QColor tint(const QColor &surface, const QColor &accent, qreal accentRatio) {
+    qreal ratio = qBound(0.0, accentRatio, 1.0);
+    int r = qRound(surface.red() * (1.0 - ratio) + accent.red() * ratio);
+    int g = qRound(surface.green() * (1.0 - ratio) + accent.green() * ratio);
+    int b = qRound(surface.blue() * (1.0 - ratio) + accent.blue() * ratio);
+    return QColor(qBound(0, r, 255), qBound(0, g, 255), qBound(0, b, 255));
   }
 };
 

@@ -2,6 +2,7 @@
 #define UI_INPUT_H
 
 #include "../theme/theme.h"
+#include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -43,6 +44,9 @@ signals:
   void textEdited(const QString &text);
   void returnPressed();
 
+protected:
+  bool eventFilter(QObject *watched, QEvent *event) override;
+
 private slots:
   void applyThemeStyles();
 
@@ -54,6 +58,7 @@ private:
   QPushButton *m_clearButton;
   bool m_clearButtonEnabled{false};
   bool m_hasError{false};
+  bool m_isFocused{false};
 };
 
 } // namespace ui

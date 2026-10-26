@@ -4,6 +4,7 @@
 #include <QColor>
 #include <QFont>
 #include <QString>
+#include <QStringList>
 
 namespace ui {
 
@@ -67,6 +68,8 @@ struct SpacingTokens {
 
 struct TypographyTokens {
   QString fontFamily = "Segoe UI, Inter, -apple-system, Roboto, sans-serif";
+  int rootPx = 16;
+  constexpr int remPx(double rem) const { return static_cast<int>(rem * rootPx + 0.5); }
   int sizeXs = 11;
   int sizeSm = 12;
   int sizeBase = 14;
@@ -75,10 +78,24 @@ struct TypographyTokens {
   int size2Xl = 24;
   int size3Xl = 30;
 
-  QFont font(int pointSize, QFont::Weight weight = QFont::Normal) const {
-    QFont f(fontFamily, pointSize);
+  QFont font(int pixelSize, QFont::Weight weight = QFont::Normal) const {
+    QFont f;
+    const QStringList parts = fontFamily.split(',', Qt::SkipEmptyParts);
+    if (!parts.isEmpty()) {
+      QStringList families;
+      families.reserve(parts.size());
+      for (const QString &part : parts) {
+        families.append(part.trimmed());
+      }
+      f.setFamilies(families);
+    }
+    f.setPixelSize(pixelSize > 0 ? pixelSize : sizeBase);
     f.setWeight(weight);
     return f;
+  }
+
+  QFont fontRem(double rem, QFont::Weight weight = QFont::Normal) const {
+    return font(remPx(rem), weight);
   }
 };
 

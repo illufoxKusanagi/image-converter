@@ -1,4 +1,5 @@
 #include "tabs.h"
+#include "../theme/icon_helper.h"
 #include "../theme/style_helper.h"
 
 namespace ui {
@@ -41,6 +42,49 @@ void Tabs::setVariant(TabVariant variant) {
 
 int Tabs::addTab(const QString &text, const QIcon &icon, QWidget *page) {
   return insertTab(m_tabs.size(), text, icon, page);
+}
+
+int Tabs::addTab(const QString &text, const QString &iconPath, QWidget *page) {
+  return insertTab(m_tabs.size(), text, iconPath, page);
+}
+
+int Tabs::insertTab(int index, const QString &text, const QString &iconPath, QWidget *page) {
+  int targetIndex = qBound(0, index, m_tabs.size());
+
+  QPushButton *btn = new QPushButton(text, m_tabBarWidget);
+  btn->setCursor(Qt::PointingHandCursor);
+
+  TabItem item;
+  item.text = text;
+  item.iconPath = iconPath;
+  item.button = btn;
+  item.page = page;
+
+  m_tabs.insert(targetIndex, item);
+  m_tabBarLayout->insertWidget(targetIndex, btn);
+
+  QWidget *pageWidget = page;
+  if (!pageWidget) {
+    pageWidget = new QWidget(m_stackedWidget);
+  }
+  m_stackedWidget->insertWidget(targetIndex, pageWidget);
+
+  connect(btn, &QPushButton::clicked, this, [this, btn]() {
+    for (int i = 0; i < m_tabs.size(); ++i) {
+      if (m_tabs[i].button == btn) {
+        setCurrentIndex(i);
+        break;
+      }
+    }
+  });
+
+  if (m_currentIndex == -1 || m_tabs.size() == 1) {
+    setCurrentIndex(0);
+  } else {
+    applyThemeStyles();
+  }
+
+  return targetIndex;
 }
 
 int Tabs::insertTab(int index, const QString &text, const QIcon &icon, QWidget *page) {
@@ -198,6 +242,11 @@ void Tabs::applyThemeStyles() {
           .arg(border)
           .arg(r.sm > 2 ? r.sm - 1 : 2)
           .arg(StyleHelper::toHexString(c.foreground)));
+
+      if (!m_tabs[i].iconPath.isEmpty()) {
+        QColor iconColor = active ? c.foreground : c.mutedForeground;
+        m_tabs[i].button->setIcon(Icon::get(m_tabs[i].iconPath, iconColor, QSize(16, 16)));
+      }
     }
   } else {
     // Underline Variant (Linear / VS Code style)
@@ -229,6 +278,11 @@ void Tabs::applyThemeStyles() {
           .arg(fg)
           .arg(borderBottom)
           .arg(StyleHelper::toHexString(c.foreground)));
+
+      if (!m_tabs[i].iconPath.isEmpty()) {
+        QColor iconColor = active ? c.foreground : c.mutedForeground;
+        m_tabs[i].button->setIcon(Icon::get(m_tabs[i].iconPath, iconColor, QSize(16, 16)));
+      }
     }
   }
 }

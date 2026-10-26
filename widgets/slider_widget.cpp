@@ -89,6 +89,7 @@ void SliderWidget::applyThemeStyles() {
   const auto &t = ui::Theme::instance().typography();
   bool isDark = ui::Theme::instance().isDark();
 
+  m_label->setFont(t.font(t.sizeBase, QFont::DemiBold));
   m_label->setStyleSheet(
       QString("color: %1; background: transparent; font-size: %2px; "
               "font-weight: 600; font-family: '%3';")
@@ -99,15 +100,21 @@ void SliderWidget::applyThemeStyles() {
   QString cardHex = ui::StyleHelper::toHexString(c.card);
   QString fgHex = ui::StyleHelper::toHexString(c.foreground);
   QString borderHex = ui::StyleHelper::toHexString(c.primary);
+  QString disabledBorderHex = ui::StyleHelper::toHexString(c.border);
   QString hoverBorderHex = ui::StyleHelper::toHexString(
       ui::StyleHelper::hoverColor(c.primary, isDark));
   QString mutedFgHex = ui::StyleHelper::toHexString(c.mutedForeground);
   QString mutedHex = ui::StyleHelper::toHexString(c.muted);
   QString secondaryHex = ui::StyleHelper::toHexString(c.secondary);
   QString bgHex = ui::StyleHelper::toHexString(c.background);
-  QString compartmentBgHex = isDark ? "#27272a" : "#ede9fe";
-  QString compartmentHoverHex = isDark ? "#3f3f46" : "#ddd6fe";
-  QString compartmentPressedHex = isDark ? "#52525b" : "#c4b5fd";
+  QString compartmentBgHex = ui::StyleHelper::toHexString(
+      isDark ? c.secondary : ui::StyleHelper::tint(c.card, c.primary, 0.12));
+  QString compartmentHoverHex = ui::StyleHelper::toHexString(
+      isDark ? ui::StyleHelper::lighten(c.secondary, 18)
+             : ui::StyleHelper::tint(c.card, c.primary, 0.22));
+  QString compartmentPressedHex = ui::StyleHelper::toHexString(
+      isDark ? ui::StyleHelper::lighten(c.secondary, 30)
+             : ui::StyleHelper::tint(c.card, c.primary, 0.34));
   QString upIcon = isDark ? ":/icons/icons/arrow-up.svg"
                           : ":/icons/icons/arrow-up-black.svg";
   QString downIcon = isDark ? ":/icons/icons/arrow-down.svg"
@@ -146,7 +153,7 @@ void SliderWidget::applyThemeStyles() {
       mutedHex +
       ";"
       "  border-color: " +
-      borderHex +
+      disabledBorderHex +
       ";"
       "}"
       "QSpinBox::up-button {"
@@ -176,6 +183,14 @@ void SliderWidget::applyThemeStyles() {
       "QSpinBox::up-button:pressed {"
       "  background-color: " +
       compartmentPressedHex +
+      ";"
+      "}"
+      "QSpinBox::up-button:disabled, QSpinBox::down-button:disabled {"
+      "  background-color: " +
+      mutedHex +
+      ";"
+      "  border-color: " +
+      disabledBorderHex +
       ";"
       "}"
       "QSpinBox::up-arrow {"

@@ -1,11 +1,11 @@
 name: Build & Release ImageConverter
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-    tags:
-      - "v*"
+    types:
+      - closed
     paths-ignore:
       - "**.md"
       - "docs/**"
@@ -25,14 +25,17 @@ concurrency:
 
 jobs:
   build-deb:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     uses: ./.github/workflows/build-deb.yml
     secrets: inherit
 
   build-fedora:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     uses: ./.github/workflows/build-fedora.yml
     secrets: inherit
 
   build-windows:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     uses: ./.github/workflows/build-windows.yml
     secrets: inherit
 

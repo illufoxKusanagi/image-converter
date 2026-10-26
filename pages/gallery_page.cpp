@@ -79,6 +79,7 @@ QWidget *GalleryPage::createSectionHeader(const QString &title, const QString &d
   const auto &c = ui::Theme::instance().colors();
 
   auto *titleLabel = new QLabel(title, header);
+  titleLabel->setProperty("galleryRole", "sectionTitle");
   titleLabel->setFont(t.font(t.sizeLg, QFont::Bold));
   titleLabel->setStyleSheet(QString("color: %1; background: transparent;")
                                 .arg(ui::StyleHelper::toHexString(c.foreground)));
@@ -86,6 +87,7 @@ QWidget *GalleryPage::createSectionHeader(const QString &title, const QString &d
 
   if (!description.isEmpty()) {
     auto *descLabel = new QLabel(description, header);
+    descLabel->setProperty("galleryRole", "mutedText");
     descLabel->setFont(t.font(t.sizeSm, QFont::Normal));
     descLabel->setStyleSheet(QString("color: %1; background: transparent;")
                                  .arg(ui::StyleHelper::toHexString(c.mutedForeground)));
@@ -185,6 +187,7 @@ QWidget *GalleryPage::buildFormSection() {
   switchLayout->setSpacing(8);
   m_switch = new ui::Switch(true, section);
   auto *switchLabel = new QLabel("Enable High Compression", section);
+  switchLabel->setProperty("galleryRole", "bodyText");
   switchLabel->setStyleSheet(QString("color: %1;").arg(ui::StyleHelper::toHexString(ui::Theme::instance().colors().foreground)));
   switchLayout->addWidget(m_switch);
   switchLayout->addWidget(switchLabel);
@@ -194,6 +197,7 @@ QWidget *GalleryPage::buildFormSection() {
   auto *sliderLayout = new QVBoxLayout();
   sliderLayout->setSpacing(4);
   auto *sliderLabel = new QLabel("Quality: 65%", section);
+  sliderLabel->setProperty("galleryRole", "bodyText");
   sliderLabel->setStyleSheet(QString("color: %1;").arg(ui::StyleHelper::toHexString(ui::Theme::instance().colors().foreground)));
 
   m_slider = new ui::Slider(Qt::Horizontal, section);
@@ -234,6 +238,7 @@ QWidget *GalleryPage::buildFeedbackSection() {
   m_spinner->start();
   spinnerLayout->addWidget(m_spinner);
   auto *spinnerText = new QLabel("Loading task...", section);
+  spinnerText->setProperty("galleryRole", "mutedText");
   spinnerText->setStyleSheet(QString("color: %1;").arg(ui::StyleHelper::toHexString(ui::Theme::instance().colors().mutedForeground)));
   spinnerLayout->addWidget(spinnerText);
   row->addLayout(spinnerLayout);
@@ -268,6 +273,7 @@ QWidget *GalleryPage::buildContentSection() {
   // Card
   auto *card = new ui::Card("Shadcn Design System", "Production-ready Qt 6 component architecture with tokenized styling", section);
   auto *cardBody = new QLabel("All widgets automatically adapt to Light, Dark, and System color schemes via centralized theme tokens.", card);
+  cardBody->setProperty("galleryRole", "mutedText");
   cardBody->setWordWrap(true);
   cardBody->setStyleSheet(QString("color: %1;").arg(ui::StyleHelper::toHexString(ui::Theme::instance().colors().mutedForeground)));
   card->contentLayout()->addWidget(cardBody);
@@ -279,6 +285,7 @@ QWidget *GalleryPage::buildContentSection() {
 
   // Accordion
   auto *accordionContent = new QLabel("The accordion container smoothly animates expand and collapse operations without layout jitter.", section);
+  accordionContent->setProperty("galleryRole", "mutedText");
   accordionContent->setWordWrap(true);
   accordionContent->setStyleSheet(QString("color: %1;").arg(ui::StyleHelper::toHexString(ui::Theme::instance().colors().mutedForeground)));
   auto *accordion = new ui::Accordion("Why use tokenized design?", accordionContent, section);
@@ -287,7 +294,9 @@ QWidget *GalleryPage::buildContentSection() {
   // Avatars row
   auto *avatarRow = new QHBoxLayout();
   avatarRow->setSpacing(12);
-  avatarRow->addWidget(new QLabel("Avatars:", section));
+  auto *avatarLabel = new QLabel("Avatars:", section);
+  avatarLabel->setProperty("galleryRole", "bodyText");
+  avatarRow->addWidget(avatarLabel);
   avatarRow->addWidget(new ui::Avatar("SM", ui::AvatarSize::Small, section));
   avatarRow->addWidget(new ui::Avatar("DF", ui::AvatarSize::Default, section));
   avatarRow->addWidget(new ui::Avatar("LG", ui::AvatarSize::Large, section));
@@ -313,9 +322,27 @@ void GalleryPage::onShowToastDestructiveClicked() {
 
 void GalleryPage::applyThemeStyles() {
   const auto &c = ui::Theme::instance().colors();
+  const auto &t = ui::Theme::instance().typography();
   QString bgHex = ui::StyleHelper::toHexString(c.background);
+  QString fgHex = ui::StyleHelper::toHexString(c.foreground);
+  QString mutedFgHex = ui::StyleHelper::toHexString(c.mutedForeground);
 
-  setStyleSheet(QString("QScrollArea { background-color: transparent; border: none; }"
+  setStyleSheet(QString("QScrollArea { background-color: %1; border: none; }"
                         "QWidget#galleryContainer { background-color: %1; }")
                     .arg(bgHex));
+
+  const auto labels = findChildren<QLabel *>();
+  for (QLabel *lbl : labels) {
+    QString role = lbl->property("galleryRole").toString();
+    if (role == "sectionTitle") {
+      lbl->setFont(t.font(t.sizeLg, QFont::Bold));
+      lbl->setStyleSheet(QString("color: %1; background: transparent;").arg(fgHex));
+    } else if (role == "bodyText") {
+      lbl->setFont(t.font(t.sizeBase, QFont::Normal));
+      lbl->setStyleSheet(QString("color: %1; background: transparent;").arg(fgHex));
+    } else if (role == "mutedText") {
+      lbl->setFont(t.font(t.sizeSm, QFont::Normal));
+      lbl->setStyleSheet(QString("color: %1; background: transparent;").arg(mutedFgHex));
+    }
+  }
 }
