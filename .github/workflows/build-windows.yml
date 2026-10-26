@@ -18,6 +18,11 @@ jobs:
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -29,8 +34,8 @@ jobs:
           version: "6.7.2"
           host: "windows"
           target: "desktop"
-          arch: "win64_msvc2022_64"
-          modules: "qtpdf qtsvg"
+          arch: "win64_msvc2019_64"
+          modules: "qtpdf"
           setup-python: false
           cache: true
 
