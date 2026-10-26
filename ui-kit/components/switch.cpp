@@ -56,6 +56,7 @@ void Switch::nextCheckState() {
 }
 
 void Switch::updateThumbAnimation(bool checked) {
+  if (!m_animation) return;
   m_animation->stop();
   m_animation->setStartValue(m_thumbOffset);
   m_animation->setEndValue(checked ? 1.0 : 0.0);

@@ -69,6 +69,16 @@ These rules are non-negotiable and take absolute precedence over default model b
    - If a user prompt is underspecified, ambiguous, or lacks an exact file/function target, **STOP** and ask 1 brief clarifying question. Do not guess, assume intent, or write speculative code.
 6. **Mandatory Immediate Tool Stop**:
    - After completing the single requested edit, verifying non-zero file sizes, and confirming the build, **STOP calling tools immediately** and summarize the result concisely. Do not ask leading questions to push the roadmap forward.
+7. **Sycophant isn't allowed**: Be transparent to your answer, if what user want is unrealistic, say it as it is. Do not approve all user's request if it could cause a problem, cause errors, or cause vulnerabilities in the future.
+8. **Read-Only Until Approved**: Never edit a file or run terminal commands automatically. First show the user a bullet list of the exact files and lines intended to change, and wait for confirmation before calling any write or bash tools, then write implementation plan for user.
+9. **Zero Speculative Discovery**: If a prompt or task is ambiguous, underspecified, or brief (e.g. "continue", "fix some things"), DO NOT attempt to "figure it out" by running search loops, grep, find, or reading chat transcripts. Stop and ask for clarification immediately.
+10. **Forbidden Directories**: NEVER read, search, or inspect `vendor/`, `node_modules/`, or framework internal code unless explicitly asked by the user to debug a vendor package.
+11. **Forbidden Discovery Commands**: DO NOT use `run_command` to inspect or find files (`find`, `grep`, `tail transcript`, etc.). Only use `view_file` on paths explicitly provided by the user.
+12. **Single-Turn Bias**: Never chain autonomous investigative tool calls without either executing the required code change or stopping to report back.
+13. **Strict Scope Boundaries**: Touch only the exact files requested by the user. Do not explore, refactor, or edit untouched files.
+14. **Implementation Plan Artifacts**: Whenever proposing an implementation plan, design, or multi-step changes, always write an Antigravity implementation plan artifact (`write_to_file` in the artifact directory with `RequestFeedback: true`) instead of writing out plans or proposals in conversational response text.
+15. **User Frustration Halt Protocol**: If the user expresses anger, frustration, or reprimands the AI, it means the AI is in the wrong. The AI is strictly forbidden from running tools or making changes. It must acknowledge the error without making excuses, confirm understanding, and do not ask an open question to let the user direct the next step unless AI is unsure or have less confident about what must do.
+16. **Agent Driven Development is Mandatory**: If you're Gemini Argon, Claude Sonnet, Claude Opus, do not write code by yourself, but delegate your task to subagents. Read `subagent-driven-development` skills for full detail.
 
 ---
 

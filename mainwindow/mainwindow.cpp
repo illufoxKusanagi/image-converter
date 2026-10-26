@@ -31,14 +31,22 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   headerLayout->addWidget(m_themeToggleBtn, 0, Qt::AlignVCenter);
   rootLayout->addWidget(headerWidget);
 
-  // Main Tabs
+  // Main Tabs: Convert Image, Compress PDF, UI Components
   m_tabs = new ui::Tabs(ui::TabVariant::Underline, m_centralWidget);
+
   m_mainPage = new MainPage(m_tabs);
   m_tabs->addTab("Convert Image",
                  ui::Icon::get(":/icons/icons/lucide-image.svg",
                                ui::Theme::instance().colors().foreground,
                                QSize(16, 16)),
                  m_mainPage);
+
+  m_pdfPage = new PdfPage(m_tabs);
+  m_tabs->addTab("Compress PDF",
+                 ui::Icon::get(":/icons/icons/lucide-file-text.svg",
+                               ui::Theme::instance().colors().foreground,
+                               QSize(16, 16)),
+                 m_pdfPage);
 
   m_galleryPage = new GalleryPage(m_tabs);
   m_tabs->addTab("UI Components",
@@ -55,7 +63,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   applyThemeStyles();
 }
 
-void MainWindow::onThemeToggleClicked() { ui::Theme::instance().toggleMode(); }
+void MainWindow::onThemeToggleClicked() {
+  ui::Theme::instance().toggleMode();
+}
 
 void MainWindow::applyThemeStyles() {
   const auto &c = ui::Theme::instance().colors();
@@ -69,7 +79,8 @@ void MainWindow::applyThemeStyles() {
           .arg(ui::StyleHelper::toHexString(c.background)));
 
   m_titleLabel->setStyleSheet(
-      QString("color: %1;").arg(ui::StyleHelper::toHexString(c.foreground)));
+      QString("color: %1; background: transparent;")
+          .arg(ui::StyleHelper::toHexString(c.foreground)));
 
   QString modeText;
   QString iconPath;
