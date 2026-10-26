@@ -4,6 +4,7 @@
 #include "ui-kit/theme/icon_helper.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
+#include <QBuffer>
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -188,9 +189,12 @@ void MainPage::onProcessButtonClicked() {
     QFuture<void> future =
         QtConcurrent::run([this, sourcePaths, outputPath, quality, totalFiles]() {
           QString tempOutputPath = outputPath + ".tmp";
-          int dpi = (quality <= 0) ? 72 : (72 + static_cast<int>((quality / 100.0) * (300 - 72)));
+          int clampedQuality = qBound(1, quality, 100);
+          int targetDpi = 72 + ((300 - 72) * clampedQuality) / 100;
+          qreal scaleFactor = 0.35 + (0.65 * clampedQuality) / 100.0;
+
           QPdfWriter pdfWriter(tempOutputPath);
-          pdfWriter.setResolution(dpi);
+          pdfWriter.setResolution(targetDpi);
           pdfWriter.setPageMargins(QMarginsF(0, 0, 0, 0));
 
           qint64 totalOrigBytes = 0;
@@ -206,8 +210,8 @@ void MainPage::onProcessButtonClicked() {
             }
 
             const QString &path = sourcePaths.at(i);
-            QImage image(path);
-            if (image.isNull()) {
+            QImage origImage(path);
+            if (origImage.isNull()) {
               skippedCount++;
               QMetaObject::invokeMethod(
                   this, [this, i]() { m_progressBar->setValue(i + 1); },
@@ -215,9 +219,30 @@ void MainPage::onProcessButtonClicked() {
               continue;
             }
 
-            // Set page dimensions based on image aspect ratio at selected DPI (72 pt per inch)
-            QSizeF ptSize(image.width() * 72.0 / dpi, image.height() * 72.0 / dpi);
+            // Preserve consistent physical page dimensions in points (at 96 base DPI)
+            QSizeF ptSize(origImage.width() * 72.0 / 96.0,
+                          origImage.height() * 72.0 / 96.0);
             pdfWriter.setPageSize(QPageSize(ptSize, QPageSize::Point));
+
+            // Downscale & compress image according to quality slider
+            QImage processedImg = origImage.convertToFormat(QImage::Format_RGB888);
+            if (clampedQuality < 95) {
+              QSize scaledSize(
+                  qMax(1, qRound(origImage.width() * scaleFactor)),
+                  qMax(1, qRound(origImage.height() * scaleFactor)));
+              processedImg = processedImg.scaled(scaledSize, Qt::KeepAspectRatio,
+                                                 Qt::SmoothTransformation);
+              QByteArray jpegBytes;
+              QBuffer buffer(&jpegBytes);
+              if (buffer.open(QIODevice::WriteOnly)) {
+                processedImg.save(&buffer, "JPG", clampedQuality);
+                buffer.close();
+                QImage reloaded;
+                if (reloaded.loadFromData(jpegBytes, "JPG")) {
+                  processedImg = reloaded;
+                }
+              }
+            }
 
             if (successCount == 0) {
               if (!painter.begin(&pdfWriter)) {
@@ -233,8 +258,8 @@ void MainPage::onProcessButtonClicked() {
               }
             }
 
-            QRect pageRect = pdfWriter.pageLayout().paintRectPixels(dpi);
-            painter.drawImage(pageRect, image);
+            QRect pageRect = pdfWriter.pageLayout().paintRectPixels(targetDpi);
+            painter.drawImage(pageRect, processedImg);
 
             totalOrigBytes += QFileInfo(path).size();
             successCount++;
@@ -279,7 +304,7 @@ void MainPage::onProcessButtonClicked() {
               this,
               [this, outputPath, ok, successCount, skippedCount, totalOrigBytes]() {
                 setProcessingState(false);
-                m_cancelButton->setText("Cancel");
+                m_cancelButton->setText("Cancel Conversion");
 
                 if (m_isCancelled) {
                   MessageBoxWidget messageBox(
@@ -378,11 +403,10 @@ void MainPage::onProcessButtonClicked() {
                 if (m_isCancelled) break;
 
                 QSizeF ptSize = doc.pagePointSize(p);
-                // Dynamic resolution (72 DPI to 600 DPI)
                 int extractDpi = (quality <= 0) ? 72 : (72 + static_cast<int>((quality / 100.0) * (600 - 72)));
                 qreal scale = extractDpi / 72.0;
-                QSize renderSize(static_cast<int>(ptSize.width() * scale),
-                                 static_cast<int>(ptSize.height() * scale));
+                QSize renderSize(qMax(1, static_cast<int>(ptSize.width() * scale)),
+                                 qMax(1, static_cast<int>(ptSize.height() * scale)));
                 QImage pageImg = doc.render(p, renderSize);
 
                 if (pageImg.isNull()) {
@@ -460,7 +484,7 @@ void MainPage::onProcessButtonClicked() {
               this,
               [this, totalExtracted, failedCount, totalOutputBytes, outputDir]() {
                 setProcessingState(false);
-                m_cancelButton->setText("Cancel");
+                m_cancelButton->setText("Cancel Conversion");
 
                 if (m_isCancelled) {
                   MessageBoxWidget messageBox(
@@ -540,7 +564,7 @@ void MainPage::onProcessButtonClicked() {
                targetFormatString]() {
                 m_progressBar->setValue(1);
                 setProcessingState(false);
-                m_cancelButton->setText("Cancel");
+                m_cancelButton->setText("Cancel Conversion");
 
                 if (m_isCancelled) {
                   MessageBoxWidget messageBox(
@@ -651,7 +675,7 @@ void MainPage::onProcessButtonClicked() {
               [this, successCount, failureCount, totalOrigBytes,
                totalOutputBytes]() {
                 setProcessingState(false);
-                m_cancelButton->setText("Cancel");
+                m_cancelButton->setText("Cancel Conversion");
 
                 QString title = m_isCancelled ? "Batch Conversion Cancelled"
                                               : "Batch Conversion Complete";

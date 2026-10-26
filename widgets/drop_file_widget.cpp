@@ -9,9 +9,9 @@
 DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
                                SliderWidget *sliderWidget,
                                ImageExtension *sourceExtension)
-    : QGroupBox(parent), m_sourceExtension(sourceExtension),
-      m_sliderWidget(sliderWidget), m_typeFile(typeFile),
-      m_isDragHovered(false) {
+    : QGroupBox(parent), m_sliderWidget(sliderWidget),
+      m_sourceExtension(sourceExtension), m_qualityValue(100),
+      m_typeFile(typeFile), m_isDragHovered(false) {
   setObjectName("DropFileWidget");
   mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(12, 12, 12, 12);
@@ -26,10 +26,9 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
   setLayout(mainLayout);
 
   if (m_sliderWidget) {
+    m_qualityValue = m_sliderWidget->getValue();
     connect(m_sliderWidget, &SliderWidget::valueChanged, this,
             &DropFileWidget::onSliderValueChanged);
-  } else {
-    m_qualityValue = 100;
   }
   connect(m_browseButton, &QPushButton::clicked, this,
           &DropFileWidget::onBrowseButtonPressed);
@@ -91,7 +90,6 @@ void DropFileWidget::setupChosenFileWidget() {
   chosenFileLayout->setContentsMargins(4, 4, 4, 4);
   chosenFileLayout->setSpacing(6);
 
-  // Top header bar: Count/size label on left, "Clear All" on right
   QHBoxLayout *headerLayout = new QHBoxLayout();
   headerLayout->setContentsMargins(4, 0, 4, 0);
   m_chosenHeaderLabel = new QLabel("Selected Files", this);
@@ -104,7 +102,6 @@ void DropFileWidget::setupChosenFileWidget() {
   headerLayout->addWidget(m_clearAllButton, 0, Qt::AlignRight | Qt::AlignVCenter);
   chosenFileLayout->addLayout(headerLayout);
 
-  // Scroll Area for item cards
   m_fileScrollArea = new QScrollArea(this);
   m_fileScrollArea->setWidgetResizable(true);
   m_fileScrollArea->setFrameShape(QFrame::NoFrame);
@@ -118,7 +115,6 @@ void DropFileWidget::setupChosenFileWidget() {
   m_fileScrollArea->setWidget(m_fileListContainer);
   chosenFileLayout->addWidget(m_fileScrollArea, 1);
 
-  // Bottom action: "+ Add More Files"
   QHBoxLayout *footerLayout = new QHBoxLayout();
   footerLayout->setContentsMargins(0, 0, 0, 0);
   m_addMoreButton = new ui::Button("+ Add More Files", ui::ButtonVariant::Ghost, ui::ButtonSize::Small, this);
@@ -137,7 +133,7 @@ void DropFileWidget::setupOrSeparatorLayout(QVBoxLayout *layout) {
   m_formatLabel = new QLabel(
       m_typeFile == "PDF"
           ? "Supports .pdf documents"
-          : "Supports .png, .jpg, .jpeg, .webp, .tiff, .bmp, .gif",
+          : "Supports .png, .jpg, .jpeg, .webp, .tiff, .bmp, .gif, .pdf",
       this);
   m_formatLabel->setAlignment(Qt::AlignCenter);
 
@@ -257,7 +253,6 @@ void DropFileWidget::updateWidgetVisibility() {
 void DropFileWidget::rebuildFileList() {
   if (!m_fileListLayout) return;
 
-  // Clear existing items in layout
   QLayoutItem *item;
   while ((item = m_fileListLayout->takeAt(0)) != nullptr) {
     if (item->widget()) {
@@ -271,15 +266,15 @@ void DropFileWidget::rebuildFileList() {
   const auto &t = ui::Theme::instance().typography();
 
   qint64 totalBytes = 0;
-  QString iconPath = (m_typeFile == "PDF") ? ":/icons/icons/lucide-file-text.svg"
-                                          : ":/icons/icons/lucide-image.svg";
-  QPixmap rowIcon = ui::Icon::pixmap(iconPath, c.primary, 18, 18);
+  QPixmap pdfRowIcon = ui::Icon::pixmap(":/icons/icons/lucide-file-text.svg", c.primary, 18, 18);
+  QPixmap imgRowIcon = ui::Icon::pixmap(":/icons/icons/lucide-image.svg", c.primary, 18, 18);
 
   for (int i = 0; i < m_filePaths.size(); ++i) {
     const QString &path = m_filePaths.at(i);
     QFileInfo fi(path);
     qint64 size = fi.size();
     totalBytes += size;
+    bool isPdfFile = (fi.suffix().toLower() == "pdf");
 
     QWidget *card = new QWidget(m_fileListContainer);
     card->setFixedHeight(32);
@@ -298,7 +293,7 @@ void DropFileWidget::rebuildFileList() {
     cardLayout->setSpacing(6);
 
     QLabel *iconLabel = new QLabel(card);
-    iconLabel->setPixmap(rowIcon);
+    iconLabel->setPixmap(isPdfFile ? pdfRowIcon : imgRowIcon);
     iconLabel->setFixedSize(18, 18);
     iconLabel->setStyleSheet("border: none; background: transparent;");
 
@@ -440,7 +435,7 @@ void DropFileWidget::dropEvent(QDropEvent *event) {
             newPaths.append(QDir::cleanPath(filePath));
           }
         } else {
-          QStringList validExts = {"png", "jpg", "jpeg", "webp", "tiff", "bmp", "gif"};
+          QStringList validExts = {"png", "jpg", "jpeg", "webp", "tiff", "bmp", "gif", "pdf"};
           if (validExts.contains(ext)) {
             newPaths.append(QDir::cleanPath(filePath));
           }
@@ -504,17 +499,21 @@ QString DropFileWidget::formatFileSize(qint64 bytes) {
 }
 
 bool DropFileWidget::saveImage(const QImage *image, const QString &outputPath,
-                              const int quality,
-                              const ImageExtension *sourceExtension) {
+                               const int quality,
+                               const ImageExtension *sourceExtension) {
   if (!image || image->isNull() || !sourceExtension) {
     return false;
   }
-  QString format = imageExtensionToString(*sourceExtension);
-  int effectiveQuality = quality;
-  if (*sourceExtension == PNG) {
-    effectiveQuality = -1;
+  QString format = imageExtensionToString(*sourceExtension).toLower();
+  if (format.isEmpty()) {
+    return false;
   }
-  return image->save(outputPath, format.toUpper().toUtf8().constData(),
+  int effectiveQuality = (*sourceExtension == PNG) ? -1 : quality;
+  QString finalPath = outputPath;
+  if (!finalPath.endsWith("." + format, Qt::CaseInsensitive)) {
+    finalPath += "." + format;
+  }
+  return image->save(finalPath, format.toUpper().toUtf8().constData(),
                      effectiveQuality);
 }
 
@@ -546,8 +545,10 @@ void DropFileWidget::onBrowseButtonPressed() {
                                       "PDF Files (*.pdf);;All Files (*)");
   } else {
     fileNames = QFileDialog::getOpenFileNames(
-        this, "Select Image Files", QDir::homePath(),
-        "Image Files (*.png *.jpg *.jpeg *.webp *.tiff *.bmp *.gif);;All Files (*)");
+        this, "Select Image or PDF Files", QDir::homePath(),
+        "Supported Files (*.png *.jpg *.jpeg *.webp *.tiff *.bmp *.gif *.pdf);;"
+        "Image Files (*.png *.jpg *.jpeg *.webp *.tiff *.bmp *.gif);;"
+        "PDF Files (*.pdf);;All Files (*)");
   }
   if (fileNames.isEmpty()) {
     return;

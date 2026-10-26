@@ -51,8 +51,7 @@ set(PROJECT_STYLES
         resources/icons.qrc
 )
 
-set(
-        PROJECT_PAGES
+set(PROJECT_PAGES
         pages/main_page.cpp
         pages/main_page.h
         pages/pdf_page.cpp
@@ -74,31 +73,28 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         ${PROJECT_WIDGETS}
         ${PROJECT_STYLES}
         ${PROJECT_PAGES}
-
     )
-# Define target properties for Android with Qt 6 as:
-#    set_property(TARGET ImageConverter APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
-#                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
-# For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
 else()
     if(ANDROID)
         add_library(ImageConverter SHARED
             ${PROJECT_SOURCES}
+            ${PROJECT_WIDGETS}
+            ${PROJECT_STYLES}
+            ${PROJECT_PAGES}
         )
-# Define properties for Android with Qt 5 after find_package() calls as:
-#    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
     else()
         add_executable(ImageConverter
             ${PROJECT_SOURCES}
+            ${PROJECT_WIDGETS}
+            ${PROJECT_STYLES}
+            ${PROJECT_PAGES}
         )
     endif()
 endif()
 
 target_link_libraries(ImageConverter PRIVATE ui_kit Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Pdf Qt${QT_VERSION_MAJOR}::Concurrent Qt${QT_VERSION_MAJOR}::Svg)
 target_include_directories(ImageConverter PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-# Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
-# If you are developing for iOS or macOS you should consider setting an
-# explicit, fixed bundle identifier manually though.
+
 if(${QT_VERSION} VERSION_LESS 6.1.0)
   set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.ImageConverter)
 endif()
@@ -148,4 +144,3 @@ set(CPACK_RPM_PACKAGE_GROUP "Applications/Graphics")
 set(CPACK_RPM_PACKAGE_AUTOREQPROV ON)
 
 include(CPack)
-

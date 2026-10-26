@@ -9,7 +9,6 @@
 #include <QLabel>
 #include <QPixmap>
 #include <QSizePolicy>
-#include <Qwidget>
 
 class ButtonSidebarWidget : public QWidget {
 public:
