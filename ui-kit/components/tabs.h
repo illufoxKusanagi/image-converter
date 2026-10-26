@@ -29,7 +29,9 @@ public:
   void setVariant(TabVariant variant);
 
   int addTab(const QString &text, const QIcon &icon = QIcon(), QWidget *page = nullptr);
+  int addTab(const QString &text, const QString &iconPath, QWidget *page = nullptr);
   int insertTab(int index, const QString &text, const QIcon &icon = QIcon(), QWidget *page = nullptr);
+  int insertTab(int index, const QString &text, const QString &iconPath, QWidget *page = nullptr);
   void removeTab(int index);
 
   int currentIndex() const;
@@ -60,6 +62,7 @@ private:
   struct TabItem {
     QString text;
     QIcon icon;
+    QString iconPath;
     QPushButton *button{nullptr};
     QWidget *page{nullptr};
   };

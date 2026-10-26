@@ -27,6 +27,11 @@ void Select::applyThemeStyles() {
   const auto &t = Theme::instance().typography();
   bool isDark = Theme::instance().isDark();
 
+  setFont(t.font(t.sizeBase, QFont::Normal));
+  if (view()) {
+    view()->setFont(t.font(t.sizeBase, QFont::Normal));
+  }
+
   QString bgHex = StyleHelper::toHexString(c.background);
   QString fgHex = StyleHelper::toHexString(c.foreground);
   QString borderHex = StyleHelper::toHexString(c.primary);
@@ -35,8 +40,10 @@ void Select::applyThemeStyles() {
   QString popoverFgHex = StyleHelper::toHexString(c.popoverForeground);
   QString accentHex = StyleHelper::toHexString(c.accent);
   QString accentFgHex = StyleHelper::toHexString(c.accentForeground);
-  QString compartmentBgHex = isDark ? "#27272a" : "#ede9fe";
-  QString compartmentHoverHex = isDark ? "#3f3f46" : "#ddd6fe";
+  QColor compBg = isDark ? c.secondary : StyleHelper::tint(c.background, c.primary, 0.12);
+  QColor compHover = isDark ? StyleHelper::lighten(c.secondary, 18) : StyleHelper::tint(c.background, c.primary, 0.22);
+  QString compartmentBgHex = StyleHelper::toHexString(compBg);
+  QString compartmentHoverHex = StyleHelper::toHexString(compHover);
   QString downIcon = isDark ? ":/icons/icons/arrow-down.svg" : ":/icons/icons/arrow-down-black.svg";
 
   setStyleSheet(

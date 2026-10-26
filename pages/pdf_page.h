@@ -2,18 +2,20 @@
 #define PDF_PAGE_H
 
 #include "ui-kit/components/button.h"
+#include "ui-kit/components/dialog.h"
 #include "ui-kit/components/form_field.h"
+#include "ui-kit/components/progress.h"
 #include "ui-kit/components/select.h"
+#include "ui-kit/components/toast.h"
 #include "ui-kit/theme/theme.h"
 #include "widgets/drop_file_widget.h"
-#include "widgets/message_box_widget.h"
 #include "widgets/slider_widget.h"
 #include <QFutureWatcher>
+#include <QLabel>
 #include <QPageSize>
 #include <QPainter>
 #include <QPdfDocument>
 #include <QPdfWriter>
-#include <QProgressBar>
 #include <QVBoxLayout>
 #include <QWidget>
 #include <atomic>
@@ -39,7 +41,8 @@ private:
   SliderWidget *m_qualitySlider{nullptr};
   ui::Select *m_presetSelect{nullptr};
   ui::FormField *m_presetField{nullptr};
-  QProgressBar *m_progressBar{nullptr};
+  ui::Progress *m_progressBar{nullptr};
+  QLabel *m_progressLabel{nullptr};
   ui::Button *m_processButton{nullptr};
   ui::Button *m_cancelButton{nullptr};
   QFutureWatcher<void> *m_futureWatcher{nullptr};

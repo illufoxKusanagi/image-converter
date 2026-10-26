@@ -8,6 +8,7 @@ Input::Input(QWidget *parent)
 
 Input::Input(const QString &placeholder, QWidget *parent)
     : QWidget(parent) {
+  setAttribute(Qt::WA_StyledBackground, true);
   setFixedHeight(40);
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
@@ -22,6 +23,7 @@ Input::Input(const QString &placeholder, QWidget *parent)
   m_lineEdit->setFrame(false);
   m_lineEdit->setPlaceholderText(placeholder);
   m_lineEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  m_lineEdit->installEventFilter(this);
 
   m_suffixLabel = new QLabel(this);
   m_suffixLabel->setVisible(false);
@@ -110,6 +112,19 @@ QLineEdit *Input::lineEdit() const {
   return m_lineEdit;
 }
 
+bool Input::eventFilter(QObject *watched, QEvent *event) {
+  if (watched == m_lineEdit) {
+    if (event->type() == QEvent::FocusIn) {
+      m_isFocused = true;
+      applyThemeStyles();
+    } else if (event->type() == QEvent::FocusOut) {
+      m_isFocused = false;
+      applyThemeStyles();
+    }
+  }
+  return QWidget::eventFilter(watched, event);
+}
+
 void Input::applyThemeStyles() {
   const auto &c = Theme::instance().colors();
   const auto &r = Theme::instance().radius();
@@ -120,26 +135,23 @@ void Input::applyThemeStyles() {
   m_prefixLabel->setFont(t.font(t.sizeSm, QFont::DemiBold));
   m_suffixLabel->setFont(t.font(t.sizeSm, QFont::Normal));
 
-  QColor borderColor = m_hasError ? c.destructive : c.border;
-  QColor focusRingColor = m_hasError ? c.destructive : c.ring;
-
+  QColor activeBorder = m_hasError ? c.destructive : (m_isFocused ? c.ring : c.border);
+  int borderWidth = m_isFocused ? 2 : 1;
+  QColor hoverBorder = m_hasError ? c.destructive : (m_isFocused ? c.ring : c.primary);
   setStyleSheet(QString(
       "ui--Input {"
       "  background-color: %1;"
-      "  border: 1px solid %2;"
-      "  border-radius: %3px;"
+      "  border: %2px solid %3;"
+      "  border-radius: %4px;"
       "}"
       "ui--Input:hover {"
-      "  border-color: %4;"
-      "}"
-      "ui--Input:focus-within {"
-      "  border: 2px solid %5;"
+      "  border-color: %5;"
       "}")
       .arg(StyleHelper::toHexString(c.background))
-      .arg(StyleHelper::toHexString(borderColor))
+      .arg(borderWidth)
+      .arg(StyleHelper::toHexString(activeBorder))
       .arg(r.md)
-      .arg(StyleHelper::toHexString(c.primary))
-      .arg(StyleHelper::toHexString(focusRingColor)));
+      .arg(StyleHelper::toHexString(hoverBorder)));
 
   m_lineEdit->setStyleSheet(QString(
       "QLineEdit {"

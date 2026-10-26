@@ -57,6 +57,7 @@ These rules are non-negotiable and take absolute precedence over default model b
    - **NEVER** modify or create files that were not explicitly named or requested in the user's prompt.
    - **NEVER** advance to the next roadmap milestone, phase, or unrequested component automatically.
    - **NEVER** batch multiple unrelated features or files in one turn. Execute *only* the immediate task and stop.
+   - **ALWAYS** see what user asked. If user asked to execute multiple tasks, then run multiple tasks, and refer to rule no-16: **Agent Driven Development is Mandatory**.
 2. **Zero-Tolerance for Faked or Assumed Status**:
    - **NEVER** claim a build compiled or tests passed without actually executing `cmake --build` via `run_command` and verifying exit code `0`.
    - **NEVER** claim CodeRabbit review passed without actually running `cr review --agent --uncommitted` and inspecting the real JSON output (`findings: 0`).

@@ -1,4 +1,4 @@
-﻿#include "card.h"
+#include "card.h"
 #include "../theme/style_helper.h"
 
 namespace ui {
@@ -8,6 +8,7 @@ Card::Card(QWidget *parent)
 
 Card::Card(const QString &title, const QString &description, QWidget *parent)
     : QFrame(parent) {
+  setAttribute(Qt::WA_StyledBackground, true);
   m_rootLayout = new QVBoxLayout(this);
   m_rootLayout->setContentsMargins(24, 24, 24, 24);
   m_rootLayout->setSpacing(16);
@@ -104,7 +105,7 @@ void Card::applyThemeStyles() {
                                  .arg(StyleHelper::toHexString(c.mutedForeground)));
 
   setStyleSheet(QString(
-      "ui--Card, QFrame {"
+      "ui--Card {"
       "  background-color: %1;"
       "  border: 1px solid %2;"
       "  border-radius: %3px;"
