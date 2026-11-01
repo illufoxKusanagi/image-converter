@@ -113,7 +113,7 @@ jobs:
           env = os.environ.copy()
           for name in ("GS_LIB", "GS_DLL", "GS_OPTIONS", "GS_FONTPATH"):
               env.pop(name, None)
-          env["PATH"] = str(Path(env["SystemRoot"]) / "System32")
+          env["PATH"] = str(Path(env["SYSTEMROOT"]) / "System32")
           version = subprocess.run([str(bundled), "--version"], check=True, capture_output=True, text=True, env=env, timeout=30).stdout.strip()
           print(f"Bundled Ghostscript version: {version}", flush=True)
           assert version == "10.08.0", version
