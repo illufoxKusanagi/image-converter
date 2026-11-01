@@ -11,6 +11,9 @@ jobs:
       image: fedora:40
     permissions:
       contents: write
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Install Build Dependencies
@@ -22,6 +25,7 @@ jobs:
             cmake \
             ninja-build \
             rpm-build \
+            ghostscript \
             nodejs \
             python3 \
             qt6-qtbase-devel \
@@ -50,6 +54,78 @@ jobs:
         run: |
           cd build
           cpack -G RPM
+
+      - name: Verify RPM Dependency and Install Package
+        run: |
+          shopt -s nullglob
+          packages=(build/*.rpm)
+          if [ "${#packages[@]}" -ne 1 ]; then
+            echo "Expected exactly one RPM, found ${#packages[@]}"
+            exit 1
+          fi
+          rpm -qp --requires "${packages[0]}"
+          rpm -qp --requires "${packages[0]}" | grep -E '^ghostscript([[:space:]]|$)'
+          dnf install -y "${packages[0]}"
+          rpm -q image-converter ghostscript
+          rpm -V image-converter
+
+      - name: Smoke Test Installed Runtime
+        run: |
+          gs --version
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          import subprocess
+          import tempfile
+
+          gs = shutil.which("gs")
+          assert gs, "Ghostscript runtime dependency is missing"
+          with tempfile.TemporaryDirectory(prefix="PDF smoke café 日本語 ") as directory:
+              root = Path(directory)
+              source = root / "input café 日本語.pdf"
+              output = root / "compressed café 日本語.pdf"
+              text = root / "selectable text café 日本語.txt"
+              marker = "Selectable packaging smoke text"
+              stream = f"BT /F1 18 Tf 24 100 Td ({marker}) Tj ET\n".encode("ascii") + b"% compression padding\n" * 4096
+              objects = [
+                  b"<< /Type /Catalog /Pages 2 0 R >>",
+                  b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+                  b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 360 160] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+                  b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+                  f"<< /Length {len(stream)} >>\nstream\n".encode("ascii") + stream + b"endstream",
+              ]
+              pdf = bytearray(b"%PDF-1.4\n")
+              offsets = [0]
+              for number, obj in enumerate(objects, 1):
+                  offsets.append(len(pdf))
+                  pdf.extend(f"{number} 0 obj\n".encode("ascii") + obj + b"\nendobj\n")
+              xref = len(pdf)
+              pdf.extend(f"xref\n0 {len(offsets)}\n0000000000 65535 f \n".encode("ascii"))
+              for offset in offsets[1:]:
+                  pdf.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+              pdf.extend(f"trailer\n<< /Size {len(offsets)} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode("ascii"))
+              source.write_bytes(pdf)
+              common = [gs, "-dSAFER", "-dBATCH", "-dNOPAUSE"]
+              subprocess.run(common + ["-sDEVICE=pdfwrite", "-dCompatibilityLevel=1.4", "-dPDFSETTINGS=/ebook", f"-sOutputFile={output}", "-f", str(source)], check=True, cwd=root, timeout=60)
+              assert output.read_bytes().startswith(b"%PDF-"), "Invalid PDF output"
+              assert 0 < output.stat().st_size < source.stat().st_size, "PDF was not compressed"
+              subprocess.run(common + ["-sDEVICE=txtwrite", f"-sOutputFile={text}", "-f", str(output)], check=True, cwd=root, timeout=60)
+              assert marker in text.read_text(encoding="utf-8"), "Selectable text was lost"
+              print(f"Unicode/spaced-path compression and text checks passed: {source.stat().st_size} -> {output.stat().st_size} bytes", flush=True)
+          PY
+
+          application="$(rpm -ql image-converter | grep '/bin/ImageConverter$')"
+          test -x "$application"
+          if QT_QPA_PLATFORM=offscreen timeout 5s "$application"; then
+            echo "Installed application exited before the smoke-test timeout"
+            exit 1
+          else
+            result=$?
+            if [ "$result" -ne 124 ]; then
+              echo "Installed application failed to start: $result"
+              exit 1
+            fi
+          fi
 
       - name: Upload RPM Package
         uses: actions/upload-artifact@v4
