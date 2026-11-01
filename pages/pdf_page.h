@@ -12,14 +12,9 @@
 #include "widgets/slider_widget.h"
 #include <QFutureWatcher>
 #include <QLabel>
-#include <QPageSize>
-#include <QPainter>
-#include <QPdfDocument>
-#include <QPdfWriter>
 #include <QVBoxLayout>
 #include <QWidget>
 #include <atomic>
-#include <functional>
 
 class PdfPage : public QWidget {
   Q_OBJECT
@@ -51,19 +46,23 @@ private:
 
   void setProcessingState(bool isProcessing);
 
+  enum class CompressionStatus { Compressed, Unchanged, Failed, Cancelled };
+  struct CompressionResult {
+    CompressionStatus status{CompressionStatus::Failed};
+    qint64 originalBytes{0};
+    qint64 outputBytes{0};
+    QString error;
+  };
+
   void compressSinglePdf(const QString &sourcePath, int quality);
   void compressBatchPdf(const QStringList &sourcePaths, int quality);
-  bool compressPdf(const QString &inputPath, const QString &outputPath,
-                   int quality,
-                   const std::function<void(int, int)> &onPageProgress);
-  bool compressPdfWithGhostscript(const QString &inputPath,
-                                  const QString &tempOutputPath, int quality);
-  bool compressPdfWithQtFallback(
-      const QString &inputPath, const QString &tempOutputPath, int quality,
-      const std::function<void(int, int)> &onPageProgress);
+  CompressionResult compressPdf(const QString &inputPath,
+                                const QString &outputPath, int quality);
+  bool compressPdfWithGhostscript(const QString &executable,
+                                  const QString &inputPath,
+                                  const QString &tempOutputPath, int quality,
+                                  QString &error);
   static QString findGhostscriptExecutable();
-  QImage compressImage(const QImage &originalImage, int quality);
-  int calculateDPI(int quality);
 };
 
 #endif // PDF_PAGE_H

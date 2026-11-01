@@ -40,7 +40,7 @@ jobs:
           cache: true
 
       - name: Configure CMake
-        shell: powershell
+        shell: pwsh
         run: |
           $QtRoot = $env:QT_ROOT_DIR
           if (-not $QtRoot) { $QtRoot = Split-Path (Split-Path $env:Qt6_DIR -Parent) -Parent }
@@ -48,14 +48,16 @@ jobs:
           cmake -B build -G "Ninja" `
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_PREFIX_PATH="$QtRoot"
+          if ($LASTEXITCODE -ne 0) { throw "CMake configuration failed: $LASTEXITCODE" }
 
       - name: Build
-        shell: powershell
+        shell: pwsh
         run: |
           cmake --build build --config Release
+          if ($LASTEXITCODE -ne 0) { throw "Build failed: $LASTEXITCODE" }
 
       - name: Deploy Qt Dependencies (windeployqt)
-        shell: powershell
+        shell: pwsh
         run: |
           $QtRoot = $env:QT_ROOT_DIR
           if (-not $QtRoot) { $QtRoot = Split-Path (Split-Path $env:Qt6_DIR -Parent) -Parent }
@@ -64,7 +66,114 @@ jobs:
           Copy-Item "build/ImageConverter.exe" -Destination "dist/"
 
           & "$QtRoot/bin/windeployqt.exe" --release --no-translations --compiler-runtime "dist/ImageConverter.exe"
+          if ($LASTEXITCODE -ne 0) { throw "windeployqt failed: $LASTEXITCODE" }
 
+      - name: Deploy Pinned Ghostscript Runtime
+        shell: pwsh
+        run: |
+          # Official asset digest: https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/tag/gs10080
+          $installer = Join-Path $env:RUNNER_TEMP "gs10080w64.exe"
+          Invoke-WebRequest -Uri "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10080/gs10080w64.exe" -OutFile $installer
+          $expectedHash = "52a91b8bf09298788d7a57b9206127026c23eacd75405f0a131e26dc381dce50"
+          if ((Get-FileHash $installer -Algorithm SHA256).Hash -ne $expectedHash) {
+            throw "Ghostscript installer SHA-256 mismatch"
+          }
+
+          # Extract rather than install: no registry or machine-wide Ghostscript dependency.
+          # Keep all runtime, font, resource, documentation and license files.
+          & 7z x -y "-odist/gs" '-x!$PLUGINSDIR' '-x!*.nsis' $installer
+          if ($LASTEXITCODE -ne 0) { throw "Ghostscript extraction failed: $LASTEXITCODE" }
+
+          # windeployqt may ship an installer rather than app-local MSVC runtime DLLs.
+          $crtDirectories = @(Get-ChildItem -Path (Join-Path $env:VCToolsRedistDir "x64/Microsoft.VC*.CRT") -Directory)
+          $crtDlls = @($crtDirectories | Get-ChildItem -Filter "*.dll" -File)
+          if ($crtDlls.Count -eq 0) { throw "MSVC x64 runtime DLLs were not found" }
+          $crtDlls | Copy-Item -Destination "dist/" -Force
+          $crtDlls | Copy-Item -Destination "dist/gs/bin/" -Force
+
+          foreach ($path in @("bin/gswin64c.exe", "bin/gsdll64.dll", "lib", "Resource", "doc")) {
+            if (-not (Test-Path "dist/gs/$path")) { throw "Ghostscript bundle is missing $path" }
+          }
+          $licenses = @(Get-ChildItem "dist/gs" -Recurse -File | Where-Object { $_.Name -match '^(COPYING|LICENSE|AGPL)(\..*)?$' })
+          if ($licenses.Count -eq 0) { throw "Ghostscript license files are missing" }
+          $agpl = @(Select-String -Path $licenses.FullName -SimpleMatch "GNU AFFERO GENERAL PUBLIC LICENSE" -List)
+          if ($agpl.Count -eq 0) { throw "Ghostscript AGPL license material is missing" }
+
+      - name: Verify Portable Ghostscript Compression
+        shell: pwsh
+        run: |
+          @'
+          import os
+          from pathlib import Path
+          import shutil
+          import subprocess
+          import tempfile
+
+          bundled = Path("dist/gs/bin/gswin64c.exe").resolve()
+          env = os.environ.copy()
+          for name in ("GS_LIB", "GS_DLL", "GS_OPTIONS", "GS_FONTPATH"):
+              env.pop(name, None)
+          env["PATH"] = str(Path(env["SystemRoot"]) / "System32")
+          version = subprocess.run([str(bundled), "--version"], check=True, capture_output=True, text=True, env=env, timeout=30).stdout.strip()
+          print(f"Bundled Ghostscript version: {version}", flush=True)
+          assert version == "10.08.0", version
+
+          with tempfile.TemporaryDirectory(prefix="PDF smoke café 日本語 ") as directory:
+              root = Path(directory)
+              shutil.copytree(bundled.parent.parent, root / "portable gs")
+              gs = str(root / "portable gs/bin/gswin64c.exe")
+              source = root / "input café 日本語.pdf"
+              output = root / "compressed café 日本語.pdf"
+              text = root / "selectable text café 日本語.txt"
+              marker = "Selectable packaging smoke text"
+              stream = f"BT /F1 18 Tf 24 100 Td ({marker}) Tj ET\n".encode("ascii") + b"% compression padding\n" * 4096
+              objects = [
+                  b"<< /Type /Catalog /Pages 2 0 R >>",
+                  b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+                  b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 360 160] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+                  b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+                  f"<< /Length {len(stream)} >>\nstream\n".encode("ascii") + stream + b"endstream",
+              ]
+              pdf = bytearray(b"%PDF-1.4\n")
+              offsets = [0]
+              for number, obj in enumerate(objects, 1):
+                  offsets.append(len(pdf))
+                  pdf.extend(f"{number} 0 obj\n".encode("ascii") + obj + b"\nendobj\n")
+              xref = len(pdf)
+              pdf.extend(f"xref\n0 {len(offsets)}\n0000000000 65535 f \n".encode("ascii"))
+              for offset in offsets[1:]:
+                  pdf.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+              pdf.extend(f"trailer\n<< /Size {len(offsets)} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode("ascii"))
+              source.write_bytes(pdf)
+              common = [gs, "-dSAFER", "-dBATCH", "-dNOPAUSE"]
+              subprocess.run(common + ["-sDEVICE=pdfwrite", "-dCompatibilityLevel=1.4", "-dPDFSETTINGS=/ebook", f"-sOutputFile={output}", "-f", str(source)], check=True, cwd=root, env=env, timeout=60)
+              assert output.read_bytes().startswith(b"%PDF-"), "Invalid PDF output"
+              assert 0 < output.stat().st_size < source.stat().st_size, "PDF was not compressed"
+              subprocess.run(common + ["-sDEVICE=txtwrite", f"-sOutputFile={text}", "-f", str(output)], check=True, cwd=root, env=env, timeout=60)
+              assert marker in text.read_text(encoding="utf-8"), "Selectable text was lost"
+              print(f"Unicode/spaced-path compression and text checks passed: {source.stat().st_size} -> {output.stat().st_size} bytes", flush=True)
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw "Ghostscript deployment smoke test failed: $LASTEXITCODE" }
+
+      - name: Smoke Test Deployed Application Startup
+        shell: pwsh
+        run: |
+          $application = (Resolve-Path "dist/ImageConverter.exe").Path
+          $process = Start-Process -FilePath $application -WorkingDirectory "dist" -PassThru
+          try {
+            if ($process.WaitForExit(5000)) {
+              throw "Deployed application exited during startup (exit $($process.ExitCode))"
+            }
+          } finally {
+            if (-not $process.HasExited) {
+              Stop-Process -Id $process.Id -Force
+              $process.WaitForExit()
+            }
+          }
+
+      - name: Archive Verified Windows Bundle
+        shell: pwsh
+        run: |
           Compress-Archive -Path "dist/*" -DestinationPath "build/ImageConverter-windows-x64.zip" -Force
 
       - name: Upload Windows Bundle

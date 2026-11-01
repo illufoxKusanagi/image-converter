@@ -6,6 +6,8 @@
 #include <QDialog>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QResizeEvent>
+#include <QTextEdit>
 #include <QVBoxLayout>
 
 namespace ui {
@@ -15,7 +17,8 @@ class Dialog : public QDialog {
 
 public:
   explicit Dialog(QWidget *parent = nullptr);
-  Dialog(const QString &title, const QString &description = "", QWidget *parent = nullptr);
+  Dialog(const QString &title, const QString &description = "",
+         QWidget *parent = nullptr);
   ~Dialog() override = default;
 
   void setTitle(const QString &title);
@@ -31,8 +34,15 @@ public:
   Button *confirmButton() const;
   Button *cancelButton() const;
 
-  static bool confirm(QWidget *parent, const QString &title, const QString &description, const QString &confirmText = "Confirm", bool isDestructive = false);
-  static void info(QWidget *parent, const QString &title, const QString &description);
+  static bool confirm(QWidget *parent, const QString &title,
+                      const QString &description,
+                      const QString &confirmText = "Confirm",
+                      bool isDestructive = false);
+  static void info(QWidget *parent, const QString &title,
+                   const QString &description);
+
+protected:
+  void resizeEvent(QResizeEvent *event) override;
 
 private slots:
   void applyThemeStyles();
@@ -41,14 +51,15 @@ private:
   QVBoxLayout *m_rootLayout;
   QVBoxLayout *m_headerLayout;
   QLabel *m_titleLabel;
-  QLabel *m_descLabel;
+  QTextEdit *m_descriptionEdit{nullptr};
   QVBoxLayout *m_contentLayout;
   QHBoxLayout *m_footerLayout;
   Button *m_cancelButton;
   Button *m_confirmButton;
+
+  void updateDescriptionHeight();
 };
 
 } // namespace ui
 
 #endif // UI_DIALOG_H
-

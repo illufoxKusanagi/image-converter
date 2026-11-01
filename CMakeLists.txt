@@ -137,10 +137,13 @@ set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Illufox Kusanagi")
 set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+# Ghostscript is invoked as a subprocess, so shared-library scanning misses it.
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "ghostscript")
 
 # RPM (.rpm)
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Applications/Graphics")
 set(CPACK_RPM_PACKAGE_AUTOREQPROV ON)
+set(CPACK_RPM_PACKAGE_REQUIRES "ghostscript")
 
 include(CPack)
