@@ -5,6 +5,8 @@
 #include "ui-kit/theme/style_helper.h"
 #include <QFontMetrics>
 #include <QScrollBar>
+#include <QThread>
+#include <QVariant>
 
 DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
                                SliderWidget *sliderWidget,
@@ -43,8 +45,9 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
 void DropFileWidget::updateDropZoneStyle() {
   const auto &c = ui::Theme::instance().colors();
   const auto &r = ui::Theme::instance().radius();
-  QString borderColor = m_isDragHovered ? ui::StyleHelper::toHexString(c.primary)
-                                        : ui::StyleHelper::toHexString(c.border);
+  QString borderColor = m_isDragHovered
+                            ? ui::StyleHelper::toHexString(c.primary)
+                            : ui::StyleHelper::toHexString(c.border);
   QString bgColor = m_isDragHovered ? ui::StyleHelper::toHexString(c.accent)
                                     : ui::StyleHelper::toHexString(c.card);
   setStyleSheet(QString("QGroupBox#DropFileWidget {"
@@ -68,9 +71,11 @@ void DropFileWidget::setupEmptyFileWidget() {
   emptyFieldLayout->setAlignment(Qt::AlignCenter);
 
   m_icon = new QLabel(m_emptyFieldWidget);
-  m_emptyLabel = new QLabel("Choose your " + m_typeFile + "(s) or drag here...", m_emptyFieldWidget);
+  m_emptyLabel = new QLabel("Choose your " + m_typeFile + "(s) or drag here...",
+                            m_emptyFieldWidget);
 
-  m_browseButton = new ui::Button("Browse Files", ui::ButtonVariant::Outline, ui::ButtonSize::Default, m_emptyFieldWidget);
+  m_browseButton = new ui::Button("Browse Files", ui::ButtonVariant::Outline,
+                                  ui::ButtonSize::Default, m_emptyFieldWidget);
   m_browseButton->setMinimumWidth(140);
 
   m_icon->setAlignment(Qt::AlignCenter);
@@ -94,12 +99,15 @@ void DropFileWidget::setupChosenFileWidget() {
   headerLayout->setContentsMargins(4, 0, 4, 0);
   m_chosenHeaderLabel = new QLabel("Selected Files", this);
 
-  m_clearAllButton = new ui::Button("Clear All", ui::ButtonVariant::Ghost, ui::ButtonSize::Small, this);
+  m_clearAllButton = new ui::Button("Clear All", ui::ButtonVariant::Ghost,
+                                    ui::ButtonSize::Small, this);
   connect(m_clearAllButton, &QPushButton::clicked, this,
           &DropFileWidget::onClearAllPressed);
 
-  headerLayout->addWidget(m_chosenHeaderLabel, 1, Qt::AlignLeft | Qt::AlignVCenter);
-  headerLayout->addWidget(m_clearAllButton, 0, Qt::AlignRight | Qt::AlignVCenter);
+  headerLayout->addWidget(m_chosenHeaderLabel, 1,
+                          Qt::AlignLeft | Qt::AlignVCenter);
+  headerLayout->addWidget(m_clearAllButton, 0,
+                          Qt::AlignRight | Qt::AlignVCenter);
   chosenFileLayout->addLayout(headerLayout);
 
   m_fileScrollArea = new QScrollArea(this);
@@ -117,7 +125,8 @@ void DropFileWidget::setupChosenFileWidget() {
 
   QHBoxLayout *footerLayout = new QHBoxLayout();
   footerLayout->setContentsMargins(0, 0, 0, 0);
-  m_addMoreButton = new ui::Button("+ Add More Files", ui::ButtonVariant::Ghost, ui::ButtonSize::Small, this);
+  m_addMoreButton = new ui::Button("+ Add More Files", ui::ButtonVariant::Ghost,
+                                   ui::ButtonSize::Small, this);
   connect(m_addMoreButton, &QPushButton::clicked, this,
           &DropFileWidget::onBrowseButtonPressed);
   footerLayout->addStretch();
@@ -165,72 +174,79 @@ void DropFileWidget::applyThemeStyles() {
 
   if (m_emptyLabel) {
     m_emptyLabel->setFont(t.font(t.sizeBase, QFont::DemiBold));
-    m_emptyLabel->setStyleSheet(QString("color: %1; background: transparent;")
-                                    .arg(ui::StyleHelper::toHexString(c.foreground)));
+    m_emptyLabel->setStyleSheet(
+        QString("color: %1; background: transparent;")
+            .arg(ui::StyleHelper::toHexString(c.foreground)));
   }
 
   if (m_formatLabel) {
     m_formatLabel->setFont(t.font(t.sizeXs, QFont::Normal));
-    m_formatLabel->setStyleSheet(QString("color: %1; background: transparent;")
-                                     .arg(ui::StyleHelper::toHexString(c.mutedForeground)));
+    m_formatLabel->setStyleSheet(
+        QString("color: %1; background: transparent;")
+            .arg(ui::StyleHelper::toHexString(c.mutedForeground)));
   }
 
   if (m_orLabel) {
     m_orLabel->setFont(t.font(t.sizeXs, QFont::Normal));
-    m_orLabel->setStyleSheet(QString("color: %1; background: transparent;")
-                                 .arg(ui::StyleHelper::toHexString(c.mutedForeground)));
+    m_orLabel->setStyleSheet(
+        QString("color: %1; background: transparent;")
+            .arg(ui::StyleHelper::toHexString(c.mutedForeground)));
   }
 
   if (m_chosenHeaderLabel) {
     m_chosenHeaderLabel->setFont(t.font(t.sizeSm, QFont::DemiBold));
-    m_chosenHeaderLabel->setStyleSheet(QString("color: %1; background: transparent;")
-                                           .arg(ui::StyleHelper::toHexString(c.foreground)));
+    m_chosenHeaderLabel->setStyleSheet(
+        QString("color: %1; background: transparent;")
+            .arg(ui::StyleHelper::toHexString(c.foreground)));
   }
 
   if (m_clearAllButton) {
     m_clearAllButton->setFont(t.font(t.sizeXs, QFont::DemiBold));
-    m_clearAllButton->setStyleSheet(QString(
-        "QPushButton {"
-        "  background: transparent;"
-        "  border: none;"
-        "  color: %1;"
-        "}"
-        "QPushButton:hover {"
-        "  text-decoration: underline;"
-        "}")
-        .arg(ui::StyleHelper::toHexString(c.destructive)));
+    m_clearAllButton->setStyleSheet(
+        QString("QPushButton {"
+                "  background: transparent;"
+                "  border: none;"
+                "  color: %1;"
+                "}"
+                "QPushButton:hover {"
+                "  text-decoration: underline;"
+                "}")
+            .arg(ui::StyleHelper::toHexString(c.destructive)));
   }
 
   if (m_fileScrollArea) {
-    m_fileScrollArea->setStyleSheet(QString(
-        "QScrollArea { background: transparent; border: none; }"
-        "QScrollBar:vertical {"
-        "  border: none;"
-        "  background: transparent;"
-        "  width: 6px;"
-        "  border-radius: 3px;"
-        "}"
-        "QScrollBar::handle:vertical {"
-        "  background: %1;"
-        "  min-height: 20px;"
-        "  border-radius: 3px;"
-        "}"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {"
-        "  height: 0px;"
-        "}")
-        .arg(ui::StyleHelper::toHexString(c.border)));
+    m_fileScrollArea->setStyleSheet(
+        QString("QScrollArea { background: transparent; border: none; }"
+                "QScrollBar:vertical {"
+                "  border: none;"
+                "  background: transparent;"
+                "  width: 6px;"
+                "  border-radius: 3px;"
+                "}"
+                "QScrollBar::handle:vertical {"
+                "  background: %1;"
+                "  min-height: 20px;"
+                "  border-radius: 3px;"
+                "}"
+                "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {"
+                "  height: 0px;"
+                "}")
+            .arg(ui::StyleHelper::toHexString(c.border)));
   }
 
   if (m_browseButton) {
-    m_browseButton->setIcon(ui::Icon::get(":/icons/icons/lucide-folder-open.svg", c.foreground, QSize(16, 16)));
+    m_browseButton->setIcon(ui::Icon::get(
+        ":/icons/icons/lucide-folder-open.svg", c.foreground, QSize(16, 16)));
   }
 
   if (m_addMoreButton) {
-    m_addMoreButton->setIcon(ui::Icon::get(":/icons/icons/lucide-plus.svg", c.foreground, QSize(14, 14)));
+    m_addMoreButton->setIcon(ui::Icon::get(":/icons/icons/lucide-plus.svg",
+                                           c.foreground, QSize(14, 14)));
   }
 
-  QString iconRes = (m_typeFile == "PDF") ? ":/icons/icons/lucide-file-text.svg"
-                                          : ":/icons/icons/lucide-upload-cloud.svg";
+  QString iconRes = (m_typeFile == "PDF")
+                        ? ":/icons/icons/lucide-file-text.svg"
+                        : ":/icons/icons/lucide-upload-cloud.svg";
   QPixmap coloredIcon = ui::Icon::pixmap(iconRes, c.primary, 48, 48);
   if (m_icon) {
     m_icon->setPixmap(coloredIcon);
@@ -246,16 +262,23 @@ void DropFileWidget::updateWidgetVisibility() {
   } else {
     m_emptyFieldWidget->setVisible(false);
     m_chosenFileWidget->setVisible(true);
-    rebuildFileList();
   }
+  rebuildFileList();
 }
 
 void DropFileWidget::rebuildFileList() {
-  if (!m_fileListLayout) return;
+  if (!m_fileListLayout)
+    return;
+
+  for (const FileRow &row : m_fileRows) {
+    row.spinner->stop();
+  }
+  m_fileRows.clear();
 
   QLayoutItem *item;
   while ((item = m_fileListLayout->takeAt(0)) != nullptr) {
     if (item->widget()) {
+      item->widget()->hide();
       item->widget()->deleteLater();
     }
     delete item;
@@ -266,44 +289,57 @@ void DropFileWidget::rebuildFileList() {
   const auto &t = ui::Theme::instance().typography();
 
   qint64 totalBytes = 0;
-  QPixmap pdfRowIcon = ui::Icon::pixmap(":/icons/icons/lucide-file-text.svg", c.primary, 18, 18);
-  QPixmap imgRowIcon = ui::Icon::pixmap(":/icons/icons/lucide-image.svg", c.primary, 18, 18);
 
   for (int i = 0; i < m_filePaths.size(); ++i) {
     const QString &path = m_filePaths.at(i);
+    if (!m_fileStates.contains(path)) {
+      m_fileStates.insert(path, FileState{});
+    }
     QFileInfo fi(path);
     qint64 size = fi.size();
     totalBytes += size;
-    bool isPdfFile = (fi.suffix().toLower() == "pdf");
 
     QWidget *card = new QWidget(m_fileListContainer);
+    card->setObjectName("fileRow");
     card->setFixedHeight(32);
-    card->setStyleSheet(QString(
-        "QWidget {"
-        "  background-color: %1;"
-        "  border: 1px solid %2;"
-        "  border-radius: %3px;"
-        "}")
-        .arg(ui::StyleHelper::toHexString(c.secondary))
-        .arg(ui::StyleHelper::toHexString(c.border))
-        .arg(r.sm));
+    card->setStyleSheet(QString("QWidget {"
+                                "  background-color: %1;"
+                                "  border: 1px solid %2;"
+                                "  border-radius: %3px;"
+                                "}")
+                            .arg(ui::StyleHelper::toHexString(c.secondary))
+                            .arg(ui::StyleHelper::toHexString(c.border))
+                            .arg(r.sm));
 
     QHBoxLayout *cardLayout = new QHBoxLayout(card);
     cardLayout->setContentsMargins(8, 2, 6, 2);
     cardLayout->setSpacing(6);
 
     QLabel *iconLabel = new QLabel(card);
-    iconLabel->setPixmap(isPdfFile ? pdfRowIcon : imgRowIcon);
+    iconLabel->setObjectName("fileStatusIcon");
     iconLabel->setFixedSize(18, 18);
     iconLabel->setStyleSheet("border: none; background: transparent;");
+
+    ui::Spinner *spinner = new ui::Spinner(18, card);
+    spinner->setObjectName("fileStatusSpinner");
+    spinner->setStyleSheet("border: none; background: transparent;");
+    spinner->stop();
+    spinner->hide();
 
     QFontMetrics fm(font());
     QString elidedName = fm.elidedText(fi.fileName(), Qt::ElideMiddle, 210);
     QLabel *nameLabel = new QLabel(elidedName, card);
+    nameLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     nameLabel->setToolTip(fi.fileName());
     nameLabel->setFont(t.font(t.sizeSm, QFont::DemiBold));
-    nameLabel->setStyleSheet(QString("border: none; background: transparent; color: %1;")
-                                 .arg(ui::StyleHelper::toHexString(c.foreground)));
+    nameLabel->setStyleSheet(
+        QString("border: none; background: transparent; color: %1;")
+            .arg(ui::StyleHelper::toHexString(c.foreground)));
+
+    QLabel *statusLabel = new QLabel(card);
+    statusLabel->setObjectName("fileStatusText");
+    statusLabel->setTextFormat(Qt::PlainText);
+    statusLabel->setFont(t.font(t.sizeXs, QFont::Normal));
 
     ui::Badge *sizeBadge =
         new ui::Badge(formatFileSize(size), ui::BadgeVariant::Secondary, card);
@@ -313,8 +349,11 @@ void DropFileWidget::rebuildFileList() {
     upBtn->setCursor(Qt::PointingHandCursor);
     upBtn->setToolTip("Move up");
     upBtn->setEnabled(i > 0);
-    upBtn->setIcon(ui::Icon::get(":/icons/icons/lucide-chevron-up.svg", i > 0 ? c.mutedForeground : c.border, QSize(14, 14)));
-    upBtn->setStyleSheet("QPushButton { background: transparent; border: none; }");
+    upBtn->setIcon(ui::Icon::get(":/icons/icons/lucide-chevron-up.svg",
+                                 i > 0 ? c.mutedForeground : c.border,
+                                 QSize(14, 14)));
+    upBtn->setStyleSheet(
+        "QPushButton { background: transparent; border: none; }");
     connect(upBtn, &QPushButton::clicked, this, [this, i]() { moveFileUp(i); });
 
     QPushButton *downBtn = new QPushButton(card);
@@ -322,27 +361,41 @@ void DropFileWidget::rebuildFileList() {
     downBtn->setCursor(Qt::PointingHandCursor);
     downBtn->setToolTip("Move down");
     downBtn->setEnabled(i < m_filePaths.size() - 1);
-    downBtn->setIcon(ui::Icon::get(":/icons/icons/lucide-chevron-down.svg", i < m_filePaths.size() - 1 ? c.mutedForeground : c.border, QSize(14, 14)));
-    downBtn->setStyleSheet("QPushButton { background: transparent; border: none; }");
-    connect(downBtn, &QPushButton::clicked, this, [this, i]() { moveFileDown(i); });
+    downBtn->setIcon(
+        ui::Icon::get(":/icons/icons/lucide-chevron-down.svg",
+                      i < m_filePaths.size() - 1 ? c.mutedForeground : c.border,
+                      QSize(14, 14)));
+    downBtn->setStyleSheet(
+        "QPushButton { background: transparent; border: none; }");
+    connect(downBtn, &QPushButton::clicked, this,
+            [this, i]() { moveFileDown(i); });
 
     QPushButton *removeBtn = new QPushButton(card);
     removeBtn->setFixedSize(20, 20);
     removeBtn->setCursor(Qt::PointingHandCursor);
     removeBtn->setToolTip("Remove file");
-    removeBtn->setIcon(ui::Icon::get(":/icons/icons/lucide-x.svg", c.mutedForeground, QSize(14, 14)));
-    removeBtn->setStyleSheet("QPushButton { background: transparent; border: none; }");
-    connect(removeBtn, &QPushButton::clicked, this, [this, i]() { removeFileAt(i); });
+    removeBtn->setIcon(ui::Icon::get(":/icons/icons/lucide-x.svg",
+                                     c.mutedForeground, QSize(14, 14)));
+    removeBtn->setStyleSheet(
+        "QPushButton { background: transparent; border: none; }");
+    connect(removeBtn, &QPushButton::clicked, this,
+            [this, i]() { removeFileAt(i); });
 
     cardLayout->addWidget(iconLabel);
+    cardLayout->addWidget(spinner);
     cardLayout->addWidget(nameLabel, 1);
+    cardLayout->addWidget(statusLabel);
     cardLayout->addWidget(sizeBadge);
     cardLayout->addWidget(upBtn);
     cardLayout->addWidget(downBtn);
     cardLayout->addWidget(removeBtn);
 
     m_fileListLayout->addWidget(card);
+    m_fileRows.insert(path, {card, iconLabel, spinner, statusLabel, upBtn,
+                             downBtn, removeBtn});
+    updateFileRowStatus(path);
   }
+  updateProcessingControls();
 
   QString countStr = m_filePaths.size() == 1
                          ? "1 file selected"
@@ -352,30 +405,182 @@ void DropFileWidget::rebuildFileList() {
   }
 }
 
+void DropFileWidget::updateFileRowStatus(const QString &path) {
+  const auto rowIt = m_fileRows.constFind(path);
+  if (rowIt == m_fileRows.cend())
+    return;
+
+  const FileRow &row = rowIt.value();
+  const FileState state = m_fileStates.value(path);
+  const auto &c = ui::Theme::instance().colors();
+  QColor color = c.mutedForeground;
+  QString iconPath;
+  QString text;
+  QString description;
+
+  switch (state.status) {
+  case FileStatus::Waiting:
+    text = tr("Waiting");
+    description = tr("Waiting to be processed.");
+    iconPath = QFileInfo(path).suffix().compare("pdf", Qt::CaseInsensitive) == 0
+                   ? ":/icons/icons/lucide-file-text.svg"
+                   : ":/icons/icons/lucide-image.svg";
+    break;
+  case FileStatus::Processing:
+    text = tr("Processing");
+    description = tr("Processing file.");
+    color = c.primary;
+    break;
+  case FileStatus::Succeeded:
+    text = tr("Succeeded");
+    description = tr("File processed successfully.");
+    iconPath = ":/icons/icons/lucide-check.svg";
+    color = c.primary;
+    break;
+  case FileStatus::Unchanged:
+    text = tr("Unchanged");
+    description = tr("File left unchanged.");
+    iconPath = ":/icons/icons/lucide-minus.svg";
+    break;
+  case FileStatus::Failed:
+    text = tr("Failed");
+    description = tr("File could not be processed.");
+    iconPath = ":/icons/icons/lucide-alert-triangle.svg";
+    color = c.destructive;
+    break;
+  case FileStatus::Cancelled:
+    text = tr("Cancelled");
+    description = tr("File processing was cancelled.");
+    iconPath = ":/icons/icons/lucide-x.svg";
+    break;
+  }
+
+  if (!state.detail.isEmpty()) {
+    description += "\n" + state.detail;
+  }
+  const QString tooltip = path + "\n" + description;
+  const QString accessibleName =
+      tr("%1: %2").arg(QFileInfo(path).fileName(), text);
+  const QList<QWidget *> statusWidgets = {row.card, row.icon, row.spinner,
+                                          row.statusLabel};
+  for (QWidget *widget : statusWidgets) {
+    widget->setProperty("filePath", path);
+    widget->setProperty("fileStatus", static_cast<int>(state.status));
+    widget->setToolTip(tooltip);
+    widget->setAccessibleName(accessibleName);
+    widget->setAccessibleDescription(description);
+  }
+
+  row.statusLabel->setText(text);
+  row.statusLabel->setStyleSheet(
+      QString("border: none; background: transparent; color: %1;")
+          .arg(ui::StyleHelper::toHexString(color)));
+
+  const bool processing = state.status == FileStatus::Processing;
+  row.icon->setVisible(!processing);
+  row.spinner->setVisible(processing);
+  if (processing) {
+    row.spinner->setColor(c.primary);
+    row.spinner->start();
+  } else {
+    row.spinner->stop();
+    row.icon->setPixmap(ui::Icon::pixmap(
+        iconPath, state.status == FileStatus::Waiting ? c.primary : color, 18,
+        18));
+  }
+}
+
+void DropFileWidget::updateProcessingControls() {
+  const bool editable = !m_isProcessing;
+  m_browseButton->setEnabled(editable);
+  m_addMoreButton->setEnabled(editable);
+  m_clearAllButton->setEnabled(editable);
+  setAcceptDrops(editable);
+
+  for (int i = 0; i < m_filePaths.size(); ++i) {
+    const auto rowIt = m_fileRows.constFind(m_filePaths.at(i));
+    if (rowIt == m_fileRows.cend())
+      continue;
+    const FileRow &row = rowIt.value();
+    row.upButton->setEnabled(editable && i > 0);
+    row.downButton->setEnabled(editable && i < m_filePaths.size() - 1);
+    row.removeButton->setEnabled(editable);
+  }
+}
+
+void DropFileWidget::beginProcessing() {
+  Q_ASSERT(QThread::currentThread() == thread());
+  if (QThread::currentThread() != thread())
+    return;
+
+  m_isProcessing = true;
+  m_isDragHovered = false;
+  m_fileStates.clear();
+  for (const QString &path : m_filePaths) {
+    m_fileStates.insert(path, FileState{});
+    updateFileRowStatus(path);
+  }
+  updateProcessingControls();
+  updateDropZoneStyle();
+}
+
+void DropFileWidget::setFileStatus(const QString &path, FileStatus status,
+                                   const QString &detail) {
+  Q_ASSERT(QThread::currentThread() == thread());
+  if (QThread::currentThread() != thread())
+    return;
+
+  const QString cleanPath = QDir::cleanPath(QDir::fromNativeSeparators(path));
+  auto stateIt = m_fileStates.find(cleanPath);
+  if (stateIt == m_fileStates.end())
+    return;
+  stateIt.value() = {status, detail};
+  updateFileRowStatus(cleanPath);
+}
+
+void DropFileWidget::finishProcessing(bool cancelled) {
+  Q_ASSERT(QThread::currentThread() == thread());
+  if (QThread::currentThread() != thread())
+    return;
+
+  for (const QString &path : m_filePaths) {
+    FileState &state = m_fileStates[path];
+    if (state.status == FileStatus::Processing) {
+      state = {cancelled ? FileStatus::Cancelled : FileStatus::Failed,
+               cancelled ? QString()
+                         : tr("Processing ended without a result.")};
+    } else if (cancelled && state.status == FileStatus::Waiting) {
+      state = {FileStatus::Cancelled, QString()};
+    }
+    updateFileRowStatus(path);
+  }
+  m_isProcessing = false;
+  updateProcessingControls();
+}
+
 void DropFileWidget::removeFileAt(int index) {
-  if (index >= 0 && index < m_filePaths.size()) {
+  if (!m_isProcessing && index >= 0 && index < m_filePaths.size()) {
+    m_fileStates.remove(m_filePaths.at(index));
     m_filePaths.removeAt(index);
     updateWidgetVisibility();
   }
 }
 
 void DropFileWidget::moveFileUp(int index) {
-  if (index > 0 && index < m_filePaths.size()) {
+  if (!m_isProcessing && index > 0 && index < m_filePaths.size()) {
     m_filePaths.swapItemsAt(index, index - 1);
     rebuildFileList();
   }
 }
 
 void DropFileWidget::moveFileDown(int index) {
-  if (index >= 0 && index < m_filePaths.size() - 1) {
+  if (!m_isProcessing && index >= 0 && index < m_filePaths.size() - 1) {
     m_filePaths.swapItemsAt(index, index + 1);
     rebuildFileList();
   }
 }
 
-void DropFileWidget::onClearAllPressed() {
-  clearFiles();
-}
+void DropFileWidget::onClearAllPressed() { clearFiles(); }
 
 QPixmap DropFileWidget::createColoredIcon(const QString &iconPath,
                                           const QColor &color, int width,
@@ -399,6 +604,10 @@ QPixmap DropFileWidget::createColoredIcon(const QString &iconPath,
 }
 
 void DropFileWidget::dragEnterEvent(QDragEnterEvent *event) {
+  if (m_isProcessing) {
+    event->ignore();
+    return;
+  }
   if (event->mimeData()->hasUrls()) {
     m_isDragHovered = true;
     updateDropZoneStyle();
@@ -407,6 +616,10 @@ void DropFileWidget::dragEnterEvent(QDragEnterEvent *event) {
 }
 
 void DropFileWidget::dragMoveEvent(QDragMoveEvent *event) {
+  if (m_isProcessing) {
+    event->ignore();
+    return;
+  }
   if (event->mimeData()->hasUrls()) {
     event->acceptProposedAction();
   }
@@ -419,6 +632,10 @@ void DropFileWidget::dragLeaveEvent(QDragLeaveEvent *event) {
 }
 
 void DropFileWidget::dropEvent(QDropEvent *event) {
+  if (m_isProcessing) {
+    event->ignore();
+    return;
+  }
   m_isDragHovered = false;
   updateDropZoneStyle();
   const QMimeData *mimeData = event->mimeData();
@@ -435,7 +652,8 @@ void DropFileWidget::dropEvent(QDropEvent *event) {
             newPaths.append(QDir::cleanPath(filePath));
           }
         } else {
-          QStringList validExts = {"png", "jpg", "jpeg", "webp", "tiff", "bmp", "gif", "pdf"};
+          QStringList validExts = {"png",  "jpg", "jpeg", "webp",
+                                   "tiff", "bmp", "gif",  "pdf"};
           if (validExts.contains(ext)) {
             newPaths.append(QDir::cleanPath(filePath));
           }
@@ -455,12 +673,13 @@ QString DropFileWidget::getFilePath() const {
   return m_filePaths.isEmpty() ? QString() : m_filePaths.first();
 }
 
-QStringList DropFileWidget::getFilePaths() const {
-  return m_filePaths;
-}
+QStringList DropFileWidget::getFilePaths() const { return m_filePaths; }
 
 void DropFileWidget::clearFiles() {
+  if (m_isProcessing)
+    return;
   m_filePaths.clear();
+  m_fileStates.clear();
   updateWidgetVisibility();
 }
 
@@ -527,9 +746,12 @@ void DropFileWidget::convertImage(const QString &sourcePath) {
   }
   QFileInfo fi(sourcePath);
   QString targetExtStr = imageExtensionToString(*m_sourceExtension).toLower();
-  QString defaultPath = fi.dir().filePath(fi.completeBaseName() + "." + targetExtStr);
-  QString filter = QString("%1 Files (*.%2);;All Files (*)").arg(targetExtStr.toUpper(), targetExtStr);
-  QString outputPath = QFileDialog::getSaveFileName(this, "Save Converted Image", defaultPath, filter);
+  QString defaultPath =
+      fi.dir().filePath(fi.completeBaseName() + "." + targetExtStr);
+  QString filter = QString("%1 Files (*.%2);;All Files (*)")
+                       .arg(targetExtStr.toUpper(), targetExtStr);
+  QString outputPath = QFileDialog::getSaveFileName(
+      this, "Save Converted Image", defaultPath, filter);
   if (outputPath.isEmpty()) {
     return;
   }
@@ -538,11 +760,13 @@ void DropFileWidget::convertImage(const QString &sourcePath) {
 }
 
 void DropFileWidget::onBrowseButtonPressed() {
+  if (m_isProcessing)
+    return;
   QStringList fileNames;
   if (m_typeFile == "PDF") {
-    fileNames =
-        QFileDialog::getOpenFileNames(this, "Select PDF Files", QDir::homePath(),
-                                      "PDF Files (*.pdf);;All Files (*)");
+    fileNames = QFileDialog::getOpenFileNames(
+        this, "Select PDF Files", QDir::homePath(),
+        "PDF Files (*.pdf);;All Files (*)");
   } else {
     fileNames = QFileDialog::getOpenFileNames(
         this, "Select Image or PDF Files", QDir::homePath(),
@@ -550,7 +774,7 @@ void DropFileWidget::onBrowseButtonPressed() {
         "Image Files (*.png *.jpg *.jpeg *.webp *.tiff *.bmp *.gif);;"
         "PDF Files (*.pdf);;All Files (*)");
   }
-  if (fileNames.isEmpty()) {
+  if (m_isProcessing || fileNames.isEmpty()) {
     return;
   }
   for (const QString &fn : fileNames) {

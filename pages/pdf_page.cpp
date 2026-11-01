@@ -214,13 +214,20 @@ void PdfPage::setProcessingState(bool isProcessing) {
     m_progressLabel->setVisible(isProcessing);
   }
   if (m_progressBar) {
+    if (!isProcessing) {
+      m_progressBar->setIndeterminate(false);
+    }
     m_progressBar->setVisible(isProcessing);
   }
   m_qualitySlider->setEnabled(!isProcessing);
   if (m_presetSelect) {
     m_presetSelect->setEnabled(!isProcessing);
   }
-  m_dragWidget->setEnabled(!isProcessing);
+  if (isProcessing) {
+    m_dragWidget->beginProcessing();
+  } else {
+    m_dragWidget->finishProcessing(m_isCancelled);
+  }
 }
 
 void PdfPage::onCancelButtonClicked() {
@@ -265,10 +272,16 @@ void PdfPage::compressSinglePdf(const QString &sourcePath, int quality) {
     return;
   }
 
-  setProcessingState(true);
   m_isCancelled = false;
-  m_progressBar->setRange(0, 0);
-  m_progressLabel->setText("Optimizing PDF with Ghostscript...");
+  setProcessingState(true);
+  m_progressBar->setRange(0, 1);
+  m_progressBar->setValue(0, false);
+  m_progressBar->setIndeterminate(true);
+  m_progressLabel->setText(QString("Compressing %1 (1 of 1)...")
+                               .arg(QFileInfo(sourcePath).fileName()));
+  m_dragWidget->setFileStatus(sourcePath,
+                              DropFileWidget::FileStatus::Processing,
+                              "Optimizing PDF with Ghostscript");
 
   QFuture<void> future = QtConcurrent::run([this, sourcePath, outputPath,
                                             quality]() {
@@ -277,7 +290,30 @@ void PdfPage::compressSinglePdf(const QString &sourcePath, int quality) {
 
     QMetaObject::invokeMethod(
         this,
-        [this, result, outputPath]() {
+        [this, sourcePath, result, outputPath]() {
+          using FileStatus = DropFileWidget::FileStatus;
+          FileStatus status = FileStatus::Failed;
+          QString detail = result.error;
+          switch (result.status) {
+          case CompressionStatus::Compressed:
+            status = FileStatus::Succeeded;
+            detail = QString("Saved to %1").arg(outputPath);
+            break;
+          case CompressionStatus::Unchanged:
+            status = FileStatus::Unchanged;
+            detail = "No smaller PDF produced; no output saved";
+            break;
+          case CompressionStatus::Cancelled:
+            status = FileStatus::Cancelled;
+            detail = "Compression cancelled; no output saved";
+            break;
+          case CompressionStatus::Failed:
+            break;
+          }
+          m_dragWidget->setFileStatus(sourcePath, status, detail);
+          if (result.status != CompressionStatus::Cancelled) {
+            m_progressBar->setValue(1, false);
+          }
           setProcessingState(false);
           m_cancelButton->setText("Cancel Compression");
 
@@ -319,11 +355,12 @@ void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
     return;
   }
 
-  setProcessingState(true);
   m_isCancelled = false;
+  setProcessingState(true);
   int totalFiles = sourcePaths.size();
+  m_progressBar->setIndeterminate(false);
   m_progressBar->setRange(0, totalFiles);
-  m_progressBar->setValue(0);
+  m_progressBar->setValue(0, false);
   m_progressLabel->setText(
       QString("Compressing 0 of %1 PDFs...").arg(totalFiles));
 
@@ -343,6 +380,20 @@ void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
       }
 
       const QString &sourcePath = sourcePaths.at(i);
+      QMetaObject::invokeMethod(
+          this,
+          [this, sourcePath, i, totalFiles]() {
+            m_dragWidget->setFileStatus(sourcePath,
+                                        DropFileWidget::FileStatus::Processing,
+                                        "Optimizing PDF with Ghostscript");
+            m_progressLabel->setText(
+                QString("Compressing %1 (%2 of %3; %4 completed)...")
+                    .arg(QFileInfo(sourcePath).fileName())
+                    .arg(i + 1)
+                    .arg(totalFiles)
+                    .arg(i));
+          },
+          Qt::QueuedConnection);
       QFileInfo fileInfo(sourcePath);
       QString baseName = fileInfo.baseName() + "_compressed";
       QString uniqueBaseName = baseName;
@@ -357,6 +408,37 @@ void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
 
       const CompressionResult result =
           compressPdf(sourcePath, outputPath, quality);
+      QMetaObject::invokeMethod(
+          this,
+          [this, sourcePath, outputPath, result, i, totalFiles]() {
+            using FileStatus = DropFileWidget::FileStatus;
+            FileStatus status = FileStatus::Failed;
+            QString detail = result.error;
+            switch (result.status) {
+            case CompressionStatus::Compressed:
+              status = FileStatus::Succeeded;
+              detail = QString("Saved to %1").arg(outputPath);
+              break;
+            case CompressionStatus::Unchanged:
+              status = FileStatus::Unchanged;
+              detail = "No smaller PDF produced; no output saved";
+              break;
+            case CompressionStatus::Cancelled:
+              status = FileStatus::Cancelled;
+              detail = "Compression cancelled; no output saved";
+              break;
+            case CompressionStatus::Failed:
+              break;
+            }
+            m_dragWidget->setFileStatus(sourcePath, status, detail);
+            if (result.status != CompressionStatus::Cancelled) {
+              m_progressBar->setValue(i + 1);
+              m_progressLabel->setText(QString("Processed %1 of %2 PDFs")
+                                           .arg(i + 1)
+                                           .arg(totalFiles));
+            }
+          },
+          Qt::QueuedConnection);
       if (result.status == CompressionStatus::Cancelled) {
         break;
       }
@@ -373,16 +455,6 @@ void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
               QString("%1: %2").arg(fileInfo.fileName(), result.error));
         }
       }
-
-      QMetaObject::invokeMethod(
-          this,
-          [this, i, totalFiles]() {
-            m_progressBar->setValue(i + 1);
-            m_progressLabel->setText(QString("Compressing %1 of %2 PDFs...")
-                                         .arg(i + 1)
-                                         .arg(totalFiles));
-          },
-          Qt::QueuedConnection);
     }
 
     QMetaObject::invokeMethod(
