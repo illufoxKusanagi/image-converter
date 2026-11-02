@@ -8,11 +8,7 @@
 
 namespace ui {
 
-enum class ThemeMode {
-  Light,
-  Dark,
-  System
-};
+enum class ThemeMode { Light, Dark, System };
 
 struct ColorTokens {
   QColor background;
@@ -42,6 +38,19 @@ struct ColorTokens {
   QColor border;
   QColor input;
   QColor ring;
+
+  // Status foregrounds are for their subtle surfaces, not their base colors.
+  QColor success;
+  QColor successForeground;
+  QColor successSurface;
+
+  QColor warning;
+  QColor warningForeground;
+  QColor warningSurface;
+
+  QColor info;
+  QColor infoForeground;
+  QColor infoSurface;
 };
 
 struct RadiusTokens {
@@ -69,7 +78,9 @@ struct SpacingTokens {
 struct TypographyTokens {
   QString fontFamily = "Segoe UI, Inter, -apple-system, Roboto, sans-serif";
   int rootPx = 16;
-  constexpr int remPx(double rem) const { return static_cast<int>(rem * rootPx + 0.5); }
+  constexpr int remPx(double rem) const {
+    return static_cast<int>(rem * rootPx + 0.5);
+  }
   int sizeXs = 11;
   int sizeSm = 12;
   int sizeBase = 14;
@@ -130,6 +141,18 @@ inline ColorTokens lightColorTokens() {
   t.border = QColor("#e4e4e7");
   t.input = QColor("#e4e4e7");
   t.ring = QColor("#9b44f9");
+
+  t.success = QColor("#15803d");
+  t.successForeground = QColor("#166534");
+  t.successSurface = QColor("#f0fdf4");
+
+  t.warning = QColor("#a16207");
+  t.warningForeground = QColor("#854d0e");
+  t.warningSurface = QColor("#fefce8");
+
+  t.info = QColor("#0369a1");
+  t.infoForeground = QColor("#075985");
+  t.infoSurface = QColor("#f0f9ff");
   return t;
 }
 
@@ -164,6 +187,18 @@ inline ColorTokens darkColorTokens() {
   t.border = QColor("#27272a");
   t.input = QColor("#27272a");
   t.ring = QColor("#a78bfa");
+
+  t.success = QColor("#4ade80");
+  t.successForeground = QColor("#bbf7d0");
+  t.successSurface = QColor("#052e16");
+
+  t.warning = QColor("#facc15");
+  t.warningForeground = QColor("#fef08a");
+  t.warningSurface = QColor("#422006");
+
+  t.info = QColor("#38bdf8");
+  t.infoForeground = QColor("#bae6fd");
+  t.infoSurface = QColor("#082f49");
   return t;
 }
 
