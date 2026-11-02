@@ -35,13 +35,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   m_tabs = new ui::Tabs(ui::TabVariant::Underline, m_centralWidget);
 
   m_mainPage = new MainPage(m_tabs);
-  m_tabs->addTab("Convert Image", QString(":/icons/icons/lucide-image.svg"), m_mainPage);
+  m_tabs->addTab("Convert Image", QString(":/icons/icons/lucide-image.svg"),
+                 m_mainPage);
 
   m_pdfPage = new PdfPage(m_tabs);
-  m_tabs->addTab("Compress PDF", QString(":/icons/icons/lucide-file-text.svg"), m_pdfPage);
+  m_tabs->addTab("Compress PDF", QString(":/icons/icons/lucide-file-text.svg"),
+                 m_pdfPage);
 
-  m_galleryPage = new GalleryPage(m_tabs);
-  m_tabs->addTab("UI Components", QString(":/icons/icons/lucide-sliders.svg"), m_galleryPage);
+  // m_galleryPage = new GalleryPage(m_tabs);
+  // m_tabs->addTab("UI Components",
+  // QString(":/icons/icons/lucide-sliders.svg"),
+  //                m_galleryPage);
 
   rootLayout->addWidget(m_tabs, 1);
   setCentralWidget(m_centralWidget);
@@ -51,9 +55,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   applyThemeStyles();
 }
 
-void MainWindow::onThemeToggleClicked() {
-  ui::Theme::instance().toggleMode();
-}
+void MainWindow::onThemeToggleClicked() { ui::Theme::instance().toggleMode(); }
 
 void MainWindow::applyThemeStyles() {
   const auto &c = ui::Theme::instance().colors();
