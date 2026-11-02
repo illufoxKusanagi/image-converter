@@ -149,6 +149,8 @@ void Tabs::removeTab(int index) {
   if (m_tabs.isEmpty()) {
     m_currentIndex = -1;
     m_stackedWidget->setVisible(false);
+    setSizePolicy(sizePolicy().horizontalPolicy(), QSizePolicy::Fixed);
+    updateGeometry();
   } else {
     int newIndex = qBound(0, m_currentIndex, m_tabs.size() - 1);
     setCurrentIndex(newIndex);
@@ -168,7 +170,11 @@ void Tabs::setCurrentIndex(int index) {
   if (m_stackedWidget->count() > index) {
     m_stackedWidget->setCurrentIndex(index);
   }
-  m_stackedWidget->setVisible(m_tabs[index].page != nullptr);
+  const bool hasPage = m_tabs[index].page != nullptr;
+  m_stackedWidget->setVisible(hasPage);
+  setSizePolicy(sizePolicy().horizontalPolicy(),
+                hasPage ? QSizePolicy::Expanding : QSizePolicy::Fixed);
+  updateGeometry();
 
   applyThemeStyles();
   emit currentChanged(m_currentIndex);

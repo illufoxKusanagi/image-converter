@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    project(ui_kit VERSION 1.0.0 LANGUAGES CXX)
+endif()
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -79,6 +83,8 @@ set(UI_KIT_COMPONENT_SOURCES
     components/splitter.cpp
     components/empty_state.h
     components/empty_state.cpp
+    demo/demo_page.h
+    demo/demo_page.cpp
 )
 
 add_library(ui_kit STATIC
@@ -95,3 +101,18 @@ target_link_libraries(ui_kit PUBLIC
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::Svg
 )
+
+option(UI_KIT_BUILD_DEMO "Build standalone UI-Kit demo showcase executable" OFF)
+if(UI_KIT_BUILD_DEMO)
+    set(UI_KIT_DEMO_RESOURCES "")
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../resources/icons.qrc")
+        list(APPEND UI_KIT_DEMO_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../resources/icons.qrc")
+    elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons.qrc")
+        list(APPEND UI_KIT_DEMO_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons.qrc")
+    endif()
+    add_executable(ui_kit_demo
+        demo/main.cpp
+        ${UI_KIT_DEMO_RESOURCES}
+    )
+    target_link_libraries(ui_kit_demo PRIVATE ui_kit)
+endif()

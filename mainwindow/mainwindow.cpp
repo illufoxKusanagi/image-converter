@@ -39,7 +39,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
                  m_mainPage);
 
   m_pdfPage = new PdfPage(m_tabs);
-  m_tabs->addTab("Compress PDF", QString(":/icons/icons/lucide-file-text.svg"),
+  m_tabs->addTab("PDF Tools", QString(":/icons/icons/lucide-file-text.svg"),
                  m_pdfPage);
 
   // m_galleryPage = new GalleryPage(m_tabs);
