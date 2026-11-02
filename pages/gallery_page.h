@@ -14,10 +14,11 @@ class Progress;
 class Switch;
 class Slider;
 class Input;
-}
+} // namespace ui
 
 /**
- * @brief Interactive showcase gallery of UI kit components with dynamic theme reactivity.
+ * @brief Interactive showcase gallery of UI kit components with dynamic theme
+ * reactivity.
  */
 class GalleryPage : public QWidget {
   Q_OBJECT
@@ -34,12 +35,18 @@ private slots:
 
 private:
   void setupUi();
-  QWidget *createSectionHeader(const QString &title, const QString &description = "");
+  QWidget *createSectionHeader(const QString &title,
+                               const QString &description = "");
   QWidget *buildButtonSection();
   QWidget *buildBadgeSection();
   QWidget *buildFormSection();
   QWidget *buildFeedbackSection();
   QWidget *buildContentSection();
+  QWidget *buildSelectionSection();
+  QWidget *buildTextNumberSection();
+  QWidget *buildActionsSection();
+  QWidget *buildStatusSection();
+  QWidget *buildLayoutSection();
 
   QScrollArea *m_scrollArea{nullptr};
   QWidget *m_containerWidget{nullptr};

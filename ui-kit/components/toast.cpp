@@ -10,6 +10,8 @@ Toast::Toast(QWidget *parent)
 
 Toast::Toast(const QString &title, const QString &description, ToastVariant variant, QWidget *parent)
     : QFrame(parent), m_variant(variant) {
+  setAttribute(Qt::WA_StyledBackground, true);
+  setFrameShape(QFrame::NoFrame);
   setFixedWidth(340);
   setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
 
@@ -18,6 +20,7 @@ Toast::Toast(const QString &title, const QString &description, ToastVariant vari
   m_rootLayout->setSpacing(10);
 
   m_iconLabel = new QLabel(this);
+  m_iconLabel->setFrameShape(QFrame::NoFrame);
   m_iconLabel->setFixedSize(20, 20);
   m_iconLabel->setAlignment(Qt::AlignCenter);
 
@@ -26,7 +29,9 @@ Toast::Toast(const QString &title, const QString &description, ToastVariant vari
   m_textLayout->setSpacing(2);
 
   m_titleLabel = new QLabel(title, this);
+  m_titleLabel->setFrameShape(QFrame::NoFrame);
   m_descLabel = new QLabel(description, this);
+  m_descLabel->setFrameShape(QFrame::NoFrame);
   m_descLabel->setWordWrap(true);
   m_descLabel->setVisible(!description.isEmpty());
 
@@ -149,12 +154,14 @@ void Toast::applyThemeStyles() {
   const auto &t = Theme::instance().typography();
 
   m_titleLabel->setFont(t.font(t.sizeSm, QFont::DemiBold));
-  m_titleLabel->setStyleSheet(QString("color: %1; background: transparent;")
-                                  .arg(StyleHelper::toHexString(c.foreground)));
+  m_titleLabel->setStyleSheet(
+      QString("color: %1; background: transparent; border: none;")
+          .arg(StyleHelper::toHexString(c.foreground)));
 
   m_descLabel->setFont(t.font(t.sizeXs, QFont::Normal));
-  m_descLabel->setStyleSheet(QString("color: %1; background: transparent;")
-                                 .arg(StyleHelper::toHexString(c.mutedForeground)));
+  m_descLabel->setStyleSheet(
+      QString("color: %1; background: transparent; border: none;")
+          .arg(StyleHelper::toHexString(c.mutedForeground)));
 
   m_closeButton->setStyleSheet(QString(
       "QPushButton {"
@@ -177,11 +184,11 @@ void Toast::applyThemeStyles() {
   switch (m_variant) {
   case ToastVariant::Success:
     iconSymbol = "✓";
-    iconColor = QColor("#22c55e");
+    iconColor = c.success;
     break;
   case ToastVariant::Warning:
     iconSymbol = "⚠";
-    iconColor = QColor("#f59e0b");
+    iconColor = c.warning;
     break;
   case ToastVariant::Destructive:
     iconSymbol = "✕";
@@ -197,11 +204,12 @@ void Toast::applyThemeStyles() {
 
   m_iconLabel->setText(iconSymbol);
   m_iconLabel->setFont(t.font(t.sizeBase, QFont::Bold));
-  m_iconLabel->setStyleSheet(QString("color: %1; background: transparent;")
-                                 .arg(StyleHelper::toHexString(iconColor)));
+  m_iconLabel->setStyleSheet(
+      QString("color: %1; background: transparent; border: none;")
+          .arg(StyleHelper::toHexString(iconColor)));
 
   setStyleSheet(QString(
-      "ui--Toast, QFrame {"
+      "ui--Toast {"
       "  background-color: %1;"
       "  border: 1px solid %2;"
       "  border-radius: %3px;"

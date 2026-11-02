@@ -1,5 +1,10 @@
 #include "button.h"
 #include "../theme/style_helper.h"
+#include "spinner.h"
+#include <QHideEvent>
+#include <QShowEvent>
+#include <QStyleOptionButton>
+#include <QStylePainter>
 
 namespace ui {
 
@@ -9,16 +14,22 @@ Button::Button(QWidget *parent)
 Button::Button(const QString &text, QWidget *parent)
     : Button(text, ButtonVariant::Primary, ButtonSize::Default, parent) {}
 
-Button::Button(const QString &text, ButtonVariant variant, ButtonSize size, QWidget *parent)
+Button::Button(const QString &text, ButtonVariant variant, ButtonSize size,
+               QWidget *parent)
     : QPushButton(text, parent), m_variant(variant), m_size(size) {
   setCursor(Qt::PointingHandCursor);
-  connect(&Theme::instance(), &Theme::themeChanged, this, &Button::applyThemeStyles);
+  m_loadingText = tr("Please wait...");
+  m_loadingSpinner = new Spinner(iconSize().height(), this);
+  m_loadingSpinner->setAttribute(Qt::WA_TransparentForMouseEvents);
+  m_loadingSpinner->setFocusPolicy(Qt::NoFocus);
+  m_loadingSpinner->stop();
+  m_loadingSpinner->hide();
+  connect(&Theme::instance(), &Theme::themeChanged, this,
+          &Button::applyThemeStyles);
   applyThemeStyles();
 }
 
-ButtonVariant Button::variant() const {
-  return m_variant;
-}
+ButtonVariant Button::variant() const { return m_variant; }
 
 void Button::setVariant(ButtonVariant variant) {
   if (m_variant != variant) {
@@ -27,9 +38,7 @@ void Button::setVariant(ButtonVariant variant) {
   }
 }
 
-ButtonSize Button::size() const {
-  return m_size;
-}
+ButtonSize Button::size() const { return m_size; }
 
 void Button::setSize(ButtonSize size) {
   if (m_size != size) {
@@ -38,23 +47,125 @@ void Button::setSize(ButtonSize size) {
   }
 }
 
-bool Button::isLoading() const {
-  return m_isLoading;
-}
+bool Button::isLoading() const { return m_isLoading; }
 
 void Button::setLoading(bool loading) {
   if (m_isLoading == loading) {
     return;
   }
-  m_isLoading = loading;
-  setEnabled(!loading);
   if (loading) {
     m_savedText = text();
-    setText("Please wait...");
+    m_savedIcon = icon();
+    m_savedSizeHint = QPushButton::sizeHint();
+    m_savedMinimumSizeHint = QPushButton::minimumSizeHint();
+    // isEnabled() also includes the parent's state, which must not become an
+    // explicit disable on this button when loading finishes.
+    m_wasExplicitlyDisabled = testAttribute(Qt::WA_ForceDisabled);
+    m_isLoading = true;
+    setText(m_loadingText);
+    setIcon(QIcon());
+    setEnabled(false);
+    // Disabling can synchronously invoke handlers that cancel loading.
+    if (!m_isLoading) {
+      return;
+    }
+    m_loadingSpinner->show();
+    if (isVisible()) {
+      m_loadingSpinner->start();
+    }
   } else {
+    m_isLoading = false;
+    m_loadingSpinner->stop();
+    m_loadingSpinner->hide();
     setText(m_savedText);
+    setIcon(m_savedIcon);
+    setEnabled(!m_wasExplicitlyDisabled);
   }
-  applyThemeStyles();
+  updateGeometry();
+  update();
+}
+
+QString Button::loadingText() const { return m_loadingText; }
+
+void Button::setLoadingText(const QString &text) {
+  if (m_loadingText == text) {
+    return;
+  }
+  m_loadingText = text;
+  if (m_isLoading) {
+    setText(m_loadingText);
+    update();
+  }
+}
+
+QSize Button::sizeHint() const {
+  return m_isLoading ? m_savedSizeHint : QPushButton::sizeHint();
+}
+
+QSize Button::minimumSizeHint() const {
+  return m_isLoading ? m_savedMinimumSizeHint : QPushButton::minimumSizeHint();
+}
+
+void Button::paintEvent(QPaintEvent *event) {
+  if (!m_isLoading) {
+    QPushButton::paintEvent(event);
+    return;
+  }
+
+  QStylePainter painter(this);
+  QStyleOptionButton option;
+  initStyleOption(&option);
+  option.text.clear();
+  option.icon = QIcon();
+  option.features.setFlag(QStyleOptionButton::HasMenu, false);
+  painter.drawControl(QStyle::CE_PushButton, option);
+
+  const QRect content =
+      style()->subElementRect(QStyle::SE_PushButtonContents, &option, this);
+  const int extent = qMax(
+      1, qMin(iconSize().height(), qMin(content.width(), content.height())));
+  const int spacing = Theme::instance().spacing().space2;
+  int textFlags = Qt::AlignCenter | Qt::TextSingleLine | Qt::TextShowMnemonic;
+  if (!style()->styleHint(QStyle::SH_UnderlineShortcut, &option, this)) {
+    textFlags |= Qt::TextHideMnemonic;
+  }
+  const QString caption =
+      m_size == ButtonSize::Icon
+          ? QString()
+          : fontMetrics().elidedText(
+                text(), Qt::ElideRight,
+                qMax(0, content.width() - extent - spacing), textFlags);
+  const int textWidth = fontMetrics().size(textFlags, caption).width();
+  const int groupWidth = extent + (caption.isEmpty() ? 0 : spacing + textWidth);
+  const int groupHeight =
+      caption.isEmpty() ? extent : qMax(extent, fontMetrics().height());
+  const QRect group =
+      QStyle::alignedRect(layoutDirection(), Qt::AlignCenter,
+                          QSize(groupWidth, groupHeight), content);
+  m_loadingSpinner->setSpinnerSize(extent);
+  m_loadingSpinner->setGeometry(QStyle::visualRect(
+      layoutDirection(), group,
+      QRect(group.left(), group.top() + (group.height() - extent) / 2, extent,
+            extent)));
+
+  if (!caption.isEmpty()) {
+    const QRect textRect = QStyle::visualRect(
+        layoutDirection(), group, group.adjusted(extent + spacing, 0, 0, 0));
+    painter.drawItemText(textRect, textFlags, option.palette, isEnabled(),
+                         caption, QPalette::ButtonText);
+  }
+}
+
+void Button::showEvent(QShowEvent *event) {
+  QPushButton::showEvent(event);
+  if (m_isLoading) {
+    m_loadingSpinner->start();
+  }
+}
+
+void Button::hideEvent(QHideEvent *event) {
+  m_loadingSpinner->stop();
+  QPushButton::hideEvent(event);
 }
 
 void Button::applyThemeStyles() {
@@ -108,7 +219,8 @@ void Button::applyThemeStyles() {
   case ButtonVariant::Secondary:
     bg = StyleHelper::toHexString(c.secondary);
     fg = StyleHelper::toHexString(c.secondaryForeground);
-    hoverBg = StyleHelper::toHexString(StyleHelper::hoverColor(c.secondary, isDark));
+    hoverBg =
+        StyleHelper::toHexString(StyleHelper::hoverColor(c.secondary, isDark));
     pressedBg = StyleHelper::toHexString(StyleHelper::darken(c.secondary, 10));
     border = "transparent";
     hoverBorder = "transparent";
@@ -118,7 +230,8 @@ void Button::applyThemeStyles() {
     bg = "transparent";
     fg = StyleHelper::toHexString(c.foreground);
     hoverBg = StyleHelper::toHexString(c.accent);
-    pressedBg = StyleHelper::toHexString(StyleHelper::hoverColor(c.accent, isDark));
+    pressedBg =
+        StyleHelper::toHexString(StyleHelper::hoverColor(c.accent, isDark));
     border = StyleHelper::toHexString(c.border);
     hoverBorder = StyleHelper::toHexString(c.border);
     break;
@@ -127,7 +240,8 @@ void Button::applyThemeStyles() {
     bg = "transparent";
     fg = StyleHelper::toHexString(c.foreground);
     hoverBg = StyleHelper::toHexString(c.accent);
-    pressedBg = StyleHelper::toHexString(StyleHelper::hoverColor(c.accent, isDark));
+    pressedBg =
+        StyleHelper::toHexString(StyleHelper::hoverColor(c.accent, isDark));
     border = "transparent";
     hoverBorder = "transparent";
     break;
@@ -136,7 +250,8 @@ void Button::applyThemeStyles() {
     bg = StyleHelper::toHexString(c.destructive);
     fg = StyleHelper::toHexString(c.destructiveForeground);
     hoverBg = StyleHelper::toHexString(StyleHelper::lighten(c.destructive, 10));
-    pressedBg = StyleHelper::toHexString(StyleHelper::darken(c.destructive, 10));
+    pressedBg =
+        StyleHelper::toHexString(StyleHelper::darken(c.destructive, 10));
     border = "transparent";
     hoverBorder = "transparent";
     break;
@@ -161,48 +276,49 @@ void Button::applyThemeStyles() {
     break;
   }
 
-  QString style = QString(
-      "QPushButton {"
-      "  background-color: %1;"
-      "  color: %2;"
-      "  border: 1px solid %3;"
-      "  border-radius: %4px;"
-      "  padding: 0px %5px;"
-      "  text-align: center;"
-      "}"
-      "QPushButton:hover {"
-      "  background-color: %6;"
-      "  border-color: %7;"
-      "}"
-      "QPushButton:pressed {"
-      "  background-color: %8;"
-      "}"
-      "QPushButton:focus {"
-      "  outline: none;"
-      "  border: 2px solid %9;"
-      "}"
-      "QPushButton:disabled {"
-      "  background-color: %10;"
-      "  color: %11;"
-      "  border-color: transparent;"
-      "}")
-      .arg(bg)
-      .arg(fg)
-      .arg(border)
-      .arg(borderRadius)
-      .arg(paddingH)
-      .arg(hoverBg)
-      .arg(hoverBorder)
-      .arg(pressedBg)
-      .arg(StyleHelper::toHexString(c.ring))
-      .arg(StyleHelper::toHexString(StyleHelper::withAlphaF(c.muted, 0.5)))
-      .arg(StyleHelper::toHexString(c.mutedForeground));
+  QString style =
+      QString("QPushButton {"
+              "  background-color: %1;"
+              "  color: %2;"
+              "  border: 1px solid %3;"
+              "  border-radius: %4px;"
+              "  padding: 0px %5px;"
+              "  text-align: center;"
+              "}"
+              "QPushButton:hover {"
+              "  background-color: %6;"
+              "  border-color: %7;"
+              "}"
+              "QPushButton:pressed {"
+              "  background-color: %8;"
+              "}"
+              "QPushButton:focus {"
+              "  outline: none;"
+              "  border: 2px solid %9;"
+              "}"
+              "QPushButton:disabled {"
+              "  background-color: %10;"
+              "  color: %11;"
+              "  border-color: transparent;"
+              "}")
+          .arg(bg)
+          .arg(fg)
+          .arg(border)
+          .arg(borderRadius)
+          .arg(paddingH)
+          .arg(hoverBg)
+          .arg(hoverBorder)
+          .arg(pressedBg)
+          .arg(StyleHelper::toHexString(c.ring))
+          .arg(StyleHelper::toHexString(StyleHelper::withAlphaF(c.muted, 0.5)))
+          .arg(StyleHelper::toHexString(c.mutedForeground));
 
   if (m_variant == ButtonVariant::Link) {
     style += "QPushButton:hover { text-decoration: underline; }";
   }
 
   setStyleSheet(style);
+  m_loadingSpinner->setColor(c.mutedForeground);
 }
 
 } // namespace ui

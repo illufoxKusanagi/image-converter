@@ -57,6 +57,28 @@ set(UI_KIT_COMPONENT_SOURCES
     components/avatar.cpp
     components/table.h
     components/table.cpp
+    components/checkbox.h
+    components/checkbox.cpp
+    components/radio_group.h
+    components/radio_group.cpp
+    components/textarea.h
+    components/textarea.cpp
+    components/number_input.h
+    components/number_input.cpp
+    components/combobox.h
+    components/combobox.cpp
+    components/menu.h
+    components/menu.cpp
+    components/alert.h
+    components/alert.cpp
+    components/popover.h
+    components/popover.cpp
+    components/scroll_area.h
+    components/scroll_area.cpp
+    components/splitter.h
+    components/splitter.cpp
+    components/empty_state.h
+    components/empty_state.cpp
 )
 
 add_library(ui_kit STATIC
