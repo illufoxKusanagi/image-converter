@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(ImageConverter VERSION 0.1 LANGUAGES CXX)
+project(ImageConverter VERSION 1.2.0 LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC OFF)
 set(CMAKE_AUTOMOC ON)
@@ -60,6 +60,27 @@ set(PROJECT_PAGES
         pages/gallery_page.h
 )
 
+set(PROJECT_CONTROLLERS
+        controllers/pdf_utils.cpp
+        controllers/pdf_utils.h
+        controllers/pdf_tool_controller.cpp
+        controllers/pdf_tool_controller.h
+        controllers/compress_controller.cpp
+        controllers/compress_controller.h
+        controllers/merge_controller.cpp
+        controllers/merge_controller.h
+        controllers/split_controller.cpp
+        controllers/split_controller.h
+        controllers/organize_controller.cpp
+        controllers/organize_controller.h
+        controllers/pdf_to_images_controller.cpp
+        controllers/pdf_to_images_controller.h
+        controllers/images_to_pdf_controller.cpp
+        controllers/images_to_pdf_controller.h
+        controllers/grayscale_controller.cpp
+        controllers/grayscale_controller.h
+)
+
 set(PROJECT_SOURCES
         main.cpp
         mainwindow/mainwindow.cpp
@@ -73,6 +94,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         ${PROJECT_WIDGETS}
         ${PROJECT_STYLES}
         ${PROJECT_PAGES}
+        ${PROJECT_CONTROLLERS}
     )
 else()
     if(ANDROID)
@@ -81,6 +103,7 @@ else()
             ${PROJECT_WIDGETS}
             ${PROJECT_STYLES}
             ${PROJECT_PAGES}
+            ${PROJECT_CONTROLLERS}
         )
     else()
         add_executable(ImageConverter
@@ -88,6 +111,7 @@ else()
             ${PROJECT_WIDGETS}
             ${PROJECT_STYLES}
             ${PROJECT_PAGES}
+            ${PROJECT_CONTROLLERS}
         )
     endif()
 endif()
