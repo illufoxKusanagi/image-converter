@@ -1,6 +1,13 @@
 #ifndef PDF_PAGE_H
 #define PDF_PAGE_H
 
+#include "controllers/compress_controller.h"
+#include "controllers/grayscale_controller.h"
+#include "controllers/images_to_pdf_controller.h"
+#include "controllers/merge_controller.h"
+#include "controllers/organize_controller.h"
+#include "controllers/pdf_to_images_controller.h"
+#include "controllers/split_controller.h"
 #include "ui-kit/components/button.h"
 #include "ui-kit/components/dialog.h"
 #include "ui-kit/components/form_field.h"
@@ -13,16 +20,11 @@
 #include "ui-kit/theme/theme.h"
 #include "widgets/drop_file_widget.h"
 #include "widgets/slider_widget.h"
-#include <QFutureWatcher>
 #include <QLabel>
 #include <QListWidget>
-#include <QPair>
-#include <QPdfDocument>
 #include <QStackedWidget>
 #include <QVBoxLayout>
-#include <QVector>
 #include <QWidget>
-#include <atomic>
 
 class PdfPage : public QWidget {
   Q_OBJECT
@@ -67,6 +69,17 @@ private slots:
   void syncImageListFromDropWidget();
   void moveImageItemUp();
   void moveImageItemDown();
+
+  // Controller signal handlers
+  void onControllerProgress(int current, int total, const QString &statusText);
+  void onControllerFileStatus(const QString &filePath, int status, const QString &detail);
+  void onCompressFinished(const CompressController::Result &result);
+  void onMergeFinished(const MergeController::Result &result);
+  void onSplitFinished(const SplitController::Result &result);
+  void onOrganizeFinished(const OrganizeController::Result &result);
+  void onPdfToImagesFinished(const PdfToImagesController::Result &result);
+  void onImagesToPdfFinished(const ImagesToPdfController::Result &result);
+  void onGrayscaleFinished(const GrayscaleController::Result &result);
 
 private:
   QVBoxLayout *mainLayout{nullptr};
@@ -141,9 +154,18 @@ private:
   QLabel *m_progressLabel{nullptr};
   ui::Button *m_processButton{nullptr};
   ui::Button *m_cancelButton{nullptr};
-  QFutureWatcher<void> *m_futureWatcher{nullptr};
-  std::atomic<bool> m_isCancelled{false};
+
   bool m_isProcessing{false};
+
+  // Controllers
+  CompressController *m_compressController{nullptr};
+  MergeController *m_mergeController{nullptr};
+  SplitController *m_splitController{nullptr};
+  OrganizeController *m_organizeController{nullptr};
+  PdfToImagesController *m_pdfToImagesController{nullptr};
+  ImagesToPdfController *m_imagesToPdfController{nullptr};
+  GrayscaleController *m_grayscaleController{nullptr};
+  PdfToolController *m_currentController{nullptr};
 
   DropFileWidget *activeDropWidget() const;
   void setupToolPanels();
@@ -153,70 +175,14 @@ private:
   QString cancelButtonTextForMode(PdfToolMode mode) const;
   void updateOrganizeItemDisplay(QListWidgetItem *item) const;
 
-  enum class CompressionStatus { Compressed, Unchanged, Failed, Cancelled };
-  struct CompressionResult {
-    CompressionStatus status{CompressionStatus::Failed};
-    qint64 originalBytes{0};
-    qint64 outputBytes{0};
-    QString error;
-  };
-
-  struct PageOp {
-    int originalPageIndex{0};
-    int rotationDegrees{0};
-  };
-
-  // Compress PDF (Tool 0)
-  void compressSinglePdf(const QString &sourcePath, int quality);
-  void compressBatchPdf(const QStringList &sourcePaths, int quality);
-  CompressionResult compressPdf(const QString &inputPath,
-                                const QString &outputPath, int quality);
-  bool compressPdfWithGhostscript(const QString &executable,
-                                  const QString &inputPath,
-                                  const QString &tempOutputPath, int quality,
-                                  QString &error, bool grayscale = false);
-  static QString findGhostscriptExecutable();
-
-  // Merge PDF (Tool 1)
-  void mergePdfs();
-  bool mergePdfsWithGhostscript(const QString &executable,
-                                const QStringList &inputPaths,
-                                const QString &tempOutputPath, QString &error);
-  bool mergePdfsWithQtPdf(const QStringList &inputPaths,
-                          const QString &tempOutputPath, QString &error);
-
-  // Split PDF (Tool 2)
-  void splitPdfs();
-  static bool parsePageRanges(const QString &rangeSpec, int pageCount,
-                              QVector<QPair<int, int>> &outRanges,
-                              QString &error);
-  bool extractPageRangeWithGhostscript(const QString &executable,
-                                       const QString &inputPath, int firstPage,
-                                       int lastPage,
-                                       const QString &tempOutputPath,
-                                       QString &error);
-  bool extractPageRangeWithQtPdf(QPdfDocument &sourceDoc, int firstPage,
-                                 int lastPage, const QString &tempOutputPath,
-                                 QString &error);
-
-  // Organize / Rotate / Delete PDF Pages (Tool 3)
-  void organizePdf();
-
-  // PDF to Images (Tool 4)
-  void exportPdfToImages();
-
-  // Images to Merged PDF (Tool 5)
-  void imagesToPdf();
-
-  // PDF to Grayscale (Tool 6)
-  void convertSinglePdfToGrayscale(const QString &sourcePath, int quality);
-  void convertBatchPdfToGrayscale(const QStringList &sourcePaths, int quality);
-  CompressionResult convertPdfToGrayscale(const QString &inputPath,
-                                          const QString &outputPath,
-                                          int quality);
-  bool convertPdfToGrayscaleWithQtPdf(QPdfDocument &sourceDoc,
-                                      const QString &tempOutputPath,
-                                      int quality, QString &error);
+  void initControllers();
+  void executeCompress();
+  void executeMerge();
+  void executeSplit();
+  void executeOrganize();
+  void executePdfToImages();
+  void executeImagesToPdf();
+  void executeGrayscale();
 };
 
 #endif // PDF_PAGE_H

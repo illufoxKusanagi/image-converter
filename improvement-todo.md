@@ -55,6 +55,9 @@ Using a local `ffmpeg` binary via `QProcess` (matching the existing `Ghostscript
 
 ---
 
-## 4. Explicitly Out of Scope
+## 6. Sentry Implementation
+- **Sentry Error Bug**: Add sentry to this project to capture error or bug from user. You can read from here: [Sentry Docs for Qt](https://docs.sentry.io/platforms/native/guides/qt/configuration/options/)
+
+## 5. Explicitly Out of Scope
 
 - **Office Documents (`DOCX / PPTX / XLSX → PDF`)**: Excluded by design. Accurate Office rendering requires bundling a massive layout engine (hundreds of MBs), which conflicts with keeping ImageConverter fast, lightweight, and self-contained.

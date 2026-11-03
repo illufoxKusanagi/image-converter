@@ -1,170 +1,16 @@
-#include "pdf_page.h"
+#include "pages/pdf_page.h"
+#include "controllers/pdf_utils.h"
 #include "ui-kit/theme/icon_helper.h"
 #include "ui-kit/theme/style_helper.h"
-#include <QCoreApplication>
-#include <QDateTime>
-#include <QDebug>
 #include <QDir>
-#include <QElapsedTimer>
-#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QImage>
-#include <QPageLayout>
-#include <QPageSize>
-#include <QPainter>
+#include <QHBoxLayout>
 #include <QPdfDocument>
-#include <QPdfWriter>
-#include <QProcess>
-#include <QProcessEnvironment>
-#include <QSaveFile>
-#include <QSet>
-#include <QStandardPaths>
-#include <QTemporaryDir>
 #include <QTransform>
-#include <QtConcurrent/QtConcurrent>
-#include <memory>
-
-namespace {
-bool isSamePdf(const QFileInfo &source, const QFileInfo &destination) {
-  const QString canonicalSource = source.canonicalFilePath();
-  const QString canonicalDestination = destination.canonicalFilePath();
-#ifdef Q_OS_WIN
-  constexpr Qt::CaseSensitivity pathCase = Qt::CaseInsensitive;
-#else
-  constexpr Qt::CaseSensitivity pathCase = Qt::CaseSensitive;
-#endif
-  return source == destination ||
-         (!canonicalSource.isEmpty() && !canonicalDestination.isEmpty() &&
-          canonicalSource.compare(canonicalDestination, pathCase) == 0);
-}
-
-bool savePdfAtomically(const QString &candidatePath, const QString &outputPath,
-                       const std::atomic<bool> &cancelled, QString &error) {
-  QFile candidate(candidatePath);
-  QSaveFile destination(outputPath);
-  // Never fall back to truncating an existing destination on a failed save.
-  destination.setDirectWriteFallback(false);
-  if (!candidate.open(QIODevice::ReadOnly)) {
-    error = QString("Cannot read the generated PDF: %1")
-                .arg(candidate.errorString());
-    return false;
-  }
-  if (!destination.open(QIODevice::WriteOnly)) {
-    error = QString("Cannot save the output PDF: %1")
-                .arg(destination.errorString());
-    return false;
-  }
-
-  while (!candidate.atEnd()) {
-    if (cancelled) {
-      return false;
-    }
-    const QByteArray chunk = candidate.read(1024 * 1024);
-    if (candidate.error() != QFileDevice::NoError) {
-      error = QString("Cannot read the generated PDF: %1")
-                  .arg(candidate.errorString());
-      return false;
-    }
-    if (destination.write(chunk) != chunk.size()) {
-      error = QString("Cannot save the output PDF: %1")
-                  .arg(destination.errorString());
-      return false;
-    }
-  }
-  if (cancelled) {
-    return false;
-  }
-  if (!destination.commit()) {
-    error = QString("Cannot commit the output PDF: %1")
-                .arg(destination.errorString());
-    return false;
-  }
-  return true;
-}
-
-QImage renderPdfPageOnWhite(QPdfDocument &doc, int pageIndex,
-                            const QSize &pixelSize,
-                            QImage::Format format = QImage::Format_RGB32) {
-  if (pixelSize.width() <= 0 || pixelSize.height() <= 0) {
-    return QImage();
-  }
-  const QImage rendered = doc.render(pageIndex, pixelSize);
-  if (rendered.isNull()) {
-    return QImage();
-  }
-  QImage canvas(pixelSize, format);
-  canvas.fill(Qt::white);
-  QPainter painter(&canvas);
-  painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
-  painter.drawImage(0, 0, rendered);
-  painter.end();
-  return canvas;
-}
-
-bool runGhostscriptProcess(const QString &executable, const QStringList &args,
-                           const QString &workingDir,
-                           const QString &expectedOutputPath,
-                           const std::atomic<bool> &cancelled, QString &error,
-                           bool failOnWarnings = true) {
-  QProcess proc;
-  proc.setWorkingDirectory(workingDir);
-  proc.setProcessChannelMode(QProcess::MergedChannels);
-  QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
-  environment.remove("GS_OPTIONS");
-  proc.setProcessEnvironment(environment);
-  proc.start(executable, args);
-  if (!proc.waitForStarted(5000)) {
-    error = QString("Cannot start Ghostscript: %1. Check the bundled runtime "
-                    "and its DLLs/resources, or reinstall Ghostscript.")
-                .arg(proc.errorString());
-    return false;
-  }
-
-  QElapsedTimer timer;
-  timer.start();
-  QByteArray diagnostics;
-  while (proc.state() != QProcess::NotRunning) {
-    proc.waitForFinished(150);
-    diagnostics = (diagnostics + proc.readAll()).right(16384);
-    if (cancelled || timer.elapsed() > 15 * 60 * 1000) {
-      proc.kill();
-      proc.waitForFinished(3000);
-      if (!cancelled) {
-        error = "Ghostscript exceeded the 15-minute processing limit.";
-      }
-      return false;
-    }
-  }
-  diagnostics = (diagnostics + proc.readAll()).right(16384);
-  if (cancelled) {
-    return false;
-  }
-  if (proc.exitStatus() != QProcess::NormalExit || proc.exitCode() != 0) {
-    error = QString("Ghostscript failed (exit %1): %2")
-                .arg(proc.exitCode())
-                .arg(QString::fromLocal8Bit(diagnostics).trimmed().right(4096));
-    qWarning().noquote() << error;
-    return false;
-  }
-  if (failOnWarnings && !diagnostics.trimmed().isEmpty()) {
-    error = QString("Ghostscript reported warnings; the output was not saved "
-                    "to avoid accepting missing or substituted content: %1")
-                .arg(QString::fromLocal8Bit(diagnostics).trimmed().right(4096));
-    qWarning().noquote() << error;
-    return false;
-  }
-  if (QFileInfo(expectedOutputPath).size() <= 0) {
-    error = "Ghostscript did not produce a nonempty PDF.";
-    return false;
-  }
-  return true;
-}
-} // namespace
 
 PdfPage::PdfPage(QWidget *parent)
-    : QWidget(parent), mainLayout(new QVBoxLayout(this)),
-      m_futureWatcher(new QFutureWatcher<void>(this)) {
+    : QWidget(parent), mainLayout(new QVBoxLayout(this)) {
   mainLayout->setContentsMargins(0, 8, 0, 8);
   mainLayout->setSpacing(12);
   mainLayout->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
@@ -248,6 +94,7 @@ PdfPage::PdfPage(QWidget *parent)
   mainLayout->addWidget(m_cancelButton, 0, Qt::AlignCenter);
   setLayout(mainLayout);
 
+  initControllers();
   updateToolModeUi();
 
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,
@@ -256,10 +103,57 @@ PdfPage::PdfPage(QWidget *parent)
 }
 
 PdfPage::~PdfPage() {
-  m_isCancelled = true;
-  if (m_futureWatcher->isRunning()) {
-    m_futureWatcher->waitForFinished();
+  for (PdfToolController *ctrl : {
+           static_cast<PdfToolController *>(m_compressController),
+           static_cast<PdfToolController *>(m_mergeController),
+           static_cast<PdfToolController *>(m_splitController),
+           static_cast<PdfToolController *>(m_organizeController),
+           static_cast<PdfToolController *>(m_pdfToImagesController),
+           static_cast<PdfToolController *>(m_imagesToPdfController),
+           static_cast<PdfToolController *>(m_grayscaleController)}) {
+    if (ctrl && ctrl->isRunning()) {
+      ctrl->cancelAndWait();
+    }
   }
+}
+
+void PdfPage::initControllers() {
+  m_compressController = new CompressController(this);
+  m_mergeController = new MergeController(this);
+  m_splitController = new SplitController(this);
+  m_organizeController = new OrganizeController(this);
+  m_pdfToImagesController = new PdfToImagesController(this);
+  m_imagesToPdfController = new ImagesToPdfController(this);
+  m_grayscaleController = new GrayscaleController(this);
+
+  for (PdfToolController *ctrl : {
+           static_cast<PdfToolController *>(m_compressController),
+           static_cast<PdfToolController *>(m_mergeController),
+           static_cast<PdfToolController *>(m_splitController),
+           static_cast<PdfToolController *>(m_organizeController),
+           static_cast<PdfToolController *>(m_pdfToImagesController),
+           static_cast<PdfToolController *>(m_imagesToPdfController),
+           static_cast<PdfToolController *>(m_grayscaleController)}) {
+    connect(ctrl, &PdfToolController::progressChanged, this,
+            &PdfPage::onControllerProgress, Qt::QueuedConnection);
+    connect(ctrl, &PdfToolController::fileStatusChanged, this,
+            &PdfPage::onControllerFileStatus, Qt::QueuedConnection);
+  }
+
+  connect(m_compressController, &CompressController::finished, this,
+          &PdfPage::onCompressFinished, Qt::QueuedConnection);
+  connect(m_mergeController, &MergeController::finished, this,
+          &PdfPage::onMergeFinished, Qt::QueuedConnection);
+  connect(m_splitController, &SplitController::finished, this,
+          &PdfPage::onSplitFinished, Qt::QueuedConnection);
+  connect(m_organizeController, &OrganizeController::finished, this,
+          &PdfPage::onOrganizeFinished, Qt::QueuedConnection);
+  connect(m_pdfToImagesController, &PdfToImagesController::finished, this,
+          &PdfPage::onPdfToImagesFinished, Qt::QueuedConnection);
+  connect(m_imagesToPdfController, &ImagesToPdfController::finished, this,
+          &PdfPage::onImagesToPdfFinished, Qt::QueuedConnection);
+  connect(m_grayscaleController, &GrayscaleController::finished, this,
+          &PdfPage::onGrayscaleFinished, Qt::QueuedConnection);
 }
 
 DropFileWidget *PdfPage::activeDropWidget() const {
@@ -771,16 +665,44 @@ void PdfPage::setProcessingState(bool isProcessing) {
     if (isProcessing) {
       drop->beginProcessing();
     } else {
-      drop->finishProcessing(m_isCancelled);
+      const bool cancelled =
+          m_currentController ? m_currentController->isCancelled() : false;
+      drop->finishProcessing(cancelled);
     }
   }
 }
 
 void PdfPage::onCancelButtonClicked() {
-  if (m_isProcessing) {
-    m_isCancelled = true;
+  if (m_isProcessing && m_currentController) {
+    m_currentController->cancel();
     m_cancelButton->setEnabled(false);
     m_cancelButton->setText("Cancelling...");
+  }
+}
+
+void PdfPage::onControllerProgress(int current, int total,
+                                   const QString &statusText) {
+  if (m_progressBar) {
+    if (total <= 0) {
+      m_progressBar->setIndeterminate(true);
+    } else {
+      m_progressBar->setIndeterminate(false);
+      m_progressBar->setRange(0, total);
+      m_progressBar->setValue(current, false);
+    }
+  }
+  if (m_progressLabel) {
+    m_progressLabel->setText(statusText);
+  }
+}
+
+void PdfPage::onControllerFileStatus(const QString &filePath, int status,
+                                     const QString &detail) {
+  DropFileWidget *drop = activeDropWidget();
+  if (drop) {
+    drop->setFileStatus(filePath,
+                        static_cast<DropFileWidget::FileStatus>(status),
+                        detail);
   }
 }
 
@@ -790,532 +712,164 @@ void PdfPage::onProcessButtonClicked() {
   }
 
   switch (m_currentTool) {
-  case PdfToolMode::Compress: {
-    const QStringList sourcePaths = m_dragWidget->getFilePaths();
-    if (sourcePaths.isEmpty()) {
-      ui::Toast::show(this, "No PDF Selected",
-                      "Please select at least one PDF file.",
-                      ui::ToastVariant::Warning);
-      return;
-    }
-    const int compressionQuality = m_qualitySlider->getValue();
-    if (sourcePaths.size() == 1) {
-      compressSinglePdf(sourcePaths.first(), compressionQuality);
-    } else {
-      compressBatchPdf(sourcePaths, compressionQuality);
-    }
+  case PdfToolMode::Compress:
+    executeCompress();
     break;
-  }
   case PdfToolMode::Merge:
-    mergePdfs();
+    executeMerge();
     break;
   case PdfToolMode::Split:
-    splitPdfs();
+    executeSplit();
     break;
   case PdfToolMode::Organize:
-    organizePdf();
+    executeOrganize();
     break;
   case PdfToolMode::PdfToImages:
-    exportPdfToImages();
+    executePdfToImages();
     break;
   case PdfToolMode::ImagesToPdf:
-    imagesToPdf();
+    executeImagesToPdf();
     break;
-  case PdfToolMode::Grayscale: {
-    const QStringList sourcePaths = m_dragWidget->getFilePaths();
-    if (sourcePaths.isEmpty()) {
-      ui::Toast::show(this, "No PDF Selected",
-                      "Please select at least one PDF file.",
-                      ui::ToastVariant::Warning);
+  case PdfToolMode::Grayscale:
+    executeGrayscale();
+    break;
+  }
+}
+
+// ============================================================================
+// Tool 0: Compress PDF
+// ============================================================================
+
+void PdfPage::executeCompress() {
+  const QStringList sourcePaths = m_dragWidget->getFilePaths();
+  if (sourcePaths.isEmpty()) {
+    ui::Toast::show(this, "No PDF Selected",
+                    "Please select at least one PDF file.",
+                    ui::ToastVariant::Warning);
+    return;
+  }
+
+  const int quality = m_qualitySlider->getValue();
+  CompressController::Params params;
+  params.quality = quality;
+
+  if (sourcePaths.size() == 1) {
+    const QString &sourcePath = sourcePaths.first();
+    const QString outputPath = QFileDialog::getSaveFileName(
+        this, "Save Compressed PDF",
+        QFileInfo(sourcePath)
+            .dir()
+            .filePath(QFileInfo(sourcePath).baseName() + "_compressed.pdf"),
+        "PDF Files (*.pdf)");
+
+    if (outputPath.isEmpty()) {
       return;
     }
-    const int quality = m_qualitySlider->getValue();
-    if (sourcePaths.size() == 1) {
-      convertSinglePdfToGrayscale(sourcePaths.first(), quality);
+
+    if (pdfutil::isSamePdf(QFileInfo(sourcePath), QFileInfo(outputPath))) {
+      ui::Toast::show(
+          this, "Invalid Output File",
+          "Choose a different output file. The original PDF must not "
+          "be overwritten.",
+          ui::ToastVariant::Destructive);
+      return;
+    }
+
+    params.isBatch = false;
+    params.sourcePath = sourcePath;
+    params.outputPath = outputPath;
+  } else {
+    const QString outputDir = QFileDialog::getExistingDirectory(
+        this, "Select Output Directory for Compressed PDFs", QDir::homePath());
+
+    if (outputDir.isEmpty()) {
+      return;
+    }
+
+    params.isBatch = true;
+    params.sourcePaths = sourcePaths;
+    params.outputDir = outputDir;
+  }
+
+  m_currentController = m_compressController;
+  setProcessingState(true);
+  m_compressController->start(params);
+}
+
+void PdfPage::onCompressFinished(const CompressController::Result &result) {
+  setProcessingState(false);
+  m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
+
+  if (!result.isBatch) {
+    // Single compression
+    if (result.status == CompressController::Result::Status::Compressed) {
+      const double savedPercent =
+          100.0 * (1.0 - static_cast<double>(result.outBytes) / result.origBytes);
+      ui::Dialog::info(
+          this, "PDF Compressed",
+          QString("Saved to: %1\n\nOriginal: %2\nCompressed: %3 "
+                  "(%4% smaller)")
+              .arg(result.singleOutputPath)
+              .arg(DropFileWidget::formatFileSize(result.origBytes))
+              .arg(DropFileWidget::formatFileSize(result.outBytes))
+              .arg(savedPercent, 0, 'f', 1));
+    } else if (result.status ==
+               CompressController::Result::Status::Unchanged) {
+      ui::Dialog::info(
+          this, "No Reduction Achieved",
+          "These settings did not produce a smaller PDF. "
+          "The original PDF and destination were left unchanged.");
+    } else if (result.status ==
+               CompressController::Result::Status::Cancelled) {
+      ui::Toast::show(this, "Cancelled", "PDF compression was cancelled.",
+                      ui::ToastVariant::Default);
     } else {
-      convertBatchPdfToGrayscale(sourcePaths, quality);
+      ui::Toast::show(this, "PDF Compression Failed",
+                      result.errors.isEmpty() ? "Compression failed."
+                                              : result.errors.first(),
+                      ui::ToastVariant::Destructive);
     }
-    break;
-  }
-  }
-}
-
-// ============================================================================
-// Tool 0: Compress PDF (Existing)
-// ============================================================================
-
-void PdfPage::compressSinglePdf(const QString &sourcePath, int quality) {
-  QString outputPath = QFileDialog::getSaveFileName(
-      this, "Save Compressed PDF",
-      QFileInfo(sourcePath)
-          .dir()
-          .filePath(QFileInfo(sourcePath).baseName() + "_compressed.pdf"),
-      "PDF Files (*.pdf)");
-
-  if (outputPath.isEmpty()) {
-    return;
-  }
-
-  m_isCancelled = false;
-  setProcessingState(true);
-  m_progressBar->setRange(0, 1);
-  m_progressBar->setValue(0, false);
-  m_progressBar->setIndeterminate(true);
-  m_progressLabel->setText(QString("Compressing %1 (1 of 1)...")
-                               .arg(QFileInfo(sourcePath).fileName()));
-  m_dragWidget->setFileStatus(sourcePath,
-                              DropFileWidget::FileStatus::Processing,
-                              "Optimizing PDF with Ghostscript");
-
-  QFuture<void> future = QtConcurrent::run([this, sourcePath, outputPath,
-                                            quality]() {
-    const CompressionResult result =
-        compressPdf(sourcePath, outputPath, quality);
-
-    QMetaObject::invokeMethod(
-        this,
-        [this, sourcePath, result, outputPath]() {
-          using FileStatus = DropFileWidget::FileStatus;
-          FileStatus status = FileStatus::Failed;
-          QString detail = result.error;
-          switch (result.status) {
-          case CompressionStatus::Compressed:
-            status = FileStatus::Succeeded;
-            detail = QString("Saved to %1").arg(outputPath);
-            break;
-          case CompressionStatus::Unchanged:
-            status = FileStatus::Unchanged;
-            detail = "No smaller PDF produced; no output saved";
-            break;
-          case CompressionStatus::Cancelled:
-            status = FileStatus::Cancelled;
-            detail = "Compression cancelled; no output saved";
-            break;
-          case CompressionStatus::Failed:
-            break;
-          }
-          m_dragWidget->setFileStatus(sourcePath, status, detail);
-          if (result.status != CompressionStatus::Cancelled) {
-            m_progressBar->setValue(1, false);
-          }
-          setProcessingState(false);
-          m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
-
-          if (result.status == CompressionStatus::Compressed) {
-            const double savedPercent =
-                100.0 * (1.0 - static_cast<double>(result.outputBytes) /
-                                   result.originalBytes);
-            ui::Dialog::info(
-                this, "PDF Compressed",
-                QString("Saved to: %1\n\nOriginal: %2\nCompressed: %3 "
-                        "(%4% smaller)")
-                    .arg(outputPath)
-                    .arg(DropFileWidget::formatFileSize(result.originalBytes))
-                    .arg(DropFileWidget::formatFileSize(result.outputBytes))
-                    .arg(savedPercent, 0, 'f', 1));
-          } else if (result.status == CompressionStatus::Unchanged) {
-            ui::Dialog::info(
-                this, "No Reduction Achieved",
-                "These settings did not produce a smaller PDF. "
-                "The original PDF and destination were left unchanged.");
-          } else if (result.status == CompressionStatus::Cancelled) {
-            ui::Toast::show(this, "Cancelled", "PDF compression was cancelled.",
-                            ui::ToastVariant::Default);
-          } else {
-            ui::Toast::show(this, "PDF Compression Failed", result.error,
-                            ui::ToastVariant::Destructive);
-          }
-        },
-        Qt::QueuedConnection);
-  });
-  m_futureWatcher->setFuture(future);
-}
-
-void PdfPage::compressBatchPdf(const QStringList &sourcePaths, int quality) {
-  QString outputDir = QFileDialog::getExistingDirectory(
-      this, "Select Output Directory for Compressed PDFs", QDir::homePath());
-
-  if (outputDir.isEmpty()) {
-    return;
-  }
-
-  m_isCancelled = false;
-  setProcessingState(true);
-  int totalFiles = sourcePaths.size();
-  m_progressBar->setIndeterminate(false);
-  m_progressBar->setRange(0, totalFiles);
-  m_progressBar->setValue(0, false);
-  m_progressLabel->setText(
-      QString("Compressing 0 of %1 PDFs...").arg(totalFiles));
-
-  QFuture<void> future = QtConcurrent::run([this, sourcePaths, outputDir,
-                                            quality, totalFiles]() {
-    int successCount = 0;
-    int unchangedCount = 0;
-    int failureCount = 0;
-    qint64 totalOrigBytes = 0;
-    qint64 totalOutputBytes = 0;
-    QStringList errors;
-    QSet<QString> usedBaseNames;
-
-    for (int i = 0; i < totalFiles; ++i) {
-      if (m_isCancelled) {
-        break;
-      }
-
-      const QString &sourcePath = sourcePaths.at(i);
-      QMetaObject::invokeMethod(
-          this,
-          [this, sourcePath, i, totalFiles]() {
-            m_dragWidget->setFileStatus(sourcePath,
-                                        DropFileWidget::FileStatus::Processing,
-                                        "Optimizing PDF with Ghostscript");
-            m_progressLabel->setText(
-                QString("Compressing %1 (%2 of %3; %4 completed)...")
-                    .arg(QFileInfo(sourcePath).fileName())
-                    .arg(i + 1)
-                    .arg(totalFiles)
-                    .arg(i));
-          },
-          Qt::QueuedConnection);
-      QFileInfo fileInfo(sourcePath);
-      QString baseName = fileInfo.baseName() + "_compressed";
-      QString uniqueBaseName = baseName;
-      int suffix = 1;
-      while (usedBaseNames.contains(uniqueBaseName.toLower()) ||
-             QFile::exists(QDir(outputDir).filePath(uniqueBaseName + ".pdf"))) {
-        uniqueBaseName = QString("%1_%2").arg(baseName).arg(suffix++);
-      }
-      usedBaseNames.insert(uniqueBaseName.toLower());
-
-      QString outputPath = QDir(outputDir).filePath(uniqueBaseName + ".pdf");
-
-      const CompressionResult result =
-          compressPdf(sourcePath, outputPath, quality);
-      QMetaObject::invokeMethod(
-          this,
-          [this, sourcePath, outputPath, result, i, totalFiles]() {
-            using FileStatus = DropFileWidget::FileStatus;
-            FileStatus status = FileStatus::Failed;
-            QString detail = result.error;
-            switch (result.status) {
-            case CompressionStatus::Compressed:
-              status = FileStatus::Succeeded;
-              detail = QString("Saved to %1").arg(outputPath);
-              break;
-            case CompressionStatus::Unchanged:
-              status = FileStatus::Unchanged;
-              detail = "No smaller PDF produced; no output saved";
-              break;
-            case CompressionStatus::Cancelled:
-              status = FileStatus::Cancelled;
-              detail = "Compression cancelled; no output saved";
-              break;
-            case CompressionStatus::Failed:
-              break;
-            }
-            m_dragWidget->setFileStatus(sourcePath, status, detail);
-            if (result.status != CompressionStatus::Cancelled) {
-              m_progressBar->setValue(i + 1);
-              m_progressLabel->setText(QString("Processed %1 of %2 PDFs")
-                                           .arg(i + 1)
-                                           .arg(totalFiles));
-            }
-          },
-          Qt::QueuedConnection);
-      if (result.status == CompressionStatus::Cancelled) {
-        break;
-      }
-      if (result.status == CompressionStatus::Compressed) {
-        successCount++;
-        totalOrigBytes += result.originalBytes;
-        totalOutputBytes += result.outputBytes;
-      } else if (result.status == CompressionStatus::Unchanged) {
-        unchangedCount++;
-      } else {
-        failureCount++;
-        if (errors.size() < 3) {
-          errors.append(
-              QString("%1: %2").arg(fileInfo.fileName(), result.error));
-        }
-      }
-    }
-
-    QMetaObject::invokeMethod(
-        this,
-        [this, successCount, unchangedCount, failureCount, totalFiles,
-         totalOrigBytes, totalOutputBytes, errors]() {
-          setProcessingState(false);
-          m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
-
-          QString title = m_isCancelled ? "Batch Compression Cancelled"
-                                        : "Batch Compression Complete";
-          QString message =
-              QString("%1 PDF(s) compressed.\n%2 PDF(s) unchanged (no output "
-                      "saved).\n%3 PDF(s) failed.")
-                  .arg(successCount)
-                  .arg(unchangedCount)
-                  .arg(failureCount);
-
-          if (totalOrigBytes > 0 && totalOutputBytes > 0 && successCount > 0) {
-            double diffPct = (1.0 - (static_cast<double>(totalOutputBytes) /
-                                     totalOrigBytes)) *
-                             100.0;
-            message +=
-                QString("\n\nTotal Original: %1\nTotal Compressed: %2 (%3% %4)")
-                    .arg(DropFileWidget::formatFileSize(totalOrigBytes))
-                    .arg(DropFileWidget::formatFileSize(totalOutputBytes))
-                    .arg(qAbs(diffPct), 0, 'f', 1)
-                    .arg(diffPct >= 0 ? "smaller" : "larger");
-          }
-
-          if (!errors.isEmpty()) {
-            message += "\n\n" + errors.join("\n");
-          }
-          if (m_isCancelled) {
-            message += QString("\n%1 PDF(s) not completed due to cancellation.")
-                           .arg(totalFiles - successCount - unchangedCount -
-                                failureCount);
-          }
-          ui::Dialog::info(this, title, message);
-        },
-        Qt::QueuedConnection);
-  });
-  m_futureWatcher->setFuture(future);
-}
-
-QString PdfPage::findGhostscriptExecutable() {
-  // Single-file packagers can point to their extracted runtime explicitly.
-  const QString configured = qEnvironmentVariable("IMAGECONVERTER_GHOSTSCRIPT");
-  if (!configured.isEmpty()) {
-    const QFileInfo executable(configured);
-    return executable.isFile() && executable.isExecutable()
-               ? executable.absoluteFilePath()
-               : QString();
-  }
-
-  const QDir appDir(QCoreApplication::applicationDirPath());
-#ifdef Q_OS_WIN
-  const QStringList bundledNames = {"gs/bin/gswin64c.exe", "gswin64c.exe"};
-  const QStringList systemNames = {"gswin64c", "gswin32c"};
-#else
-  const QStringList bundledNames = {"gs/bin/gs"};
-  const QStringList systemNames = {"gs"};
-#endif
-  for (const QString &name : bundledNames) {
-    const QFileInfo executable(appDir.filePath(name));
-    if (executable.isFile() && executable.isExecutable()) {
-      return executable.absoluteFilePath();
-    }
-  }
-  for (const QString &name : systemNames) {
-    const QString found = QStandardPaths::findExecutable(name);
-    if (!found.isEmpty()) {
-      return found;
-    }
-  }
-  return QString();
-}
-
-bool PdfPage::compressPdfWithGhostscript(const QString &executable,
-                                         const QString &inputPath,
-                                         const QString &tempOutputPath,
-                                         int quality, QString &error,
-                                         bool grayscale) {
-  const int clampedQuality = qBound(0, quality, 100);
-  const bool preserveImages = clampedQuality >= 80;
-  QStringList args = {"-sDEVICE=pdfwrite",
-                      "-dCompatibilityLevel=1.7",
-                      "-dSAFER",
-                      "-dPDFSTOPONERROR",
-                      "-dNOPAUSE",
-                      "-dQUIET",
-                      "-dBATCH",
-                      "-dAutoRotatePages=/None",
-                      "-dDetectDuplicateImages=true",
-                      "-dCompressFonts=true",
-                      "-dCompressStreams=true",
-                      "-dSubsetFonts=true",
-                      "-dPreserveAnnots=true",
-                      "-dPreserveMarkedContent=true",
-                      "-dWantsOptionalContent=true",
-                      "-dDownsampleMonoImages=false"};
-
-  if (grayscale) {
-    args << "-sColorConversionStrategy=Gray"
-         << "-dProcessColorModel=/DeviceGray";
   } else {
-    args << "-sColorConversionStrategy=LeaveColorUnchanged"
-         << "-dPassThroughJPEGImages=true"
-         << "-dPassThroughJPXImages=true";
-  }
+    // Batch compression
+    const QString title =
+        (result.status == CompressController::Result::Status::Cancelled)
+            ? "Batch Compression Cancelled"
+            : "Batch Compression Complete";
+    QString message =
+        QString("%1 PDF(s) compressed.\n%2 PDF(s) unchanged (no output "
+                "saved).\n%3 PDF(s) failed.")
+            .arg(result.successCount)
+            .arg(result.unchangedCount)
+            .arg(result.failCount);
 
-  if (preserveImages) {
-    args << "-dDownsampleColorImages=false" << "-dDownsampleGrayImages=false"
-         << "-dAutoFilterColorImages=false" << "-dAutoFilterGrayImages=false"
-         << "-dColorImageFilter=/FlateEncode"
-         << "-dGrayImageFilter=/FlateEncode";
-  } else {
-    const int targetDpi = 100 + (200 * clampedQuality) / 80;
-    args << "-dDownsampleColorImages=true" << "-dDownsampleGrayImages=true"
-         << "-dColorImageDownsampleType=/Bicubic"
-         << "-dGrayImageDownsampleType=/Bicubic"
-         << "-dColorImageDownsampleThreshold=1.5"
-         << "-dGrayImageDownsampleThreshold=1.5"
-         << QString("-dColorImageResolution=%1").arg(targetDpi)
-         << QString("-dGrayImageResolution=%1").arg(targetDpi)
-         << "-dAutoFilterColorImages=true" << "-dAutoFilterGrayImages=true";
-  }
-
-  // QFactor controls pdfwrite's JPEG encoder; -dJPEGQ is not its quality API.
-  // Avoid chroma subsampling to keep colored edges and scanned text clearer.
-  const QString imageParameters =
-      QString("<< /QFactor %1 /Blend 1 /ColorTransform 1 "
-              "/HSamples [1 1 1 1] /VSamples [1 1 1 1] >>")
-          .arg(0.6 - 0.45 * clampedQuality / 80.0, 0, 'f', 3);
-  const QString distillerParameters =
-      preserveImages
-          ? QString("<< /NeverEmbed [] >> setdistillerparams")
-          : QString("<< /NeverEmbed [] /ColorImageDict %1 /GrayImageDict %1 "
-                    "/ColorACSImageDict %1 /GrayACSImageDict %1 >> "
-                    "setdistillerparams")
-                .arg(imageParameters);
-  // A fixed relative output name avoids Ghostscript's %d filename expansion
-  // even when the user-selected destination directory contains percent signs.
-  args << "-sOutputFile=candidate.pdf" << "-c" << distillerParameters << "-f"
-       << QDir::toNativeSeparators(inputPath);
-
-  return runGhostscriptProcess(executable, args,
-                               QFileInfo(tempOutputPath).absolutePath(),
-                               tempOutputPath, m_isCancelled, error, true);
-}
-
-PdfPage::CompressionResult PdfPage::compressPdf(const QString &inputPath,
-                                                const QString &outputPath,
-                                                int quality) {
-  CompressionResult result;
-  if (m_isCancelled) {
-    result.status = CompressionStatus::Cancelled;
-    return result;
-  }
-
-  const QFileInfo sourceInfo(inputPath);
-  const QFileInfo destinationInfo(outputPath);
-  result.originalBytes = sourceInfo.size();
-  const QDateTime sourceModified = sourceInfo.lastModified();
-  if (!sourceInfo.isFile() || result.originalBytes <= 0) {
-    result.error = "The input PDF is missing or empty.";
-    return result;
-  }
-  if (isSamePdf(sourceInfo, destinationInfo)) {
-    result.error = "Choose a different output file. The original PDF must not "
-                   "be overwritten.";
-    return result;
-  }
-
-  const QString executable = findGhostscriptExecutable();
-  if (executable.isEmpty()) {
-    result.error = "Ghostscript is required for PDF compression. Install the "
-                   "ghostscript package on Linux or include the complete "
-                   "gs runtime beside the Windows application. For an "
-                   "extracted runtime, set IMAGECONVERTER_GHOSTSCRIPT to its "
-                   "executable's full path. No PDF was changed.";
-    return result;
-  }
-
-  QPdfDocument sourceDocument;
-  const auto sourceError = sourceDocument.load(sourceInfo.absoluteFilePath());
-  if (sourceError != QPdfDocument::Error::None ||
-      sourceDocument.pageCount() <= 0) {
-    result.error = QString("Cannot open the input PDF (PDF error %1). "
-                           "Check whether it is damaged or password-protected.")
-                       .arg(static_cast<int>(sourceError));
-    return result;
-  }
-
-  QTemporaryDir temporaryDirectory(
-      destinationInfo.absoluteDir().filePath(".pdf-compress-XXXXXX"));
-  if (!temporaryDirectory.isValid()) {
-    result.error = QString("Cannot create temporary output in the destination "
-                           "directory: %1")
-                       .arg(temporaryDirectory.errorString());
-    return result;
-  }
-  const QString candidatePath = temporaryDirectory.filePath("candidate.pdf");
-  if (!compressPdfWithGhostscript(executable, sourceInfo.absoluteFilePath(),
-                                  candidatePath, quality, result.error,
-                                  false)) {
-    if (m_isCancelled) {
-      result.status = CompressionStatus::Cancelled;
+    if (result.origBytes > 0 && result.outBytes > 0 &&
+        result.successCount > 0) {
+      const double diffPct =
+          (1.0 - (static_cast<double>(result.outBytes) / result.origBytes)) *
+          100.0;
+      message +=
+          QString("\n\nTotal Original: %1\nTotal Compressed: %2 (%3% %4)")
+              .arg(DropFileWidget::formatFileSize(result.origBytes))
+              .arg(DropFileWidget::formatFileSize(result.outBytes))
+              .arg(qAbs(diffPct), 0, 'f', 1)
+              .arg(diffPct >= 0 ? "smaller" : "larger");
     }
-    return result;
-  }
 
-  QPdfDocument candidateDocument;
-  const auto candidateError = candidateDocument.load(candidatePath);
-  if (candidateError != QPdfDocument::Error::None ||
-      candidateDocument.pageCount() != sourceDocument.pageCount()) {
-    result.error = "The compressed PDF failed validation (unreadable output "
-                   "or changed page count). No destination was replaced.";
-    return result;
-  }
-  for (int page = 0; page < sourceDocument.pageCount(); ++page) {
-    if (m_isCancelled) {
-      result.status = CompressionStatus::Cancelled;
-      return result;
+    if (!result.errors.isEmpty()) {
+      message += "\n\n" + result.errors.join("\n");
     }
-    const QSizeF before = sourceDocument.pagePointSize(page);
-    const QSizeF after = candidateDocument.pagePointSize(page);
-    if (qAbs(before.width() - after.width()) > 0.5 ||
-        qAbs(before.height() - after.height()) > 0.5) {
-      result.error = "The compressed PDF changed page dimensions. "
-                     "No destination was replaced.";
-      return result;
+    const int totalFiles = m_dragWidget->getFilePaths().size();
+    if (result.status == CompressController::Result::Status::Cancelled) {
+      message += QString("\n%1 PDF(s) not completed due to cancellation.")
+                     .arg(totalFiles - result.successCount -
+                          result.unchangedCount - result.failCount);
     }
+    ui::Dialog::info(this, title, message);
   }
-  candidateDocument.close();
-  sourceDocument.close();
-
-  if (m_isCancelled) {
-    result.status = CompressionStatus::Cancelled;
-    return result;
-  }
-  const QFileInfo currentSource(sourceInfo.absoluteFilePath());
-  if (currentSource.size() != result.originalBytes ||
-      currentSource.lastModified() != sourceModified) {
-    result.error = "The input PDF changed during compression. Please retry.";
-    return result;
-  }
-  const qint64 candidateBytes = QFileInfo(candidatePath).size();
-  if (candidateBytes <= 0) {
-    result.error = "The compressed PDF is empty. No destination was replaced.";
-    return result;
-  }
-  if (candidateBytes >= result.originalBytes) {
-    result.status = CompressionStatus::Unchanged;
-    result.outputBytes = result.originalBytes;
-    return result;
-  }
-
-  if (isSamePdf(currentSource, QFileInfo(destinationInfo.absoluteFilePath()))) {
-    result.error = "The destination now points to the input PDF. "
-                   "No destination was replaced.";
-    return result;
-  }
-  if (!savePdfAtomically(candidatePath, destinationInfo.absoluteFilePath(),
-                         m_isCancelled, result.error)) {
-    if (m_isCancelled) {
-      result.status = CompressionStatus::Cancelled;
-    }
-    return result;
-  }
-  result.status = CompressionStatus::Compressed;
-  result.outputBytes = candidateBytes;
-  return result;
 }
 
 // ============================================================================
-// Tool 1: Merge PDF (Multiple PDFs -> 1 Combined PDF)
+// Tool 1: Merge PDF
 // ============================================================================
 
 void PdfPage::syncMergeListFromDropWidget() {
@@ -1372,93 +926,7 @@ void PdfPage::moveMergeItemDown() {
   }
 }
 
-bool PdfPage::mergePdfsWithGhostscript(const QString &executable,
-                                       const QStringList &inputPaths,
-                                       const QString &tempOutputPath,
-                                       QString &error) {
-  QStringList args = {"-sDEVICE=pdfwrite",
-                      "-dCompatibilityLevel=1.7",
-                      "-dSAFER",
-                      "-dPDFSTOPONERROR",
-                      "-dNOPAUSE",
-                      "-dQUIET",
-                      "-dBATCH",
-                      "-dAutoRotatePages=/None",
-                      "-dCompressFonts=true",
-                      "-dCompressStreams=true",
-                      "-dSubsetFonts=true",
-                      "-dPreserveAnnots=true",
-                      "-sOutputFile=candidate.pdf",
-                      "-f"};
-  for (const QString &path : inputPaths) {
-    args << QDir::toNativeSeparators(path);
-  }
-  return runGhostscriptProcess(executable, args,
-                               QFileInfo(tempOutputPath).absolutePath(),
-                               tempOutputPath, m_isCancelled, error, false);
-}
-
-bool PdfPage::mergePdfsWithQtPdf(const QStringList &inputPaths,
-                                 const QString &tempOutputPath,
-                                 QString &error) {
-  QPdfWriter writer(tempOutputPath);
-  writer.setResolution(300);
-  std::unique_ptr<QPainter> painter;
-
-  for (const QString &inputPath : inputPaths) {
-    if (m_isCancelled) {
-      return false;
-    }
-    QPdfDocument doc;
-    const auto loadErr = doc.load(inputPath);
-    if (loadErr != QPdfDocument::Error::None || doc.pageCount() <= 0) {
-      error = QString("Cannot open '%1' for merging.")
-                  .arg(QFileInfo(inputPath).fileName());
-      return false;
-    }
-
-    for (int page = 0; page < doc.pageCount(); ++page) {
-      if (m_isCancelled) {
-        return false;
-      }
-      const QSizeF ptSize = doc.pagePointSize(page);
-      QPageLayout layout(QPageSize(ptSize, QPageSize::Point),
-                         QPageLayout::Portrait, QMarginsF(0, 0, 0, 0),
-                         QPageLayout::Point);
-      writer.setPageLayout(layout);
-      if (!painter) {
-        painter = std::make_unique<QPainter>(&writer);
-        if (!painter->isActive()) {
-          error = "Failed to initialize PDF writer.";
-          return false;
-        }
-      } else {
-        writer.newPage();
-      }
-
-      const QSize renderSize(qMax(1, qRound(ptSize.width() * 300.0 / 72.0)),
-                             qMax(1, qRound(ptSize.height() * 300.0 / 72.0)));
-      const QImage pageImg = renderPdfPageOnWhite(doc, page, renderSize);
-      if (pageImg.isNull()) {
-        error = QString("Failed to render page %1 of '%2'.")
-                    .arg(page + 1)
-                    .arg(QFileInfo(inputPath).fileName());
-        return false;
-      }
-      painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
-      painter->drawImage(
-          QRectF(0, 0, painter->device()->width(), painter->device()->height()),
-          pageImg);
-    }
-  }
-
-  if (painter) {
-    painter->end();
-  }
-  return QFileInfo(tempOutputPath).size() > 0;
-}
-
-void PdfPage::mergePdfs() {
+void PdfPage::executeMerge() {
   syncMergeListFromDropWidget();
 
   QStringList orderedPaths;
@@ -1485,7 +953,7 @@ void PdfPage::mergePdfs() {
 
   const QFileInfo destInfo(outputPath);
   for (const QString &srcPath : orderedPaths) {
-    if (isSamePdf(QFileInfo(srcPath), destInfo)) {
+    if (pdfutil::isSamePdf(QFileInfo(srcPath), destInfo)) {
       ui::Toast::show(
           this, "Invalid Output File",
           "The merged PDF destination cannot overwrite one of the input PDFs.",
@@ -1494,271 +962,42 @@ void PdfPage::mergePdfs() {
     }
   }
 
-  m_isCancelled = false;
+  MergeController::Params params;
+  params.inputPaths = orderedPaths;
+  params.outputPath = outputPath;
+
+  m_currentController = m_mergeController;
   setProcessingState(true);
-  m_progressBar->setRange(0, orderedPaths.size());
-  m_progressBar->setValue(0, false);
-  m_progressBar->setIndeterminate(true);
-  m_progressLabel->setText(
-      QString("Merging %1 PDF files...").arg(orderedPaths.size()));
+  m_mergeController->start(params);
+}
 
-  for (const QString &srcPath : orderedPaths) {
-    m_dragWidget->setFileStatus(srcPath, DropFileWidget::FileStatus::Processing,
-                                "Merging into combined PDF");
+void PdfPage::onMergeFinished(const MergeController::Result &result) {
+  setProcessingState(false);
+  m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
+
+  if (result.cancelled) {
+    ui::Toast::show(this, "Cancelled", "PDF merge was cancelled.",
+                    ui::ToastVariant::Default);
+  } else if (result.success) {
+    ui::Dialog::info(
+        this, "PDFs Merged",
+        QString("Merged %1 PDFs (%2 total pages) into:\n%3\n\n"
+                "Output Size: %4")
+            .arg(m_mergeOrderList->count())
+            .arg(result.totalPages)
+            .arg(result.outputPath)
+            .arg(DropFileWidget::formatFileSize(result.outputBytes)));
+  } else {
+    ui::Toast::show(this, "PDF Merge Failed", result.error,
+                    ui::ToastVariant::Destructive);
   }
-
-  QFuture<void> future = QtConcurrent::run([this, orderedPaths, outputPath]() {
-    QString error;
-    int expectedTotalPages = 0;
-    for (const QString &srcPath : orderedPaths) {
-      if (m_isCancelled) {
-        break;
-      }
-      const QFileInfo srcInfo(srcPath);
-      if (!srcInfo.isFile() || srcInfo.size() <= 0) {
-        error = QString("Input file '%1' is missing or empty.")
-                    .arg(srcInfo.fileName());
-        break;
-      }
-      QPdfDocument doc;
-      const auto err = doc.load(srcInfo.absoluteFilePath());
-      if (err != QPdfDocument::Error::None || doc.pageCount() <= 0) {
-        error = QString("Cannot open '%1' (damaged or password-protected).")
-                    .arg(srcInfo.fileName());
-        break;
-      }
-      expectedTotalPages += doc.pageCount();
-    }
-
-    bool succeeded = false;
-    qint64 outputBytes = 0;
-    const QFileInfo destinationInfo(outputPath);
-
-    if (error.isEmpty() && !m_isCancelled) {
-      QTemporaryDir tempDir(
-          destinationInfo.absoluteDir().filePath(".pdf-merge-XXXXXX"));
-      if (!tempDir.isValid()) {
-        error = QString("Cannot create temporary directory: %1")
-                    .arg(tempDir.errorString());
-      } else {
-        const QString candidatePath = tempDir.filePath("candidate.pdf");
-        const QString gsExec = findGhostscriptExecutable();
-        bool generated = false;
-        if (!gsExec.isEmpty()) {
-          QString gsErr;
-          generated = mergePdfsWithGhostscript(gsExec, orderedPaths,
-                                               candidatePath, gsErr);
-          if (generated) {
-            QPdfDocument checkDoc;
-            if (checkDoc.load(candidatePath) != QPdfDocument::Error::None ||
-                checkDoc.pageCount() != expectedTotalPages) {
-              generated = false;
-              QFile::remove(candidatePath);
-            }
-          }
-        }
-        if (!generated && !m_isCancelled) {
-          generated = mergePdfsWithQtPdf(orderedPaths, candidatePath, error);
-        }
-
-        if (generated && !m_isCancelled) {
-          QPdfDocument candidateDoc;
-          if (candidateDoc.load(candidatePath) != QPdfDocument::Error::None ||
-              candidateDoc.pageCount() != expectedTotalPages) {
-            error = "Merged PDF validation failed (unexpected page count).";
-          } else {
-            candidateDoc.close();
-            if (savePdfAtomically(candidatePath,
-                                  destinationInfo.absoluteFilePath(),
-                                  m_isCancelled, error)) {
-              succeeded = true;
-              outputBytes =
-                  QFileInfo(destinationInfo.absoluteFilePath()).size();
-            }
-          }
-        }
-      }
-    }
-
-    QMetaObject::invokeMethod(
-        this,
-        [this, orderedPaths, outputPath, succeeded, expectedTotalPages,
-         outputBytes, error]() {
-          using FileStatus = DropFileWidget::FileStatus;
-          for (const QString &srcPath : orderedPaths) {
-            if (m_isCancelled) {
-              m_dragWidget->setFileStatus(srcPath, FileStatus::Cancelled,
-                                          "Merge cancelled");
-            } else if (succeeded) {
-              m_dragWidget->setFileStatus(
-                  srcPath, FileStatus::Succeeded,
-                  QString("Merged into %1").arg(outputPath));
-            } else {
-              m_dragWidget->setFileStatus(srcPath, FileStatus::Failed, error);
-            }
-          }
-          if (!m_isCancelled && succeeded) {
-            m_progressBar->setIndeterminate(false);
-            m_progressBar->setValue(orderedPaths.size(), false);
-          }
-          setProcessingState(false);
-          m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
-
-          if (m_isCancelled) {
-            ui::Toast::show(this, "Cancelled", "PDF merge was cancelled.",
-                            ui::ToastVariant::Default);
-          } else if (succeeded) {
-            ui::Dialog::info(
-                this, "PDFs Merged",
-                QString("Merged %1 PDFs (%2 total pages) into:\n%3\n\n"
-                        "Output Size: %4")
-                    .arg(orderedPaths.size())
-                    .arg(expectedTotalPages)
-                    .arg(outputPath)
-                    .arg(DropFileWidget::formatFileSize(outputBytes)));
-          } else {
-            ui::Toast::show(this, "PDF Merge Failed", error,
-                            ui::ToastVariant::Destructive);
-          }
-        },
-        Qt::QueuedConnection);
-  });
-  m_futureWatcher->setFuture(future);
 }
 
 // ============================================================================
-// Tool 2: Split PDF (1 PDF -> Multiple PDFs)
+// Tool 2: Split PDF
 // ============================================================================
 
-bool PdfPage::parsePageRanges(const QString &rangeSpec, int pageCount,
-                              QVector<QPair<int, int>> &outRanges,
-                              QString &error) {
-  outRanges.clear();
-  const QString trimmed = rangeSpec.trimmed();
-  if (trimmed.isEmpty()) {
-    error = "Please enter at least one page or range (e.g. 1-3, 5, 8-12).";
-    return false;
-  }
-
-  const QStringList tokens = trimmed.split(',', Qt::SkipEmptyParts);
-  if (tokens.isEmpty()) {
-    error = "Please enter at least one page or range (e.g. 1-3, 5, 8-12).";
-    return false;
-  }
-
-  for (const QString &rawToken : tokens) {
-    const QString token = rawToken.trimmed();
-    if (token.isEmpty()) {
-      continue;
-    }
-    if (token.contains('-')) {
-      const QStringList parts = token.split('-');
-      if (parts.size() != 2) {
-        error = QString("Invalid range syntax '%1'.").arg(token);
-        return false;
-      }
-      bool okStart = false;
-      bool okEnd = false;
-      const int start = parts[0].trimmed().toInt(&okStart);
-      const int end = parts[1].trimmed().toInt(&okEnd);
-      if (!okStart || !okEnd || start < 1 || end < start || end > pageCount) {
-        error = QString("Page range '%1' is invalid (document has %2 page(s)).")
-                    .arg(token)
-                    .arg(pageCount);
-        return false;
-      }
-      outRanges.append(qMakePair(start, end));
-    } else {
-      bool okPage = false;
-      const int page = token.toInt(&okPage);
-      if (!okPage || page < 1 || page > pageCount) {
-        error =
-            QString("Page number '%1' is invalid (document has %2 page(s)).")
-                .arg(token)
-                .arg(pageCount);
-        return false;
-      }
-      outRanges.append(qMakePair(page, page));
-    }
-  }
-
-  if (outRanges.isEmpty()) {
-    error = "Please enter at least one valid page number.";
-    return false;
-  }
-  return true;
-}
-
-bool PdfPage::extractPageRangeWithGhostscript(const QString &executable,
-                                              const QString &inputPath,
-                                              int firstPage, int lastPage,
-                                              const QString &tempOutputPath,
-                                              QString &error) {
-  QStringList args = {"-sDEVICE=pdfwrite",
-                      "-dCompatibilityLevel=1.7",
-                      "-dSAFER",
-                      "-dPDFSTOPONERROR",
-                      "-dNOPAUSE",
-                      "-dQUIET",
-                      "-dBATCH",
-                      "-dAutoRotatePages=/None",
-                      QString("-dFirstPage=%1").arg(firstPage),
-                      QString("-dLastPage=%1").arg(lastPage),
-                      "-sOutputFile=candidate.pdf",
-                      "-f",
-                      QDir::toNativeSeparators(inputPath)};
-  return runGhostscriptProcess(executable, args,
-                               QFileInfo(tempOutputPath).absolutePath(),
-                               tempOutputPath, m_isCancelled, error, false);
-}
-
-bool PdfPage::extractPageRangeWithQtPdf(QPdfDocument &sourceDoc, int firstPage,
-                                        int lastPage,
-                                        const QString &tempOutputPath,
-                                        QString &error) {
-  QPdfWriter writer(tempOutputPath);
-  writer.setResolution(300);
-  std::unique_ptr<QPainter> painter;
-
-  for (int page = firstPage - 1; page <= lastPage - 1; ++page) {
-    if (m_isCancelled) {
-      return false;
-    }
-    const QSizeF ptSize = sourceDoc.pagePointSize(page);
-    QPageLayout layout(QPageSize(ptSize, QPageSize::Point),
-                       QPageLayout::Portrait, QMarginsF(0, 0, 0, 0),
-                       QPageLayout::Point);
-    writer.setPageLayout(layout);
-    if (!painter) {
-      painter = std::make_unique<QPainter>(&writer);
-      if (!painter->isActive()) {
-        error = "Failed to initialize PDF writer.";
-        return false;
-      }
-    } else {
-      writer.newPage();
-    }
-
-    const QSize renderSize(qMax(1, qRound(ptSize.width() * 300.0 / 72.0)),
-                           qMax(1, qRound(ptSize.height() * 300.0 / 72.0)));
-    const QImage pageImg = renderPdfPageOnWhite(sourceDoc, page, renderSize);
-    if (pageImg.isNull()) {
-      error = QString("Failed to render page %1.").arg(page + 1);
-      return false;
-    }
-    painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
-    painter->drawImage(
-        QRectF(0, 0, painter->device()->width(), painter->device()->height()),
-        pageImg);
-  }
-
-  if (painter) {
-    painter->end();
-  }
-  return QFileInfo(tempOutputPath).size() > 0;
-}
-
-void PdfPage::splitPdfs() {
+void PdfPage::executeSplit() {
   const QStringList sourcePaths = m_dragWidget->getFilePaths();
   if (sourcePaths.isEmpty()) {
     ui::Toast::show(this, "No PDF Selected",
@@ -1787,8 +1026,8 @@ void PdfPage::splitPdfs() {
     }
     QVector<QPair<int, int>> testRanges;
     QString rangeErr;
-    if (!parsePageRanges(rangeSpec, checkDoc.pageCount(), testRanges,
-                         rangeErr)) {
+    if (!pdfutil::parsePageRanges(rangeSpec, checkDoc.pageCount(), testRanges,
+                                  rangeErr)) {
       ui::Toast::show(this, "Invalid Page Range", rangeErr,
                       ui::ToastVariant::Warning);
       return;
@@ -1801,222 +1040,43 @@ void PdfPage::splitPdfs() {
     return;
   }
 
-  m_isCancelled = false;
+  SplitController::Params params;
+  params.sourcePaths = sourcePaths;
+  params.outputDir = outputDir;
+  params.mode = splitMode;
+  params.rangeSpec = rangeSpec;
+  params.interval = interval;
+
+  m_currentController = m_splitController;
   setProcessingState(true);
-  m_progressBar->setRange(0, sourcePaths.size());
-  m_progressBar->setValue(0, false);
-  m_progressLabel->setText("Splitting PDF files...");
+  m_splitController->start(params);
+}
 
-  QFuture<void> future = QtConcurrent::run([this, sourcePaths, outputDir,
-                                            splitMode, rangeSpec, interval]() {
-    int totalFilesCreated = 0;
-    int failedDocs = 0;
-    QStringList errors;
-    QSet<QString> usedFileNames;
-    const QString gsExec = findGhostscriptExecutable();
+void PdfPage::onSplitFinished(const SplitController::Result &result) {
+  setProcessingState(false);
+  m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
 
-    for (int i = 0; i < sourcePaths.size(); ++i) {
-      if (m_isCancelled) {
-        break;
-      }
-      const QString &sourcePath = sourcePaths.at(i);
-      const QFileInfo sourceInfo(sourcePath);
-
-      QMetaObject::invokeMethod(
-          this,
-          [this, sourcePath, i, total = sourcePaths.size()]() {
-            m_dragWidget->setFileStatus(sourcePath,
-                                        DropFileWidget::FileStatus::Processing,
-                                        "Splitting PDF pages");
-            m_progressLabel->setText(QString("Splitting %1 (%2 of %3)...")
-                                         .arg(QFileInfo(sourcePath).fileName())
-                                         .arg(i + 1)
-                                         .arg(total));
-          },
-          Qt::QueuedConnection);
-
-      QPdfDocument sourceDoc;
-      const auto loadErr = sourceDoc.load(sourceInfo.absoluteFilePath());
-      if (loadErr != QPdfDocument::Error::None || sourceDoc.pageCount() <= 0) {
-        failedDocs++;
-        const QString err = "Cannot open PDF (damaged or encrypted).";
-        errors.append(QString("%1: %2").arg(sourceInfo.fileName(), err));
-        QMetaObject::invokeMethod(
-            this,
-            [this, sourcePath, err]() {
-              m_dragWidget->setFileStatus(
-                  sourcePath, DropFileWidget::FileStatus::Failed, err);
-            },
-            Qt::QueuedConnection);
-        continue;
-      }
-
-      const int pageCount = sourceDoc.pageCount();
-      QVector<QPair<int, int>> ranges;
-      QString rangeErr;
-      if (splitMode == 0) {
-        if (!parsePageRanges(rangeSpec, pageCount, ranges, rangeErr)) {
-          failedDocs++;
-          errors.append(QString("%1: %2").arg(sourceInfo.fileName(), rangeErr));
-          QMetaObject::invokeMethod(
-              this,
-              [this, sourcePath, rangeErr]() {
-                m_dragWidget->setFileStatus(
-                    sourcePath, DropFileWidget::FileStatus::Failed, rangeErr);
-              },
-              Qt::QueuedConnection);
-          continue;
-        }
-      } else if (splitMode == 1) {
-        for (int start = 1; start <= pageCount; start += interval) {
-          const int end = qMin(pageCount, start + interval - 1);
-          ranges.append(qMakePair(start, end));
-        }
-      } else {
-        for (int p = 1; p <= pageCount; ++p) {
-          ranges.append(qMakePair(p, p));
-        }
-      }
-
-      int createdForThisPdf = 0;
-      QString docError;
-      for (const auto &range : ranges) {
-        if (m_isCancelled) {
-          break;
-        }
-        const int firstPage = range.first;
-        const int lastPage = range.second;
-        const int expectedPages = lastPage - firstPage + 1;
-
-        const QString baseStem = (firstPage == lastPage)
-                                     ? QString("%1_page_%2")
-                                           .arg(sourceInfo.baseName())
-                                           .arg(firstPage)
-                                     : QString("%1_pages_%2-%3")
-                                           .arg(sourceInfo.baseName())
-                                           .arg(firstPage)
-                                           .arg(lastPage);
-
-        QString uniqueStem = baseStem;
-        int suffix = 1;
-        while (usedFileNames.contains(uniqueStem.toLower()) ||
-               QFile::exists(QDir(outputDir).filePath(uniqueStem + ".pdf"))) {
-          uniqueStem = QString("%1_%2").arg(baseStem).arg(suffix++);
-        }
-        usedFileNames.insert(uniqueStem.toLower());
-        const QString outFilePath =
-            QDir(outputDir).filePath(uniqueStem + ".pdf");
-
-        QTemporaryDir tempDir(QDir(outputDir).filePath(".pdf-split-XXXXXX"));
-        if (!tempDir.isValid()) {
-          docError = tempDir.errorString();
-          break;
-        }
-        const QString candidatePath = tempDir.filePath("candidate.pdf");
-        bool extracted = false;
-        if (!gsExec.isEmpty()) {
-          QString gsErr;
-          extracted = extractPageRangeWithGhostscript(
-              gsExec, sourceInfo.absoluteFilePath(), firstPage, lastPage,
-              candidatePath, gsErr);
-          if (extracted) {
-            QPdfDocument checkDoc;
-            if (checkDoc.load(candidatePath) != QPdfDocument::Error::None ||
-                checkDoc.pageCount() != expectedPages) {
-              extracted = false;
-              QFile::remove(candidatePath);
-            }
-          }
-        }
-        if (!extracted && !m_isCancelled) {
-          extracted = extractPageRangeWithQtPdf(sourceDoc, firstPage, lastPage,
-                                                candidatePath, docError);
-        }
-        if (!extracted || m_isCancelled) {
-          if (docError.isEmpty()) {
-            docError = "Failed to extract page range.";
-          }
-          break;
-        }
-
-        QPdfDocument verifyDoc;
-        if (verifyDoc.load(candidatePath) != QPdfDocument::Error::None ||
-            verifyDoc.pageCount() != expectedPages) {
-          docError = "Extracted PDF failed validation.";
-          break;
-        }
-        verifyDoc.close();
-
-        if (!savePdfAtomically(candidatePath, outFilePath, m_isCancelled,
-                               docError)) {
-          break;
-        }
-        createdForThisPdf++;
-        totalFilesCreated++;
-      }
-
-      sourceDoc.close();
-
-      QMetaObject::invokeMethod(
-          this,
-          [this, sourcePath, createdForThisPdf, docError, outputDir, i]() {
-            using FileStatus = DropFileWidget::FileStatus;
-            if (m_isCancelled) {
-              m_dragWidget->setFileStatus(sourcePath, FileStatus::Cancelled,
-                                          "Split cancelled");
-            } else if (docError.isEmpty() && createdForThisPdf > 0) {
-              m_dragWidget->setFileStatus(
-                  sourcePath, FileStatus::Succeeded,
-                  QString("Created %1 PDF file(s) in %2")
-                      .arg(createdForThisPdf)
-                      .arg(outputDir));
-            } else {
-              m_dragWidget->setFileStatus(sourcePath, FileStatus::Failed,
-                                          docError);
-            }
-            if (!m_isCancelled) {
-              m_progressBar->setValue(i + 1);
-            }
-          },
-          Qt::QueuedConnection);
-
-      if (!docError.isEmpty() && !m_isCancelled) {
-        failedDocs++;
-        errors.append(QString("%1: %2").arg(sourceInfo.fileName(), docError));
-      }
-    }
-
-    QMetaObject::invokeMethod(
-        this,
-        [this, totalFilesCreated, failedDocs, outputDir, errors]() {
-          setProcessingState(false);
-          m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
-
-          if (m_isCancelled) {
-            ui::Toast::show(this, "Cancelled", "PDF split was cancelled.",
-                            ui::ToastVariant::Default);
-          } else if (totalFilesCreated > 0 && failedDocs == 0) {
-            ui::Dialog::info(this, "PDF Split Complete",
-                             QString("Created %1 split PDF file(s) in:\n%2")
-                                 .arg(totalFilesCreated)
-                                 .arg(outputDir));
-          } else if (totalFilesCreated > 0) {
-            ui::Dialog::info(
-                this, "PDF Split Finished with Warnings",
-                QString("Created %1 split PDF file(s) in:\n%2\n\nErrors:\n%3")
-                    .arg(totalFilesCreated)
-                    .arg(outputDir)
-                    .arg(errors.join("\n")));
-          } else {
-            ui::Toast::show(this, "PDF Split Failed",
-                            errors.isEmpty() ? "Could not split PDF."
-                                             : errors.join("\n"),
-                            ui::ToastVariant::Destructive);
-          }
-        },
-        Qt::QueuedConnection);
-  });
-  m_futureWatcher->setFuture(future);
+  if (result.cancelled) {
+    ui::Toast::show(this, "Cancelled", "PDF split was cancelled.",
+                    ui::ToastVariant::Default);
+  } else if (result.createdCount > 0 && result.failedDocs == 0) {
+    ui::Dialog::info(this, "PDF Split Complete",
+                     QString("Created %1 split PDF file(s) in:\n%2")
+                         .arg(result.createdCount)
+                         .arg(result.outputDir));
+  } else if (result.createdCount > 0) {
+    ui::Dialog::info(
+        this, "PDF Split Finished with Warnings",
+        QString("Created %1 split PDF file(s) in:\n%2\n\nErrors:\n%3")
+            .arg(result.createdCount)
+            .arg(result.outputDir)
+            .arg(result.errors.join("\n")));
+  } else {
+    ui::Toast::show(this, "PDF Split Failed",
+                    result.errors.isEmpty() ? "Could not split PDF."
+                                            : result.errors.join("\n"),
+                    ui::ToastVariant::Destructive);
+  }
 }
 
 // ============================================================================
@@ -2083,7 +1143,7 @@ void PdfPage::loadOrganizePagesFromSelectedPdf(bool silentIfEmpty) {
   for (int i = 0; i < doc.pageCount(); ++i) {
     const QSizeF ptSize = doc.pagePointSize(i);
     const QSize thumbSize(80, 112);
-    const QImage thumb = renderPdfPageOnWhite(doc, i, thumbSize);
+    const QImage thumb = pdfutil::renderPdfPageOnWhite(doc, i, thumbSize);
 
     QListWidgetItem *item = new QListWidgetItem(m_organizePageList);
     item->setData(Qt::UserRole, i);
@@ -2159,7 +1219,7 @@ void PdfPage::deleteSelectedOrganizePages() {
 
 void PdfPage::resetOrganizePages() { loadOrganizePagesFromSelectedPdf(false); }
 
-void PdfPage::organizePdf() {
+void PdfPage::executeOrganize() {
   const QStringList paths = m_dragWidget->getFilePaths();
   if (paths.isEmpty()) {
     ui::Toast::show(this, "No PDF Selected",
@@ -2176,11 +1236,11 @@ void PdfPage::organizePdf() {
     return;
   }
 
-  QVector<PageOp> pageOps;
+  QVector<OrganizeController::PageOp> pageOps;
   pageOps.reserve(m_organizePageList->count());
   for (int i = 0; i < m_organizePageList->count(); ++i) {
     QListWidgetItem *item = m_organizePageList->item(i);
-    PageOp op;
+    OrganizeController::PageOp op;
     op.originalPageIndex = item->data(Qt::UserRole).toInt();
     op.rotationDegrees = item->data(Qt::UserRole + 1).toInt();
     pageOps.append(op);
@@ -2196,7 +1256,7 @@ void PdfPage::organizePdf() {
     return;
   }
 
-  if (isSamePdf(sourceInfo, QFileInfo(outputPath))) {
+  if (pdfutil::isSamePdf(sourceInfo, QFileInfo(outputPath))) {
     ui::Toast::show(this, "Invalid Output File",
                     "Choose a different output file. The original PDF must not "
                     "be overwritten.",
@@ -2204,176 +1264,41 @@ void PdfPage::organizePdf() {
     return;
   }
 
-  m_isCancelled = false;
+  OrganizeController::Params params;
+  params.sourcePath = sourcePath;
+  params.outputPath = outputPath;
+  params.pageOps = pageOps;
+
+  m_currentController = m_organizeController;
   setProcessingState(true);
-  m_progressBar->setIndeterminate(false);
-  m_progressBar->setRange(0, pageOps.size());
-  m_progressBar->setValue(0, false);
-  m_progressLabel->setText(
-      QString("Saving %1 organized page(s)...").arg(pageOps.size()));
-  m_dragWidget->setFileStatus(sourcePath,
-                              DropFileWidget::FileStatus::Processing,
-                              "Writing organized PDF");
+  m_organizeController->start(params);
+}
 
-  QFuture<void> future = QtConcurrent::run([this, sourcePath, outputPath,
-                                            pageOps]() {
-    QString error;
-    bool succeeded = false;
-    qint64 outputBytes = 0;
-    const QFileInfo destinationInfo(outputPath);
+void PdfPage::onOrganizeFinished(const OrganizeController::Result &result) {
+  setProcessingState(false);
+  m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
 
-    QPdfDocument sourceDoc;
-    const auto loadErr = sourceDoc.load(sourcePath);
-    if (loadErr != QPdfDocument::Error::None || sourceDoc.pageCount() <= 0) {
-      error = "Cannot open source PDF.";
-    } else {
-      QTemporaryDir tempDir(
-          destinationInfo.absoluteDir().filePath(".pdf-organize-XXXXXX"));
-      if (!tempDir.isValid()) {
-        error = tempDir.errorString();
-      } else {
-        const QString candidatePath = tempDir.filePath("candidate.pdf");
-        QPdfWriter writer(candidatePath);
-        writer.setResolution(300);
-        std::unique_ptr<QPainter> painter;
-
-        for (int i = 0; i < pageOps.size(); ++i) {
-          if (m_isCancelled) {
-            break;
-          }
-          const PageOp &op = pageOps.at(i);
-          if (op.originalPageIndex < 0 ||
-              op.originalPageIndex >= sourceDoc.pageCount()) {
-            error = "Page index out of bounds.";
-            break;
-          }
-
-          const QSizeF origPtSize =
-              sourceDoc.pagePointSize(op.originalPageIndex);
-          const bool swapDims =
-              (op.rotationDegrees == 90 || op.rotationDegrees == 270);
-          const QSizeF effectivePtSize =
-              swapDims ? QSizeF(origPtSize.height(), origPtSize.width())
-                       : origPtSize;
-
-          QPageLayout layout(QPageSize(effectivePtSize, QPageSize::Point),
-                             QPageLayout::Portrait, QMarginsF(0, 0, 0, 0),
-                             QPageLayout::Point);
-          writer.setPageLayout(layout);
-
-          if (!painter) {
-            painter = std::make_unique<QPainter>(&writer);
-            if (!painter->isActive()) {
-              error = "Failed to initialize PDF writer.";
-              break;
-            }
-          } else {
-            writer.newPage();
-          }
-
-          const QSize renderSize(
-              qMax(1, qRound(origPtSize.width() * 300.0 / 72.0)),
-              qMax(1, qRound(origPtSize.height() * 300.0 / 72.0)));
-          QImage pageImg =
-              renderPdfPageOnWhite(sourceDoc, op.originalPageIndex, renderSize);
-          if (pageImg.isNull()) {
-            error = QString("Failed to render page %1.")
-                        .arg(op.originalPageIndex + 1);
-            break;
-          }
-          if (op.rotationDegrees != 0) {
-            pageImg =
-                pageImg.transformed(QTransform().rotate(op.rotationDegrees),
-                                    Qt::SmoothTransformation);
-          }
-
-          painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
-          painter->drawImage(QRectF(0, 0, painter->device()->width(),
-                                    painter->device()->height()),
-                             pageImg);
-
-          QMetaObject::invokeMethod(
-              this,
-              [this, done = i + 1, total = pageOps.size()]() {
-                if (!m_isCancelled) {
-                  m_progressBar->setValue(done);
-                  m_progressLabel->setText(QString("Rendered page %1 of %2...")
-                                               .arg(done)
-                                               .arg(total));
-                }
-              },
-              Qt::QueuedConnection);
-        }
-
-        if (painter) {
-          painter->end();
-        }
-
-        if (error.isEmpty() && !m_isCancelled) {
-          QPdfDocument verifyDoc;
-          if (verifyDoc.load(candidatePath) != QPdfDocument::Error::None ||
-              verifyDoc.pageCount() != pageOps.size()) {
-            error = "Organized PDF failed validation.";
-          } else {
-            verifyDoc.close();
-            if (savePdfAtomically(candidatePath,
-                                  destinationInfo.absoluteFilePath(),
-                                  m_isCancelled, error)) {
-              succeeded = true;
-              outputBytes =
-                  QFileInfo(destinationInfo.absoluteFilePath()).size();
-            }
-          }
-        }
-      }
-    }
-
-    sourceDoc.close();
-
-    QMetaObject::invokeMethod(
-        this,
-        [this, sourcePath, outputPath, succeeded, pageOps, outputBytes,
-         error]() {
-          using FileStatus = DropFileWidget::FileStatus;
-          if (m_isCancelled) {
-            m_dragWidget->setFileStatus(sourcePath, FileStatus::Cancelled,
-                                        "Operation cancelled");
-          } else if (succeeded) {
-            m_dragWidget->setFileStatus(
-                sourcePath, FileStatus::Succeeded,
-                QString("Saved organized PDF to %1").arg(outputPath));
-          } else {
-            m_dragWidget->setFileStatus(sourcePath, FileStatus::Failed, error);
-          }
-          setProcessingState(false);
-          m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
-
-          if (m_isCancelled) {
-            ui::Toast::show(this, "Cancelled",
-                            "Page organization was cancelled.",
-                            ui::ToastVariant::Default);
-          } else if (succeeded) {
-            ui::Dialog::info(
-                this, "Organized PDF Saved",
-                QString("Saved %1 page(s) to:\n%2\n\nOutput Size: %3")
-                    .arg(pageOps.size())
-                    .arg(outputPath)
-                    .arg(DropFileWidget::formatFileSize(outputBytes)));
-          } else {
-            ui::Toast::show(this, "Failed to Save Organized PDF", error,
-                            ui::ToastVariant::Destructive);
-          }
-        },
-        Qt::QueuedConnection);
-  });
-  m_futureWatcher->setFuture(future);
+  if (result.cancelled) {
+    ui::Toast::show(this, "Cancelled", "Page organization was cancelled.",
+                    ui::ToastVariant::Default);
+  } else if (result.success) {
+    ui::Dialog::info(
+        this, "Organized PDF Saved",
+        QString("Saved %1 page(s) to:\n%2\n\nOutput Size: %3")
+            .arg(result.pageCount)
+            .arg(result.outputPath)
+            .arg(DropFileWidget::formatFileSize(result.outputBytes)));
+  } else {
+    ui::Toast::show(this, "Failed to Save Organized PDF", result.error,
+                    ui::ToastVariant::Destructive);
+  }
 }
 
 // ============================================================================
-// Tool 4: PDF to Images (PDF -> PNG, JPG, WEBP, TIFF)
+// Tool 4: PDF to Images
 // ============================================================================
 
-void PdfPage::exportPdfToImages() {
+void PdfPage::executePdfToImages() {
   const QStringList sourcePaths = m_dragWidget->getFilePaths();
   if (sourcePaths.isEmpty()) {
     ui::Toast::show(this, "No PDF Selected",
@@ -2410,8 +1335,8 @@ void PdfPage::exportPdfToImages() {
     }
     QVector<QPair<int, int>> testRanges;
     QString rangeErr;
-    if (!parsePageRanges(rangeSpec, checkDoc.pageCount(), testRanges,
-                         rangeErr)) {
+    if (!pdfutil::parsePageRanges(rangeSpec, checkDoc.pageCount(), testRanges,
+                                  rangeErr)) {
       ui::Toast::show(this, "Invalid Page Filter", rangeErr,
                       ui::ToastVariant::Warning);
       return;
@@ -2425,212 +1350,53 @@ void PdfPage::exportPdfToImages() {
     return;
   }
 
-  m_isCancelled = false;
+  PdfToImagesController::Params params;
+  params.sourcePaths = sourcePaths;
+  params.outputDir = outputDir;
+  params.format = format;
+  params.dpi = dpi;
+  params.rangeFilter = rangeSpec;
+  params.quality = effectiveQuality;
+
+  m_currentController = m_pdfToImagesController;
   setProcessingState(true);
-  m_progressBar->setIndeterminate(false);
-  m_progressBar->setRange(0, sourcePaths.size());
-  m_progressBar->setValue(0, false);
-  m_progressLabel->setText("Exporting PDF pages to images...");
+  m_pdfToImagesController->start(params);
+}
 
-  QFuture<void> future = QtConcurrent::run([this, sourcePaths, outputDir,
-                                            format, effectiveQuality, dpi,
-                                            rangeSpec]() {
-    int totalExportedImages = 0;
-    int failedDocs = 0;
-    QStringList errors;
-    QSet<QString> usedFileNames;
+void PdfPage::onPdfToImagesFinished(
+    const PdfToImagesController::Result &result) {
+  setProcessingState(false);
+  m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
 
-    for (int i = 0; i < sourcePaths.size(); ++i) {
-      if (m_isCancelled) {
-        break;
-      }
-      const QString &sourcePath = sourcePaths.at(i);
-      const QFileInfo sourceInfo(sourcePath);
-
-      QMetaObject::invokeMethod(
-          this,
-          [this, sourcePath, i, total = sourcePaths.size(), dpi, format]() {
-            m_dragWidget->setFileStatus(
-                sourcePath, DropFileWidget::FileStatus::Processing,
-                QString("Rendering pages to %1 at %2 DPI")
-                    .arg(format.toUpper())
-                    .arg(dpi));
-            m_progressLabel->setText(QString("Exporting %1 (%2 of %3)...")
-                                         .arg(QFileInfo(sourcePath).fileName())
-                                         .arg(i + 1)
-                                         .arg(total));
-          },
-          Qt::QueuedConnection);
-
-      QPdfDocument doc;
-      if (doc.load(sourceInfo.absoluteFilePath()) !=
-              QPdfDocument::Error::None ||
-          doc.pageCount() <= 0) {
-        failedDocs++;
-        const QString err = "Cannot open PDF (damaged or encrypted).";
-        errors.append(QString("%1: %2").arg(sourceInfo.fileName(), err));
-        QMetaObject::invokeMethod(
-            this,
-            [this, sourcePath, err]() {
-              m_dragWidget->setFileStatus(
-                  sourcePath, DropFileWidget::FileStatus::Failed, err);
-            },
-            Qt::QueuedConnection);
-        continue;
-      }
-
-      QVector<int> targetPages;
-      if (rangeSpec.isEmpty()) {
-        for (int p = 1; p <= doc.pageCount(); ++p) {
-          targetPages.append(p);
-        }
-      } else {
-        QVector<QPair<int, int>> ranges;
-        QString rangeErr;
-        if (!parsePageRanges(rangeSpec, doc.pageCount(), ranges, rangeErr)) {
-          failedDocs++;
-          errors.append(QString("%1: %2").arg(sourceInfo.fileName(), rangeErr));
-          QMetaObject::invokeMethod(
-              this,
-              [this, sourcePath, rangeErr]() {
-                m_dragWidget->setFileStatus(
-                    sourcePath, DropFileWidget::FileStatus::Failed, rangeErr);
-              },
-              Qt::QueuedConnection);
-          continue;
-        }
-        for (const auto &r : ranges) {
-          for (int p = r.first; p <= r.second; ++p) {
-            if (!targetPages.contains(p)) {
-              targetPages.append(p);
-            }
-          }
-        }
-      }
-
-      int exportedForThisPdf = 0;
-      QString docError;
-      for (int pageNum : targetPages) {
-        if (m_isCancelled) {
-          break;
-        }
-        const int pageIdx = pageNum - 1;
-        const QSizeF ptSize = doc.pagePointSize(pageIdx);
-        const QSize pixelSize(qMax(1, qRound(ptSize.width() * dpi / 72.0)),
-                              qMax(1, qRound(ptSize.height() * dpi / 72.0)));
-
-        const QImage::Format imgFormat =
-            (format == "jpg") ? QImage::Format_RGB32 : QImage::Format_ARGB32;
-        const QImage pageImg =
-            renderPdfPageOnWhite(doc, pageIdx, pixelSize, imgFormat);
-        if (pageImg.isNull()) {
-          docError = QString("Failed to render page %1.").arg(pageNum);
-          break;
-        }
-
-        const QString baseStem = QString("%1_page_%2")
-                                     .arg(sourceInfo.baseName())
-                                     .arg(pageNum, 3, 10, QLatin1Char('0'));
-        QString uniqueStem = baseStem;
-        int suffix = 1;
-        while (usedFileNames.contains(uniqueStem.toLower()) ||
-               QFile::exists(
-                   QDir(outputDir).filePath(uniqueStem + "." + format))) {
-          uniqueStem = QString("%1_%2").arg(baseStem).arg(suffix++);
-        }
-        usedFileNames.insert(uniqueStem.toLower());
-        const QString outImagePath =
-            QDir(outputDir).filePath(uniqueStem + "." + format);
-
-        QSaveFile saveFile(outImagePath);
-        saveFile.setDirectWriteFallback(false);
-        if (!saveFile.open(QIODevice::WriteOnly) ||
-            !pageImg.save(&saveFile, format.toUpper().toUtf8().constData(),
-                          effectiveQuality) ||
-            !saveFile.commit()) {
-          docError = QString("Failed to save image '%1'.")
-                         .arg(QFileInfo(outImagePath).fileName());
-          break;
-        }
-        exportedForThisPdf++;
-        totalExportedImages++;
-      }
-
-      doc.close();
-
-      QMetaObject::invokeMethod(
-          this,
-          [this, sourcePath, exportedForThisPdf, docError, format, outputDir,
-           i]() {
-            using FileStatus = DropFileWidget::FileStatus;
-            if (m_isCancelled) {
-              m_dragWidget->setFileStatus(sourcePath, FileStatus::Cancelled,
-                                          "Export cancelled");
-            } else if (docError.isEmpty() && exportedForThisPdf > 0) {
-              m_dragWidget->setFileStatus(
-                  sourcePath, FileStatus::Succeeded,
-                  QString("Exported %1 %2 image(s) to %3")
-                      .arg(exportedForThisPdf)
-                      .arg(format.toUpper())
-                      .arg(outputDir));
-            } else {
-              m_dragWidget->setFileStatus(sourcePath, FileStatus::Failed,
-                                          docError);
-            }
-            if (!m_isCancelled) {
-              m_progressBar->setValue(i + 1);
-            }
-          },
-          Qt::QueuedConnection);
-
-      if (!docError.isEmpty() && !m_isCancelled) {
-        failedDocs++;
-        errors.append(QString("%1: %2").arg(sourceInfo.fileName(), docError));
-      }
-    }
-
-    QMetaObject::invokeMethod(
-        this,
-        [this, totalExportedImages, failedDocs, format, dpi, outputDir,
-         errors]() {
-          setProcessingState(false);
-          m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
-
-          if (m_isCancelled) {
-            ui::Toast::show(this, "Cancelled",
-                            "Page image export was cancelled.",
-                            ui::ToastVariant::Default);
-          } else if (totalExportedImages > 0 && failedDocs == 0) {
-            ui::Dialog::info(
-                this, "PDF Pages Exported",
-                QString("Exported %1 %2 image(s) at %3 DPI to:\n%4")
-                    .arg(totalExportedImages)
-                    .arg(format.toUpper())
-                    .arg(dpi)
-                    .arg(outputDir));
-          } else if (totalExportedImages > 0) {
-            ui::Dialog::info(
-                this, "Export Completed with Warnings",
-                QString("Exported %1 %2 image(s) to:\n%3\n\nErrors:\n%4")
-                    .arg(totalExportedImages)
-                    .arg(format.toUpper())
-                    .arg(outputDir)
-                    .arg(errors.join("\n")));
-          } else {
-            ui::Toast::show(this, "Export Failed",
-                            errors.isEmpty()
-                                ? "Could not export pages to images."
-                                : errors.join("\n"),
-                            ui::ToastVariant::Destructive);
-          }
-        },
-        Qt::QueuedConnection);
-  });
-  m_futureWatcher->setFuture(future);
+  if (result.cancelled) {
+    ui::Toast::show(this, "Cancelled", "Page image export was cancelled.",
+                    ui::ToastVariant::Default);
+  } else if (result.imagesExported > 0 && result.failedDocs == 0) {
+    ui::Dialog::info(
+        this, "PDF Pages Exported",
+        QString("Exported %1 %2 image(s) at %3 DPI to:\n%4")
+            .arg(result.imagesExported)
+            .arg(result.format.toUpper())
+            .arg(result.dpi)
+            .arg(result.outputDir));
+  } else if (result.imagesExported > 0) {
+    ui::Dialog::info(this, "Export Completed with Warnings",
+                     QString("Exported %1 %2 image(s) to:\n%3\n\nErrors:\n%4")
+                         .arg(result.imagesExported)
+                         .arg(result.format.toUpper())
+                         .arg(result.outputDir)
+                         .arg(result.errors.join("\n")));
+  } else {
+    ui::Toast::show(this, "Export Failed",
+                    result.errors.isEmpty()
+                        ? "Could not export pages to images."
+                        : result.errors.join("\n"),
+                    ui::ToastVariant::Destructive);
+  }
 }
 
 // ============================================================================
-// Tool 5: Images to Merged PDF (Multiple PNG/JPG/WEBP -> 1 Multi-Page PDF)
+// Tool 5: Images to Merged PDF
 // ============================================================================
 
 void PdfPage::syncImageListFromDropWidget() {
@@ -2688,7 +1454,7 @@ void PdfPage::moveImageItemDown() {
   }
 }
 
-void PdfPage::imagesToPdf() {
+void PdfPage::executeImagesToPdf() {
   syncImageListFromDropWidget();
 
   QStringList orderedImages;
@@ -2720,577 +1486,146 @@ void PdfPage::imagesToPdf() {
       m_imgPdfOrientationSelect ? m_imgPdfOrientationSelect->currentIndex() : 0;
   const int marginIndex =
       m_imgPdfMarginSelect ? m_imgPdfMarginSelect->currentIndex() : 0;
-  const QVector<qreal> marginPts = {0.0, 18.0, 36.0, 54.0};
-  const qreal marginPt = marginPts.value(marginIndex, 0.0);
 
-  m_isCancelled = false;
+  ImagesToPdfController::Params params;
+  params.imagePaths = orderedImages;
+  params.outputPath = outputPath;
+  params.pageSizeMode = pageSizeIndex;
+  params.orientationMode = orientIndex;
+  params.marginMode = marginIndex;
+
+  m_currentController = m_imagesToPdfController;
   setProcessingState(true);
-  m_progressBar->setIndeterminate(false);
-  m_progressBar->setRange(0, orderedImages.size());
-  m_progressBar->setValue(0, false);
-  m_progressLabel->setText(
-      QString("Combining %1 image(s) into PDF...").arg(orderedImages.size()));
-
-  for (const QString &imgPath : orderedImages) {
-    m_imageDragWidget->setFileStatus(
-        imgPath, DropFileWidget::FileStatus::Processing, "Adding image to PDF");
-  }
-
-  QFuture<void> future = QtConcurrent::run([this, orderedImages, outputPath,
-                                            pageSizeIndex, orientIndex,
-                                            marginPt]() {
-    QString error;
-    bool succeeded = false;
-    qint64 outputBytes = 0;
-    const QFileInfo destinationInfo(outputPath);
-
-    QTemporaryDir tempDir(
-        destinationInfo.absoluteDir().filePath(".img-to-pdf-XXXXXX"));
-    if (!tempDir.isValid()) {
-      error = tempDir.errorString();
-    } else {
-      const QString candidatePath = tempDir.filePath("candidate.pdf");
-      QPdfWriter writer(candidatePath);
-      writer.setResolution(300);
-      std::unique_ptr<QPainter> painter;
-
-      for (int i = 0; i < orderedImages.size(); ++i) {
-        if (m_isCancelled) {
-          break;
-        }
-        const QString &imgPath = orderedImages.at(i);
-        QImage rawImg(imgPath);
-        if (rawImg.isNull()) {
-          error = QString("Cannot load image '%1'.")
-                      .arg(QFileInfo(imgPath).fileName());
-          break;
-        }
-
-        // Composite onto opaque white so alpha channels render cleanly on white
-        // paper
-        QImage img(rawImg.size(), QImage::Format_RGB32);
-        img.fill(Qt::white);
-        {
-          QPainter imgPainter(&img);
-          imgPainter.drawImage(0, 0, rawImg);
-        }
-
-        if (pageSizeIndex == 0) {
-          // Fit to Image
-          double dpiX = rawImg.dotsPerMeterX() > 0
-                            ? rawImg.dotsPerMeterX() * 0.0254
-                            : 96.0;
-          double dpiY = rawImg.dotsPerMeterY() > 0
-                            ? rawImg.dotsPerMeterY() * 0.0254
-                            : 96.0;
-          if (dpiX < 36.0 || dpiX > 1200.0)
-            dpiX = 96.0;
-          if (dpiY < 36.0 || dpiY > 1200.0)
-            dpiY = 96.0;
-          const qreal wPt =
-              qMax(72.0, img.width() * 72.0 / dpiX) + 2.0 * marginPt;
-          const qreal hPt =
-              qMax(72.0, img.height() * 72.0 / dpiY) + 2.0 * marginPt;
-          QPageLayout layout(QPageSize(QSizeF(wPt, hPt), QPageSize::Point),
-                             QPageLayout::Portrait, QMarginsF(0, 0, 0, 0),
-                             QPageLayout::Point);
-          writer.setPageLayout(layout);
-        } else {
-          const QPageSize pageSize(pageSizeIndex == 1 ? QPageSize::A4
-                                                      : QPageSize::Letter);
-          QPageLayout::Orientation orient = QPageLayout::Portrait;
-          if (orientIndex == 0) {
-            orient = (img.width() > img.height()) ? QPageLayout::Landscape
-                                                  : QPageLayout::Portrait;
-          } else if (orientIndex == 2) {
-            orient = QPageLayout::Landscape;
-          }
-          QPageLayout layout(pageSize, orient, QMarginsF(0, 0, 0, 0),
-                             QPageLayout::Point);
-          writer.setPageLayout(layout);
-        }
-
-        if (!painter) {
-          painter = std::make_unique<QPainter>(&writer);
-          if (!painter->isActive()) {
-            error = "Failed to initialize PDF writer.";
-            break;
-          }
-        } else {
-          writer.newPage();
-        }
-
-        const qreal devW = painter->device()->width();
-        const qreal devH = painter->device()->height();
-        painter->fillRect(QRectF(0, 0, devW, devH), Qt::white);
-
-        const qreal marginPx = marginPt * 300.0 / 72.0;
-        const QRectF availRect(marginPx, marginPx,
-                               qMax(1.0, devW - 2.0 * marginPx),
-                               qMax(1.0, devH - 2.0 * marginPx));
-        const qreal scale = qMin(availRect.width() / img.width(),
-                                 availRect.height() / img.height());
-        const qreal drawW = img.width() * scale;
-        const qreal drawH = img.height() * scale;
-        const QRectF targetRect(
-            availRect.left() + (availRect.width() - drawW) / 2.0,
-            availRect.top() + (availRect.height() - drawH) / 2.0, drawW, drawH);
-
-        painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
-        painter->drawImage(targetRect, img);
-
-        QMetaObject::invokeMethod(
-            this,
-            [this, done = i + 1, total = orderedImages.size()]() {
-              if (!m_isCancelled) {
-                m_progressBar->setValue(done);
-                m_progressLabel->setText(
-                    QString("Added %1 of %2 image(s)...").arg(done).arg(total));
-              }
-            },
-            Qt::QueuedConnection);
-      }
-
-      if (painter) {
-        painter->end();
-      }
-
-      if (error.isEmpty() && !m_isCancelled) {
-        QPdfDocument verifyDoc;
-        if (verifyDoc.load(candidatePath) != QPdfDocument::Error::None ||
-            verifyDoc.pageCount() != orderedImages.size()) {
-          error = "Generated PDF failed validation.";
-        } else {
-          verifyDoc.close();
-          if (savePdfAtomically(candidatePath,
-                                destinationInfo.absoluteFilePath(),
-                                m_isCancelled, error)) {
-            succeeded = true;
-            outputBytes = QFileInfo(destinationInfo.absoluteFilePath()).size();
-          }
-        }
-      }
-    }
-
-    QMetaObject::invokeMethod(
-        this,
-        [this, orderedImages, outputPath, succeeded, outputBytes, error]() {
-          using FileStatus = DropFileWidget::FileStatus;
-          for (const QString &imgPath : orderedImages) {
-            if (m_isCancelled) {
-              m_imageDragWidget->setFileStatus(imgPath, FileStatus::Cancelled,
-                                               "Creation cancelled");
-            } else if (succeeded) {
-              m_imageDragWidget->setFileStatus(
-                  imgPath, FileStatus::Succeeded,
-                  QString("Added to %1").arg(outputPath));
-            } else {
-              m_imageDragWidget->setFileStatus(imgPath, FileStatus::Failed,
-                                               error);
-            }
-          }
-          setProcessingState(false);
-          m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
-
-          if (m_isCancelled) {
-            ui::Toast::show(this, "Cancelled",
-                            "Image-to-PDF creation was cancelled.",
-                            ui::ToastVariant::Default);
-          } else if (succeeded) {
-            ui::Dialog::info(
-                this, "Merged PDF Created",
-                QString("Combined %1 image(s) into:\n%2\n\nOutput Size: %3")
-                    .arg(orderedImages.size())
-                    .arg(outputPath)
-                    .arg(DropFileWidget::formatFileSize(outputBytes)));
-          } else {
-            ui::Toast::show(this, "PDF Creation Failed", error,
-                            ui::ToastVariant::Destructive);
-          }
-        },
-        Qt::QueuedConnection);
-  });
-  m_futureWatcher->setFuture(future);
+  m_imagesToPdfController->start(params);
 }
 
-// ============================================================================
-// Tool 6: PDF to Grayscale (Color PDF -> Grayscale PDF)
-// ============================================================================
+void PdfPage::onImagesToPdfFinished(
+    const ImagesToPdfController::Result &result) {
+  setProcessingState(false);
+  m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
 
-bool PdfPage::convertPdfToGrayscaleWithQtPdf(QPdfDocument &sourceDoc,
-                                             const QString &tempOutputPath,
-                                             int quality, QString &error) {
-  const int clampedQuality = qBound(0, quality, 100);
-  const int dpi =
-      (clampedQuality >= 80) ? 300 : (100 + (200 * clampedQuality) / 80);
-
-  QPdfWriter writer(tempOutputPath);
-  writer.setResolution(dpi);
-  std::unique_ptr<QPainter> painter;
-
-  for (int page = 0; page < sourceDoc.pageCount(); ++page) {
-    if (m_isCancelled) {
-      return false;
-    }
-    const QSizeF ptSize = sourceDoc.pagePointSize(page);
-    QPageLayout layout(QPageSize(ptSize, QPageSize::Point),
-                       QPageLayout::Portrait, QMarginsF(0, 0, 0, 0),
-                       QPageLayout::Point);
-    writer.setPageLayout(layout);
-    if (!painter) {
-      painter = std::make_unique<QPainter>(&writer);
-      if (!painter->isActive()) {
-        error = "Failed to initialize PDF writer.";
-        return false;
-      }
-    } else {
-      writer.newPage();
-    }
-
-    const QSize renderSize(qMax(1, qRound(ptSize.width() * dpi / 72.0)),
-                           qMax(1, qRound(ptSize.height() * dpi / 72.0)));
-    const QImage colorImg = renderPdfPageOnWhite(sourceDoc, page, renderSize);
-    if (colorImg.isNull()) {
-      error = QString("Failed to render page %1.").arg(page + 1);
-      return false;
-    }
-    const QImage grayImg = colorImg.convertToFormat(QImage::Format_Grayscale8);
-    painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
-    painter->drawImage(
-        QRectF(0, 0, painter->device()->width(), painter->device()->height()),
-        grayImg);
-  }
-
-  if (painter) {
-    painter->end();
-  }
-  return QFileInfo(tempOutputPath).size() > 0;
-}
-
-PdfPage::CompressionResult
-PdfPage::convertPdfToGrayscale(const QString &inputPath,
-                               const QString &outputPath, int quality) {
-  CompressionResult result;
-  if (m_isCancelled) {
-    result.status = CompressionStatus::Cancelled;
-    return result;
-  }
-
-  const QFileInfo sourceInfo(inputPath);
-  const QFileInfo destinationInfo(outputPath);
-  result.originalBytes = sourceInfo.size();
-  const QDateTime sourceModified = sourceInfo.lastModified();
-  if (!sourceInfo.isFile() || result.originalBytes <= 0) {
-    result.error = "The input PDF is missing or empty.";
-    return result;
-  }
-  if (isSamePdf(sourceInfo, destinationInfo)) {
-    result.error = "Choose a different output file. The original PDF must not "
-                   "be overwritten.";
-    return result;
-  }
-
-  QPdfDocument sourceDocument;
-  const auto sourceError = sourceDocument.load(sourceInfo.absoluteFilePath());
-  if (sourceError != QPdfDocument::Error::None ||
-      sourceDocument.pageCount() <= 0) {
-    result.error = QString("Cannot open the input PDF (PDF error %1). "
-                           "Check whether it is damaged or password-protected.")
-                       .arg(static_cast<int>(sourceError));
-    return result;
-  }
-
-  QTemporaryDir temporaryDirectory(
-      destinationInfo.absoluteDir().filePath(".pdf-grayscale-XXXXXX"));
-  if (!temporaryDirectory.isValid()) {
-    result.error = QString("Cannot create temporary output in the destination "
-                           "directory: %1")
-                       .arg(temporaryDirectory.errorString());
-    return result;
-  }
-  const QString candidatePath = temporaryDirectory.filePath("candidate.pdf");
-  const QString executable = findGhostscriptExecutable();
-
-  bool converted = false;
-  if (!executable.isEmpty()) {
-    converted =
-        compressPdfWithGhostscript(executable, sourceInfo.absoluteFilePath(),
-                                   candidatePath, quality, result.error, true);
+  if (result.cancelled) {
+    ui::Toast::show(this, "Cancelled", "Image-to-PDF creation was cancelled.",
+                    ui::ToastVariant::Default);
+  } else if (result.success) {
+    ui::Dialog::info(
+        this, "Merged PDF Created",
+        QString("Combined %1 image(s) into:\n%2\n\nOutput Size: %3")
+            .arg(result.pageCount)
+            .arg(result.outputPath)
+            .arg(DropFileWidget::formatFileSize(result.outputBytes)));
   } else {
-    converted = convertPdfToGrayscaleWithQtPdf(sourceDocument, candidatePath,
-                                               quality, result.error);
+    ui::Toast::show(this, "PDF Creation Failed", result.error,
+                    ui::ToastVariant::Destructive);
   }
-
-  if (!converted) {
-    if (m_isCancelled) {
-      result.status = CompressionStatus::Cancelled;
-    }
-    return result;
-  }
-
-  QPdfDocument candidateDocument;
-  const auto candidateError = candidateDocument.load(candidatePath);
-  if (candidateError != QPdfDocument::Error::None ||
-      candidateDocument.pageCount() != sourceDocument.pageCount()) {
-    result.error = "The grayscale PDF failed validation (unreadable output "
-                   "or changed page count). No destination was replaced.";
-    return result;
-  }
-  for (int page = 0; page < sourceDocument.pageCount(); ++page) {
-    if (m_isCancelled) {
-      result.status = CompressionStatus::Cancelled;
-      return result;
-    }
-    const QSizeF before = sourceDocument.pagePointSize(page);
-    const QSizeF after = candidateDocument.pagePointSize(page);
-    if (qAbs(before.width() - after.width()) > 0.5 ||
-        qAbs(before.height() - after.height()) > 0.5) {
-      result.error = "The grayscale PDF changed page dimensions. "
-                     "No destination was replaced.";
-      return result;
-    }
-  }
-  candidateDocument.close();
-  sourceDocument.close();
-
-  if (m_isCancelled) {
-    result.status = CompressionStatus::Cancelled;
-    return result;
-  }
-  const QFileInfo currentSource(sourceInfo.absoluteFilePath());
-  if (currentSource.size() != result.originalBytes ||
-      currentSource.lastModified() != sourceModified) {
-    result.error = "The input PDF changed during conversion. Please retry.";
-    return result;
-  }
-  const qint64 candidateBytes = QFileInfo(candidatePath).size();
-  if (candidateBytes <= 0) {
-    result.error = "The grayscale PDF is empty. No destination was replaced.";
-    return result;
-  }
-  if (isSamePdf(currentSource, QFileInfo(destinationInfo.absoluteFilePath()))) {
-    result.error = "The destination now points to the input PDF. "
-                   "No destination was replaced.";
-    return result;
-  }
-  if (!savePdfAtomically(candidatePath, destinationInfo.absoluteFilePath(),
-                         m_isCancelled, result.error)) {
-    if (m_isCancelled) {
-      result.status = CompressionStatus::Cancelled;
-    }
-    return result;
-  }
-  result.status = CompressionStatus::Compressed;
-  result.outputBytes = candidateBytes;
-  return result;
 }
 
-void PdfPage::convertSinglePdfToGrayscale(const QString &sourcePath,
-                                          int quality) {
-  QString outputPath = QFileDialog::getSaveFileName(
-      this, "Save Grayscale PDF",
-      QFileInfo(sourcePath)
-          .dir()
-          .filePath(QFileInfo(sourcePath).baseName() + "_grayscale.pdf"),
-      "PDF Files (*.pdf)");
+// ============================================================================
+// Tool 6: PDF to Grayscale
+// ============================================================================
 
-  if (outputPath.isEmpty()) {
+void PdfPage::executeGrayscale() {
+  const QStringList sourcePaths = m_dragWidget->getFilePaths();
+  if (sourcePaths.isEmpty()) {
+    ui::Toast::show(this, "No PDF Selected",
+                    "Please select at least one PDF file.",
+                    ui::ToastVariant::Warning);
     return;
   }
 
-  m_isCancelled = false;
-  setProcessingState(true);
-  m_progressBar->setRange(0, 1);
-  m_progressBar->setValue(0, false);
-  m_progressBar->setIndeterminate(true);
-  m_progressLabel->setText(QString("Converting %1 to grayscale (1 of 1)...")
-                               .arg(QFileInfo(sourcePath).fileName()));
-  m_dragWidget->setFileStatus(sourcePath,
-                              DropFileWidget::FileStatus::Processing,
-                              "Converting PDF to grayscale");
+  const int quality = m_qualitySlider->getValue();
+  GrayscaleController::Params params;
+  params.quality = quality;
 
-  QFuture<void> future = QtConcurrent::run([this, sourcePath, outputPath,
-                                            quality]() {
-    const CompressionResult result =
-        convertPdfToGrayscale(sourcePath, outputPath, quality);
+  if (sourcePaths.size() == 1) {
+    const QString &sourcePath = sourcePaths.first();
+    const QString outputPath = QFileDialog::getSaveFileName(
+        this, "Save Grayscale PDF",
+        QFileInfo(sourcePath)
+            .dir()
+            .filePath(QFileInfo(sourcePath).baseName() + "_grayscale.pdf"),
+        "PDF Files (*.pdf)");
 
-    QMetaObject::invokeMethod(
-        this,
-        [this, sourcePath, result, outputPath]() {
-          using FileStatus = DropFileWidget::FileStatus;
-          FileStatus status = FileStatus::Failed;
-          QString detail = result.error;
-          switch (result.status) {
-          case CompressionStatus::Compressed:
-            status = FileStatus::Succeeded;
-            detail = QString("Saved grayscale PDF to %1").arg(outputPath);
-            break;
-          case CompressionStatus::Cancelled:
-            status = FileStatus::Cancelled;
-            detail = "Conversion cancelled; no output saved";
-            break;
-          case CompressionStatus::Unchanged:
-          case CompressionStatus::Failed:
-            break;
-          }
-          m_dragWidget->setFileStatus(sourcePath, status, detail);
-          if (result.status != CompressionStatus::Cancelled) {
-            m_progressBar->setValue(1, false);
-          }
-          setProcessingState(false);
-          m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
-
-          if (result.status == CompressionStatus::Compressed) {
-            ui::Dialog::info(
-                this, "Grayscale PDF Saved",
-                QString("Saved to: %1\n\nOriginal Size: %2\nGrayscale Size: %3")
-                    .arg(outputPath)
-                    .arg(DropFileWidget::formatFileSize(result.originalBytes))
-                    .arg(DropFileWidget::formatFileSize(result.outputBytes)));
-          } else if (result.status == CompressionStatus::Cancelled) {
-            ui::Toast::show(this, "Cancelled",
-                            "Grayscale conversion was cancelled.",
-                            ui::ToastVariant::Default);
-          } else {
-            ui::Toast::show(this, "Grayscale Conversion Failed", result.error,
-                            ui::ToastVariant::Destructive);
-          }
-        },
-        Qt::QueuedConnection);
-  });
-  m_futureWatcher->setFuture(future);
-}
-
-void PdfPage::convertBatchPdfToGrayscale(const QStringList &sourcePaths,
-                                         int quality) {
-  QString outputDir = QFileDialog::getExistingDirectory(
-      this, "Select Output Directory for Grayscale PDFs", QDir::homePath());
-
-  if (outputDir.isEmpty()) {
-    return;
-  }
-
-  m_isCancelled = false;
-  setProcessingState(true);
-  const int totalFiles = sourcePaths.size();
-  m_progressBar->setIndeterminate(false);
-  m_progressBar->setRange(0, totalFiles);
-  m_progressBar->setValue(0, false);
-  m_progressLabel->setText(
-      QString("Converting 0 of %1 PDFs to grayscale...").arg(totalFiles));
-
-  QFuture<void> future = QtConcurrent::run([this, sourcePaths, outputDir,
-                                            quality, totalFiles]() {
-    int successCount = 0;
-    int failureCount = 0;
-    qint64 totalOrigBytes = 0;
-    qint64 totalOutputBytes = 0;
-    QStringList errors;
-    QSet<QString> usedBaseNames;
-
-    for (int i = 0; i < totalFiles; ++i) {
-      if (m_isCancelled) {
-        break;
-      }
-      const QString &sourcePath = sourcePaths.at(i);
-      QMetaObject::invokeMethod(
-          this,
-          [this, sourcePath, i, totalFiles]() {
-            m_dragWidget->setFileStatus(sourcePath,
-                                        DropFileWidget::FileStatus::Processing,
-                                        "Converting PDF to grayscale");
-            m_progressLabel->setText(QString("Converting %1 (%2 of %3)...")
-                                         .arg(QFileInfo(sourcePath).fileName())
-                                         .arg(i + 1)
-                                         .arg(totalFiles));
-          },
-          Qt::QueuedConnection);
-
-      QFileInfo fileInfo(sourcePath);
-      QString baseName = fileInfo.baseName() + "_grayscale";
-      QString uniqueBaseName = baseName;
-      int suffix = 1;
-      while (usedBaseNames.contains(uniqueBaseName.toLower()) ||
-             QFile::exists(QDir(outputDir).filePath(uniqueBaseName + ".pdf"))) {
-        uniqueBaseName = QString("%1_%2").arg(baseName).arg(suffix++);
-      }
-      usedBaseNames.insert(uniqueBaseName.toLower());
-      const QString outputPath =
-          QDir(outputDir).filePath(uniqueBaseName + ".pdf");
-
-      const CompressionResult result =
-          convertPdfToGrayscale(sourcePath, outputPath, quality);
-
-      QMetaObject::invokeMethod(
-          this,
-          [this, sourcePath, outputPath, result, i, totalFiles]() {
-            using FileStatus = DropFileWidget::FileStatus;
-            FileStatus status = FileStatus::Failed;
-            QString detail = result.error;
-            if (result.status == CompressionStatus::Compressed) {
-              status = FileStatus::Succeeded;
-              detail = QString("Saved to %1").arg(outputPath);
-            } else if (result.status == CompressionStatus::Cancelled) {
-              status = FileStatus::Cancelled;
-              detail = "Conversion cancelled; no output saved";
-            }
-            m_dragWidget->setFileStatus(sourcePath, status, detail);
-            if (result.status != CompressionStatus::Cancelled) {
-              m_progressBar->setValue(i + 1);
-              m_progressLabel->setText(QString("Processed %1 of %2 PDFs")
-                                           .arg(i + 1)
-                                           .arg(totalFiles));
-            }
-          },
-          Qt::QueuedConnection);
-
-      if (result.status == CompressionStatus::Cancelled) {
-        break;
-      }
-      if (result.status == CompressionStatus::Compressed) {
-        successCount++;
-        totalOrigBytes += result.originalBytes;
-        totalOutputBytes += result.outputBytes;
-      } else {
-        failureCount++;
-        if (errors.size() < 3) {
-          errors.append(
-              QString("%1: %2").arg(fileInfo.fileName(), result.error));
-        }
-      }
+    if (outputPath.isEmpty()) {
+      return;
     }
 
-    QMetaObject::invokeMethod(
-        this,
-        [this, successCount, failureCount, totalFiles, totalOrigBytes,
-         totalOutputBytes, errors]() {
-          setProcessingState(false);
-          m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
+    if (pdfutil::isSamePdf(QFileInfo(sourcePath), QFileInfo(outputPath))) {
+      ui::Toast::show(
+          this, "Invalid Output File",
+          "Choose a different output file. The original PDF must not "
+          "be overwritten.",
+          ui::ToastVariant::Destructive);
+      return;
+    }
 
-          const QString title = m_isCancelled
-                                    ? "Batch Grayscale Conversion Cancelled"
-                                    : "Batch Grayscale Conversion Complete";
-          QString message = QString("%1 PDF(s) converted to grayscale.\n"
-                                    "%2 PDF(s) failed.")
-                                .arg(successCount)
-                                .arg(failureCount);
+    params.isBatch = false;
+    params.sourcePath = sourcePath;
+    params.outputPath = outputPath;
+  } else {
+    const QString outputDir = QFileDialog::getExistingDirectory(
+        this, "Select Output Directory for Grayscale PDFs", QDir::homePath());
 
-          if (totalOrigBytes > 0 && totalOutputBytes > 0 && successCount > 0) {
-            message +=
-                QString("\n\nTotal Original: %1\nTotal Grayscale: %2")
-                    .arg(DropFileWidget::formatFileSize(totalOrigBytes))
-                    .arg(DropFileWidget::formatFileSize(totalOutputBytes));
-          }
-          if (!errors.isEmpty()) {
-            message += "\n\n" + errors.join("\n");
-          }
-          if (m_isCancelled) {
-            message += QString("\n%1 PDF(s) not completed due to cancellation.")
-                           .arg(totalFiles - successCount - failureCount);
-          }
-          ui::Dialog::info(this, title, message);
-        },
-        Qt::QueuedConnection);
-  });
-  m_futureWatcher->setFuture(future);
+    if (outputDir.isEmpty()) {
+      return;
+    }
+
+    params.isBatch = true;
+    params.sourcePaths = sourcePaths;
+    params.outputDir = outputDir;
+  }
+
+  m_currentController = m_grayscaleController;
+  setProcessingState(true);
+  m_grayscaleController->start(params);
+}
+
+void PdfPage::onGrayscaleFinished(const GrayscaleController::Result &result) {
+  setProcessingState(false);
+  m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
+
+  if (!result.isBatch) {
+    // Single grayscale
+    if (result.success) {
+      ui::Dialog::info(
+          this, "Grayscale PDF Saved",
+          QString("Saved to: %1\n\nOriginal Size: %2\nGrayscale Size: %3")
+              .arg(result.singleOutputPath)
+              .arg(DropFileWidget::formatFileSize(result.origBytes))
+              .arg(DropFileWidget::formatFileSize(result.outBytes)));
+    } else if (result.cancelled) {
+      ui::Toast::show(this, "Cancelled",
+                      "Grayscale conversion was cancelled.",
+                      ui::ToastVariant::Default);
+    } else {
+      ui::Toast::show(this, "Grayscale Conversion Failed", result.error,
+                      ui::ToastVariant::Destructive);
+    }
+  } else {
+    // Batch grayscale
+    const QString title = result.cancelled
+                              ? "Batch Grayscale Conversion Cancelled"
+                              : "Batch Grayscale Conversion Complete";
+    QString message = QString("%1 PDF(s) converted to grayscale.\n"
+                              "%2 PDF(s) failed.")
+                          .arg(result.successCount)
+                          .arg(result.failCount);
+
+    if (result.origBytes > 0 && result.outBytes > 0 &&
+        result.successCount > 0) {
+      message +=
+          QString("\n\nTotal Original: %1\nTotal Grayscale: %2")
+              .arg(DropFileWidget::formatFileSize(result.origBytes))
+              .arg(DropFileWidget::formatFileSize(result.outBytes));
+    }
+    if (!result.errors.isEmpty()) {
+      message += "\n\n" + result.errors.join("\n");
+    }
+    const int totalFiles = m_dragWidget->getFilePaths().size();
+    if (result.cancelled) {
+      message += QString("\n%1 PDF(s) not completed due to cancellation.")
+                     .arg(totalFiles - result.successCount - result.failCount);
+    }
+    ui::Dialog::info(this, title, message);
+  }
 }
