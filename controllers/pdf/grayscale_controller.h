@@ -1,8 +1,8 @@
 #ifndef GRAYSCALE_CONTROLLER_H
 #define GRAYSCALE_CONTROLLER_H
 
-#include "controllers/compress_controller.h"
-#include "controllers/pdf_tool_controller.h"
+#include "controllers/pdf/compress_controller.h"
+#include "controllers/pdf/pdf_tool_controller.h"
 #include <QPdfDocument>
 #include <QString>
 #include <QStringList>

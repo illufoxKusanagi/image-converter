@@ -1,5 +1,5 @@
 #include "pages/pdf_page.h"
-#include "controllers/pdf_utils.h"
+#include "controllers/pdf/pdf_utils.h"
 #include "ui-kit/theme/icon_helper.h"
 #include "ui-kit/theme/style_helper.h"
 #include <QDir>
@@ -23,12 +23,15 @@ PdfPage::PdfPage(QWidget *parent)
   m_toolTabs->addTab("PDF to Images");
   m_toolTabs->addTab("Images to PDF");
   m_toolTabs->addTab("Grayscale");
+  m_toolTabs->addTab("Markdown / HTML");
   connect(m_toolTabs, &ui::Tabs::currentChanged, this,
           &PdfPage::onToolTabChanged);
 
   m_dragWidget = new DropFileWidget(this, "PDF");
   m_imageDragWidget = new DropFileWidget(this, "IMAGE");
   m_imageDragWidget->setVisible(false);
+  m_docDragWidget = new DropFileWidget(this, "Markdown / HTML");
+  m_docDragWidget->setVisible(false);
 
   m_qualityRowWidget = new QWidget(this);
   QHBoxLayout *attributeLayout = new QHBoxLayout(m_qualityRowWidget);
@@ -86,6 +89,7 @@ PdfPage::PdfPage(QWidget *parent)
   mainLayout->addWidget(m_toolTabs);
   mainLayout->addWidget(m_dragWidget);
   mainLayout->addWidget(m_imageDragWidget);
+  mainLayout->addWidget(m_docDragWidget);
   mainLayout->addWidget(m_optionsStack);
   mainLayout->addWidget(m_qualityRowWidget);
   mainLayout->addWidget(m_progressLabel);
@@ -110,7 +114,8 @@ PdfPage::~PdfPage() {
            static_cast<PdfToolController *>(m_organizeController),
            static_cast<PdfToolController *>(m_pdfToImagesController),
            static_cast<PdfToolController *>(m_imagesToPdfController),
-           static_cast<PdfToolController *>(m_grayscaleController)}) {
+           static_cast<PdfToolController *>(m_grayscaleController),
+           static_cast<PdfToolController *>(m_markdownController)}) {
     if (ctrl && ctrl->isRunning()) {
       ctrl->cancelAndWait();
     }
@@ -125,6 +130,7 @@ void PdfPage::initControllers() {
   m_pdfToImagesController = new PdfToImagesController(this);
   m_imagesToPdfController = new ImagesToPdfController(this);
   m_grayscaleController = new GrayscaleController(this);
+  m_markdownController = new MarkdownPdfController(this);
 
   for (PdfToolController *ctrl : {
            static_cast<PdfToolController *>(m_compressController),
@@ -133,7 +139,8 @@ void PdfPage::initControllers() {
            static_cast<PdfToolController *>(m_organizeController),
            static_cast<PdfToolController *>(m_pdfToImagesController),
            static_cast<PdfToolController *>(m_imagesToPdfController),
-           static_cast<PdfToolController *>(m_grayscaleController)}) {
+           static_cast<PdfToolController *>(m_grayscaleController),
+           static_cast<PdfToolController *>(m_markdownController)}) {
     connect(ctrl, &PdfToolController::progressChanged, this,
             &PdfPage::onControllerProgress, Qt::QueuedConnection);
     connect(ctrl, &PdfToolController::fileStatusChanged, this,
@@ -154,11 +161,18 @@ void PdfPage::initControllers() {
           &PdfPage::onImagesToPdfFinished, Qt::QueuedConnection);
   connect(m_grayscaleController, &GrayscaleController::finished, this,
           &PdfPage::onGrayscaleFinished, Qt::QueuedConnection);
+  connect(m_markdownController, &MarkdownPdfController::finished, this,
+          &PdfPage::onMarkdownPdfFinished, Qt::QueuedConnection);
 }
 
 DropFileWidget *PdfPage::activeDropWidget() const {
-  return m_currentTool == PdfToolMode::ImagesToPdf ? m_imageDragWidget
-                                                   : m_dragWidget;
+  if (m_currentTool == PdfToolMode::ImagesToPdf) {
+    return m_imageDragWidget;
+  }
+  if (m_currentTool == PdfToolMode::MarkdownToPdf) {
+    return m_docDragWidget;
+  }
+  return m_dragWidget;
 }
 
 void PdfPage::setupToolPanels() {
@@ -416,6 +430,42 @@ void PdfPage::setupToolPanels() {
   // Page 6: Grayscale (uses m_qualityRowWidget)
   QWidget *grayscaleDummy = new QWidget(m_optionsStack);
   m_optionsStack->addWidget(grayscaleDummy);
+
+  // Page 7: Markdown / HTML to PDF
+  m_markdownPanel = new QWidget(m_optionsStack);
+  QHBoxLayout *mdLayout = new QHBoxLayout(m_markdownPanel);
+  mdLayout->setContentsMargins(0, 0, 0, 0);
+  mdLayout->setSpacing(12);
+
+  QStringList mdPageSizes = {"A4 (210 × 297 mm)", "US Letter (8.5 × 11 in)"};
+  m_mdPageSizeSelect = new ui::Select(mdPageSizes, m_markdownPanel);
+  m_mdPageSizeField =
+      new ui::FormField("Page Size", m_mdPageSizeSelect, m_markdownPanel);
+
+  QStringList mdOrientations = {"Portrait", "Landscape"};
+  m_mdOrientationSelect = new ui::Select(mdOrientations, m_markdownPanel);
+  m_mdOrientationField =
+      new ui::FormField("Orientation", m_mdOrientationSelect, m_markdownPanel);
+
+  QStringList mdMargins = {"Compact (18 pt)", "Standard (36 pt)",
+                           "Wide (54 pt)", "Extra Wide (72 pt)"};
+  m_mdMarginSelect = new ui::Select(mdMargins, m_markdownPanel);
+  m_mdMarginSelect->setCurrentIndex(1); // Standard 36 pt
+  m_mdMarginField =
+      new ui::FormField("Page Margins", m_mdMarginSelect, m_markdownPanel);
+
+  QStringList mdFontSizes = {"9 pt", "10 pt (Default)", "11 pt",
+                             "12 pt", "14 pt", "16 pt"};
+  m_mdFontSizeSelect = new ui::Select(mdFontSizes, m_markdownPanel);
+  m_mdFontSizeSelect->setCurrentIndex(1); // 10 pt
+  m_mdFontSizeField =
+      new ui::FormField("Base Font Size", m_mdFontSizeSelect, m_markdownPanel);
+
+  mdLayout->addWidget(m_mdPageSizeField, 1, Qt::AlignTop);
+  mdLayout->addWidget(m_mdOrientationField, 1, Qt::AlignTop);
+  mdLayout->addWidget(m_mdMarginField, 1, Qt::AlignTop);
+  mdLayout->addWidget(m_mdFontSizeField, 1, Qt::AlignTop);
+  m_optionsStack->addWidget(m_markdownPanel);
 }
 
 QString PdfPage::processButtonTextForMode(PdfToolMode mode) const {
@@ -434,6 +484,8 @@ QString PdfPage::processButtonTextForMode(PdfToolMode mode) const {
     return "Create Merged PDF";
   case PdfToolMode::Grayscale:
     return "Convert PDF to Grayscale";
+  case PdfToolMode::MarkdownToPdf:
+    return "Export to PDF";
   }
   return "Process PDF";
 }
@@ -454,6 +506,8 @@ QString PdfPage::cancelButtonTextForMode(PdfToolMode mode) const {
     return "Cancel Creation";
   case PdfToolMode::Grayscale:
     return "Cancel Conversion";
+  case PdfToolMode::MarkdownToPdf:
+    return "Cancel PDF Export";
   }
   return "Cancel";
 }
@@ -463,7 +517,7 @@ void PdfPage::onToolTabChanged(int index) {
     return;
   }
   m_currentTool = static_cast<PdfToolMode>(
-      qBound(0, index, static_cast<int>(PdfToolMode::Grayscale)));
+      qBound(0, index, static_cast<int>(PdfToolMode::MarkdownToPdf)));
   updateToolModeUi();
 
   if (m_currentTool == PdfToolMode::Merge) {
@@ -480,11 +534,15 @@ void PdfPage::onToolTabChanged(int index) {
 
 void PdfPage::updateToolModeUi() {
   const bool isImagesInput = (m_currentTool == PdfToolMode::ImagesToPdf);
+  const bool isDocInput = (m_currentTool == PdfToolMode::MarkdownToPdf);
   if (m_dragWidget) {
-    m_dragWidget->setVisible(!isImagesInput);
+    m_dragWidget->setVisible(!isImagesInput && !isDocInput);
   }
   if (m_imageDragWidget) {
     m_imageDragWidget->setVisible(isImagesInput);
+  }
+  if (m_docDragWidget) {
+    m_docDragWidget->setVisible(isDocInput);
   }
 
   if (m_optionsStack) {
@@ -732,6 +790,9 @@ void PdfPage::onProcessButtonClicked() {
     break;
   case PdfToolMode::Grayscale:
     executeGrayscale();
+    break;
+  case PdfToolMode::MarkdownToPdf:
+    executeMarkdownPdf();
     break;
   }
 }
@@ -1627,5 +1688,77 @@ void PdfPage::onGrayscaleFinished(const GrayscaleController::Result &result) {
                      .arg(totalFiles - result.successCount - result.failCount);
     }
     ui::Dialog::info(this, title, message);
+  }
+}
+
+// ============================================================================
+// Tool 7: Markdown / HTML to PDF
+// ============================================================================
+
+void PdfPage::executeMarkdownPdf() {
+  const QStringList sourcePaths = m_docDragWidget->getFilePaths();
+  if (sourcePaths.isEmpty()) {
+    ui::Toast::show(
+        this, "No Document Selected",
+        "Please select at least one Markdown (.md) or HTML (.html) file.",
+        ui::ToastVariant::Warning);
+    return;
+  }
+
+  const QString defaultDir = QFileInfo(sourcePaths.first()).absolutePath();
+  const QString outputDir = QFileDialog::getExistingDirectory(
+      this, "Select Output Directory for Generated PDFs", defaultDir);
+  if (outputDir.isEmpty()) {
+    return;
+  }
+
+  const QVector<int> marginOptions = {18, 36, 54, 72};
+  const QVector<int> fontOptions = {9, 10, 11, 12, 14, 16};
+
+  MarkdownPdfController::Params params;
+  params.sourcePaths = sourcePaths;
+  params.outputDir = outputDir;
+  params.useLetterPageSize =
+      (m_mdPageSizeSelect && m_mdPageSizeSelect->currentIndex() == 1);
+  params.landscape =
+      (m_mdOrientationSelect && m_mdOrientationSelect->currentIndex() == 1);
+  params.marginPt = marginOptions.value(
+      m_mdMarginSelect ? m_mdMarginSelect->currentIndex() : 1, 36);
+  params.baseFontPt = fontOptions.value(
+      m_mdFontSizeSelect ? m_mdFontSizeSelect->currentIndex() : 1, 10);
+
+  m_currentController = m_markdownController;
+  setProcessingState(true);
+  m_markdownController->start(params);
+}
+
+void PdfPage::onMarkdownPdfFinished(
+    const MarkdownPdfController::Result &result) {
+  setProcessingState(false);
+  m_currentController = nullptr;
+  m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
+
+  if (result.cancelled) {
+    ui::Toast::show(this, "Cancelled", "Document PDF export was cancelled.",
+                    ui::ToastVariant::Default);
+    return;
+  }
+
+  if (result.pdfsCreated > 0) {
+    QString msg = QString("Exported %1 document(s) to PDF in:\n%2")
+                      .arg(result.pdfsCreated)
+                      .arg(result.outputDir);
+    if (result.failedFiles > 0) {
+      msg += QString("\n\n%1 file(s) failed:\n%2")
+                 .arg(result.failedFiles)
+                 .arg(result.error);
+    }
+    ui::Dialog::info(this, "PDF Export Complete", msg);
+  } else {
+    ui::Toast::show(this, "PDF Export Failed",
+                    result.error.isEmpty()
+                        ? "Failed to export Markdown/HTML to PDF."
+                        : result.error,
+                    ui::ToastVariant::Destructive);
   }
 }
