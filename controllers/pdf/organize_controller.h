@@ -1,7 +1,7 @@
 #ifndef ORGANIZE_CONTROLLER_H
 #define ORGANIZE_CONTROLLER_H
 
-#include "controllers/pdf_tool_controller.h"
+#include "controllers/pdf/pdf_tool_controller.h"
 #include <QString>
 #include <QVector>
 

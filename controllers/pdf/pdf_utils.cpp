@@ -1,4 +1,4 @@
-#include "controllers/pdf_utils.h"
+#include "controllers/pdf/pdf_utils.h"
 
 #include <QCoreApplication>
 #include <QDebug>

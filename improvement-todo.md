@@ -25,12 +25,10 @@ Native Qt 6 and lightweight plugin extensions for designers, photographers, and 
 
 | Status | Feature                                   | A → B Examples                                       | Engine / Foundation                           | Notes                                                                                    |
 | :----: | :---------------------------------------- | :--------------------------------------------------- | :-------------------------------------------- | :--------------------------------------------------------------------------------------- |
-|  [ ]   | **Vector SVG to Raster / PDF**            | `SVG → PNG, WEBP, JPG, PDF`                          | `QSvgRenderer` (`Qt6::Svg`)                   | Custom width/height or crisp `1x / 2x / 4x` vector scaling before rasterization.         |
-|  [ ]   | **Image to Multi-Size `.ico` (App Icon)** | `PNG / SVG → .ico`                                   | `QImage` + ICO container writer               | Pack `16, 32, 48, 64, 128, 256 px` resolutions into a single Windows `.ico` file.        |
-|  [ ]   | **Next-Gen Photo Formats**                | `HEIC / HEIF / AVIF / JXL → JPG, PNG, WEBP, PDF`     | `libheif` / `libavif` / `kimageformats`       | Offline conversion for iPhone `.heic` photos and modern web formats.                     |
-|  [ ]   | **Camera RAW Conversion**                 | `CR2 / NEF / ARW / DNG → TIFF, JPG, PNG`             | `libraw` / `kdcraw`                           | Batch-convert camera RAW shoots without heavy photo suites.                              |
-|  [ ]   | **Markdown / HTML to PDF**                | `.md / .html → .pdf`                                 | `QTextDocument::setMarkdown()` + `QPdfWriter` | Zero-dependency document export built into `Qt6::Gui`.                                   |
-|  [ ]   | **Image ↔ Base64 Data URI**               | `PNG / JPG / SVG / WEBP ↔ data:image/...;base64,...` | `QByteArray::toBase64()`                      | Copy/export inline HTML/CSS/JSON data URIs or decode Base64 strings back to image files. |
+|  [x]   | **Vector SVG to Raster / PDF**            | `SVG → PNG, WEBP, JPG, PDF`                          | `QSvgRenderer` (`Qt6::Svg`)                   | Custom width/height or crisp `1x / 2x / 4x` vector scaling before rasterization.         |
+|  [x]   | **Image to Multi-Size `.ico` (App Icon)** | `PNG / SVG → .ico`                                   | `QImage` + ICO container writer               | Pack `16, 32, 48, 64, 128, 256 px` resolutions into a single Windows `.ico` file.        |
+|  [x]   | **Markdown / HTML to PDF**                | `.md / .html → .pdf`                                 | `QTextDocument::setMarkdown()` + `QPdfWriter` | Zero-dependency document export built into `Qt6::Gui`.                                   |
+|  [x]   | **Image ↔ Base64 Data URI**               | `PNG / JPG / SVG / WEBP ↔ data:image/...;base64,...` | `QByteArray::toBase64()`                      | Copy/export inline HTML/CSS/JSON data URIs or decode Base64 strings back to image files. |
 
 ---
 
