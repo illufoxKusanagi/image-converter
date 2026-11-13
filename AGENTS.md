@@ -80,6 +80,8 @@ These rules are non-negotiable and take absolute precedence over default model b
 14. **Implementation Plan Artifacts**: Whenever proposing an implementation plan, design, or multi-step changes, always write an Antigravity implementation plan artifact (`write_to_file` in the artifact directory with `RequestFeedback: true`) instead of writing out plans or proposals in conversational response text.
 15. **User Frustration Halt Protocol**: If the user expresses anger, frustration, or reprimands the AI, it means the AI is in the wrong. The AI is strictly forbidden from running tools or making changes. It must acknowledge the error without making excuses, confirm understanding, and do not ask an open question to let the user direct the next step unless AI is unsure or have less confident about what must do.
 16. **Agent Driven Development is Mandatory**: If you're Gemini Argon, Claude Sonnet, Claude Opus, do not write code by yourself, but delegate your task to subagents. Read `subagent-driven-development` skills for full detail.
+17. **Halted Process & Context Recovery**: Whenever the user says "continue" or "continue the halted process", immediately read the tail of `<appDataDir>/brain/<conversation-id>/.system_generated/logs/transcript.jsonl` (and the most recent halted subagent's `transcript.jsonl` if a subagent was interrupted) using `read_file` to recover the exact prior state and findings before resuming or delegating to a subagent.
+
 
 ---
 
