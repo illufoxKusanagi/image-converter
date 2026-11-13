@@ -56,6 +56,10 @@ set(PROJECT_PAGES
         pages/main_page.h
         pages/pdf_page.cpp
         pages/pdf_page.h
+        pages/pdf/merge_pdf_panel.cpp
+        pages/pdf/merge_pdf_panel.h
+        pages/pdf/split_pdf_panel.cpp
+        pages/pdf/split_pdf_panel.h
         pages/gallery_page.cpp
         pages/gallery_page.h
 )

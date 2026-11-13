@@ -181,79 +181,14 @@ void PdfPage::setupToolPanels() {
   m_optionsStack->addWidget(compressDummy);
 
   // Page 1: Merge PDF
-  m_mergePanel = new QWidget(m_optionsStack);
-  QVBoxLayout *mergeLayout = new QVBoxLayout(m_mergePanel);
-  mergeLayout->setContentsMargins(0, 0, 0, 0);
-  mergeLayout->setSpacing(6);
-
-  QHBoxLayout *mergeHeaderLayout = new QHBoxLayout();
-  mergeHeaderLayout->setContentsMargins(0, 0, 0, 0);
-  mergeHeaderLayout->setSpacing(8);
-
-  m_mergeHintLabel = new QLabel(
-      "Merge Order (drag items or use buttons to reorder):", m_mergePanel);
-  m_mergeSyncBtn =
-      new ui::Button("Sync from Drop Zone", ui::ButtonVariant::Secondary,
-                     ui::ButtonSize::Small, m_mergePanel);
-  m_mergeUpBtn = new ui::Button("Move Up", ui::ButtonVariant::Outline,
-                                ui::ButtonSize::Small, m_mergePanel);
-  m_mergeDownBtn = new ui::Button("Move Down", ui::ButtonVariant::Outline,
-                                  ui::ButtonSize::Small, m_mergePanel);
-
-  connect(m_mergeSyncBtn, &QPushButton::clicked, this,
+  m_mergePanel = new MergePdfPanel(m_optionsStack);
+  connect(m_mergePanel, &MergePdfPanel::syncRequested, this,
           &PdfPage::syncMergeListFromDropWidget);
-  connect(m_mergeUpBtn, &QPushButton::clicked, this, &PdfPage::moveMergeItemUp);
-  connect(m_mergeDownBtn, &QPushButton::clicked, this,
-          &PdfPage::moveMergeItemDown);
-
-  mergeHeaderLayout->addWidget(m_mergeHintLabel, 1);
-  mergeHeaderLayout->addWidget(m_mergeSyncBtn);
-  mergeHeaderLayout->addWidget(m_mergeUpBtn);
-  mergeHeaderLayout->addWidget(m_mergeDownBtn);
-
-  m_mergeOrderList = new QListWidget(m_mergePanel);
-  m_mergeOrderList->setDragDropMode(QAbstractItemView::InternalMove);
-  m_mergeOrderList->setDefaultDropAction(Qt::MoveAction);
-  m_mergeOrderList->setSelectionMode(QAbstractItemView::SingleSelection);
-  m_mergeOrderList->setFixedHeight(115);
-
-  mergeLayout->addLayout(mergeHeaderLayout);
-  mergeLayout->addWidget(m_mergeOrderList);
   m_optionsStack->addWidget(m_mergePanel);
 
   // Page 2: Split PDF
-  m_splitPanel = new QWidget(m_optionsStack);
-  QHBoxLayout *splitLayout = new QHBoxLayout(m_splitPanel);
-  splitLayout->setContentsMargins(0, 0, 0, 0);
-  splitLayout->setSpacing(12);
-
-  QStringList splitModes = {"Custom Page Ranges (e.g. 1-3, 5, 8-12)",
-                            "Fixed Interval (Every N Pages)",
-                            "Extract All Pages (1 PDF per page)"};
-  m_splitModeSelect = new ui::Select(splitModes, m_splitPanel);
-  m_splitModeField =
-      new ui::FormField("Split Mode", m_splitModeSelect, m_splitPanel);
-  connect(m_splitModeSelect,
-          QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-          &PdfPage::onSplitModeChanged);
-
-  m_splitRangesInput = new ui::Input("e.g. 1-3, 5, 8-12", m_splitPanel);
-  m_splitRangesInput->setText("1");
-  m_splitRangesField = new ui::FormField("Page Ranges (1-based)",
-                                         m_splitRangesInput, m_splitPanel);
-
-  m_splitIntervalInput = new ui::NumberInput(m_splitPanel);
-  m_splitIntervalInput->setRange(1, 1000);
-  m_splitIntervalInput->setValue(1);
-  m_splitIntervalInput->setSuffix(" page(s)");
-  m_splitIntervalField =
-      new ui::FormField("Interval Size", m_splitIntervalInput, m_splitPanel);
-
-  splitLayout->addWidget(m_splitModeField, 2, Qt::AlignTop);
-  splitLayout->addWidget(m_splitRangesField, 2, Qt::AlignTop);
-  splitLayout->addWidget(m_splitIntervalField, 1, Qt::AlignTop);
+  m_splitPanel = new SplitPdfPanel(m_optionsStack);
   m_optionsStack->addWidget(m_splitPanel);
-  onSplitModeChanged(0);
 
   // Page 3: Organize / Rotate / Delete PDF Pages
   m_organizePanel = new QWidget(m_optionsStack);
@@ -579,15 +514,6 @@ void PdfPage::updateToolModeUi() {
   }
 }
 
-void PdfPage::onSplitModeChanged(int index) {
-  if (m_splitRangesInput) {
-    m_splitRangesInput->setEnabled(index == 0 && !m_isProcessing);
-  }
-  if (m_splitIntervalInput) {
-    m_splitIntervalInput->setEnabled(index == 1 && !m_isProcessing);
-  }
-}
-
 void PdfPage::onExportFormatChanged(int index) {
   Q_UNUSED(index);
   if (m_currentTool == PdfToolMode::PdfToImages) {
@@ -610,8 +536,7 @@ void PdfPage::applyThemeStyles() {
   const QString hintStyle =
       QString("color: %1; background: transparent;")
           .arg(ui::StyleHelper::toHexString(c.foreground));
-  for (QLabel *lbl :
-       {m_mergeHintLabel, m_organizeHintLabel, m_imageOrderHintLabel}) {
+  for (QLabel *lbl : {m_organizeHintLabel, m_imageOrderHintLabel}) {
     if (lbl) {
       lbl->setFont(t.font(t.sizeXs, QFont::DemiBold));
       lbl->setStyleSheet(hintStyle);
@@ -645,8 +570,7 @@ void PdfPage::applyThemeStyles() {
                                 .arg(ui::StyleHelper::toHexString(c.accent))
                                 .arg(ui::StyleHelper::toHexString(c.secondary));
 
-  for (QListWidget *listWidget :
-       {m_mergeOrderList, m_organizePageList, m_imageOrderList}) {
+  for (QListWidget *listWidget : {m_organizePageList, m_imageOrderList}) {
     if (listWidget) {
       listWidget->setFont(t.font(t.sizeSm));
       listWidget->setStyleSheet(listStyle);
@@ -934,67 +858,16 @@ void PdfPage::onCompressFinished(const CompressController::Result &result) {
 // ============================================================================
 
 void PdfPage::syncMergeListFromDropWidget() {
-  if (!m_mergeOrderList || !m_dragWidget) {
-    return;
-  }
-  const QStringList dropPaths = m_dragWidget->getFilePaths();
-  QStringList ordered;
-  for (int i = 0; i < m_mergeOrderList->count(); ++i) {
-    const QString path =
-        m_mergeOrderList->item(i)->data(Qt::UserRole).toString();
-    if (dropPaths.contains(path) && !ordered.contains(path)) {
-      ordered.append(path);
-    }
-  }
-  for (const QString &path : dropPaths) {
-    if (!ordered.contains(path)) {
-      ordered.append(path);
-    }
-  }
-
-  m_mergeOrderList->clear();
-  for (const QString &path : ordered) {
-    QFileInfo fi(path);
-    QListWidgetItem *item =
-        new QListWidgetItem(QString("%1 (%2)")
-                                .arg(fi.fileName())
-                                .arg(DropFileWidget::formatFileSize(fi.size())),
-                            m_mergeOrderList);
-    item->setData(Qt::UserRole, path);
-    item->setToolTip(path);
-  }
-}
-
-void PdfPage::moveMergeItemUp() {
-  if (!m_mergeOrderList)
-    return;
-  const int row = m_mergeOrderList->currentRow();
-  if (row > 0) {
-    QListWidgetItem *item = m_mergeOrderList->takeItem(row);
-    m_mergeOrderList->insertItem(row - 1, item);
-    m_mergeOrderList->setCurrentRow(row - 1);
-  }
-}
-
-void PdfPage::moveMergeItemDown() {
-  if (!m_mergeOrderList)
-    return;
-  const int row = m_mergeOrderList->currentRow();
-  if (row >= 0 && row < m_mergeOrderList->count() - 1) {
-    QListWidgetItem *item = m_mergeOrderList->takeItem(row);
-    m_mergeOrderList->insertItem(row + 1, item);
-    m_mergeOrderList->setCurrentRow(row + 1);
+  if (m_mergePanel && m_dragWidget) {
+    m_mergePanel->syncFromPaths(m_dragWidget->getFilePaths());
   }
 }
 
 void PdfPage::executeMerge() {
   syncMergeListFromDropWidget();
 
-  QStringList orderedPaths;
-  for (int i = 0; i < m_mergeOrderList->count(); ++i) {
-    orderedPaths.append(
-        m_mergeOrderList->item(i)->data(Qt::UserRole).toString());
-  }
+  const QStringList orderedPaths =
+      m_mergePanel ? m_mergePanel->orderedPaths() : QStringList();
 
   if (orderedPaths.size() < 2) {
     ui::Toast::show(this, "Not Enough PDFs",
@@ -1044,7 +917,7 @@ void PdfPage::onMergeFinished(const MergeController::Result &result) {
         this, "PDFs Merged",
         QString("Merged %1 PDFs (%2 total pages) into:\n%3\n\n"
                 "Output Size: %4")
-            .arg(m_mergeOrderList->count())
+            .arg(m_mergePanel ? m_mergePanel->count() : 0)
             .arg(result.totalPages)
             .arg(result.outputPath)
             .arg(DropFileWidget::formatFileSize(result.outputBytes)));
@@ -1067,12 +940,10 @@ void PdfPage::executeSplit() {
     return;
   }
 
-  const int splitMode =
-      m_splitModeSelect ? m_splitModeSelect->currentIndex() : 0;
+  const int splitMode = m_splitPanel ? m_splitPanel->splitMode() : 0;
   const QString rangeSpec =
-      m_splitRangesInput ? m_splitRangesInput->text().trimmed() : QString();
-  const int interval =
-      m_splitIntervalInput ? qMax(1, m_splitIntervalInput->value()) : 1;
+      m_splitPanel ? m_splitPanel->rangeSpec() : QString();
+  const int interval = m_splitPanel ? m_splitPanel->interval() : 1;
 
   // Pre-validate the first PDF and range syntax before prompting for folder
   if (splitMode == 0) {
