@@ -9,11 +9,12 @@
 #include "controllers/pdf/organize_controller.h"
 #include "controllers/pdf/pdf_to_images_controller.h"
 #include "controllers/pdf/split_controller.h"
+#include "pages/pdf/merge_pdf_panel.h"
+#include "pages/pdf/split_pdf_panel.h"
 #include "ui-kit/components/button.h"
 #include "ui-kit/components/dialog.h"
 #include "ui-kit/components/form_field.h"
 #include "ui-kit/components/input.h"
-#include "ui-kit/components/number_input.h"
 #include "ui-kit/components/progress.h"
 #include "ui-kit/components/select.h"
 #include "ui-kit/components/tabs.h"
@@ -51,14 +52,11 @@ private slots:
   void onCancelButtonClicked();
   void onPresetChanged(int index);
   void onQualitySliderChanged();
-  void onSplitModeChanged(int index);
   void onExportFormatChanged(int index);
   void applyThemeStyles();
 
   // Merge tool slots
   void syncMergeListFromDropWidget();
-  void moveMergeItemUp();
-  void moveMergeItemDown();
 
   // Organize tool slots
   void loadOrganizePagesFromSelectedPdf(bool silentIfEmpty = false);
@@ -101,21 +99,10 @@ private:
   QStackedWidget *m_optionsStack{nullptr};
 
   // Merge PDF controls
-  QWidget *m_mergePanel{nullptr};
-  QLabel *m_mergeHintLabel{nullptr};
-  QListWidget *m_mergeOrderList{nullptr};
-  ui::Button *m_mergeSyncBtn{nullptr};
-  ui::Button *m_mergeUpBtn{nullptr};
-  ui::Button *m_mergeDownBtn{nullptr};
+  MergePdfPanel *m_mergePanel{nullptr};
 
   // Split PDF controls
-  QWidget *m_splitPanel{nullptr};
-  ui::Select *m_splitModeSelect{nullptr};
-  ui::FormField *m_splitModeField{nullptr};
-  ui::Input *m_splitRangesInput{nullptr};
-  ui::FormField *m_splitRangesField{nullptr};
-  ui::NumberInput *m_splitIntervalInput{nullptr};
-  ui::FormField *m_splitIntervalField{nullptr};
+  SplitPdfPanel *m_splitPanel{nullptr};
 
   // Organize / Rotate / Delete PDF controls
   QWidget *m_organizePanel{nullptr};
