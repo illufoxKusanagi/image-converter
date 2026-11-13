@@ -1,30 +1,4 @@
 #include "pages/main_page.h"
-#include "ui-kit/components/dialog.h"
-#include "ui-kit/components/toast.h"
-#include "ui-kit/theme/icon_helper.h"
-#include "ui-kit/theme/style_helper.h"
-#include "ui-kit/theme/theme.h"
-#include <QBuffer>
-#include <QClipboard>
-#include <QDir>
-#include <QFile>
-#include <QFileDialog>
-#include <QFileInfo>
-#include <QFontDatabase>
-#include <QGuiApplication>
-#include <QHBoxLayout>
-#include <QImageReader>
-#include <QIntValidator>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QPageSize>
-#include <QPainter>
-#include <QPdfDocument>
-#include <QPdfWriter>
-#include <QSaveFile>
-#include <QSet>
-#include <QSvgRenderer>
-#include <QtConcurrent/QtConcurrent>
 
 namespace {
 
@@ -51,8 +25,9 @@ QImage loadRasterOrSvgImage(const QString &path,
     baseSize.setWidth(qBound(1, baseSize.width(), 16384));
     baseSize.setHeight(qBound(1, baseSize.height(), 16384));
 
-    QImage img(baseSize, forceOpaqueWhite ? QImage::Format_RGB32
-                                          : QImage::Format_ARGB32_Premultiplied);
+    QImage img(baseSize, forceOpaqueWhite
+                             ? QImage::Format_RGB32
+                             : QImage::Format_ARGB32_Premultiplied);
     if (img.isNull()) {
       return QImage();
     }
@@ -142,8 +117,7 @@ void MainPage::initControllers() {
 }
 
 bool MainPage::isAnyJobRunning() const {
-  return m_isProcessing ||
-         (m_futureWatcher && m_futureWatcher->isRunning()) ||
+  return m_isProcessing || (m_futureWatcher && m_futureWatcher->isRunning()) ||
          (m_svgController && m_svgController->isRunning()) ||
          (m_icoController && m_icoController->isRunning());
 }
@@ -164,7 +138,8 @@ DropFileWidget *MainPage::activeDropWidget() const {
 void MainPage::setupExtensionButton() {
   QStringList extensionOptions = {"JPG",  "JPEG", "PNG", "WEBP",
                                   "TIFF", "BMP",  "GIF", "PDF"};
-  m_targetExtensionSelect = new ui::Select(extensionOptions, m_convertImagePanel);
+  m_targetExtensionSelect =
+      new ui::Select(extensionOptions, m_convertImagePanel);
   m_targetExtensionField = new ui::FormField(
       "Target Format", m_targetExtensionSelect, m_convertImagePanel);
   connect(m_targetExtensionSelect,
@@ -210,12 +185,11 @@ void MainPage::setupImageLayout() {
   m_base64CopyBtn =
       new ui::Button("Copy to Clipboard", ui::ButtonVariant::Outline,
                      ui::ButtonSize::Small, b64Content);
-  m_base64DecodeSaveBtn = new ui::Button(
-      "Decode Base64 & Save Image...", ui::ButtonVariant::Outline,
-      ui::ButtonSize::Small, b64Content);
-  m_base64StatsLabel =
-      new QLabel("No image loaded — select a file or paste Base64 below",
-                 b64Content);
+  m_base64DecodeSaveBtn = new ui::Button("Decode Base64 & Save Image...",
+                                         ui::ButtonVariant::Outline,
+                                         ui::ButtonSize::Small, b64Content);
+  m_base64StatsLabel = new QLabel(
+      "No image loaded — select a file or paste Base64 below", b64Content);
 
   connect(m_base64LoadBtn, &QPushButton::clicked, this,
           &MainPage::onBase64LoadFileClicked);
@@ -227,7 +201,8 @@ void MainPage::setupImageLayout() {
   b64Toolbar->addWidget(m_base64LoadBtn);
   b64Toolbar->addWidget(m_base64CopyBtn);
   b64Toolbar->addWidget(m_base64DecodeSaveBtn);
-  b64Toolbar->addWidget(m_base64StatsLabel, 1, Qt::AlignRight | Qt::AlignVCenter);
+  b64Toolbar->addWidget(m_base64StatsLabel, 1,
+                        Qt::AlignRight | Qt::AlignVCenter);
 
   m_base64TextEdit = new QPlainTextEdit(b64Content);
   m_base64TextEdit->setPlaceholderText(
@@ -312,9 +287,8 @@ void MainPage::setupToolPanels() {
   m_svgScaleSelect->setCurrentIndex(1); // Default 2x crisp export
   m_svgScaleField =
       new ui::FormField("Vector Scale Preset", m_svgScaleSelect, m_svgPanel);
-  connect(m_svgScaleSelect,
-          QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-          &MainPage::onSvgScaleModeChanged);
+  connect(m_svgScaleSelect, QOverload<int>::of(&QComboBox::currentIndexChanged),
+          this, &MainPage::onSvgScaleModeChanged);
 
   m_svgCustomWidthInput = new ui::Input("512", m_svgPanel);
   m_svgCustomWidthInput->setText("512");
@@ -420,20 +394,17 @@ void MainPage::setupToolPanels() {
 
   QStringList snippetFormats = {"Raw Data URI (data:image/...;base64,...)",
                                 "Raw Base64 Payload (no prefix)",
-                                "HTML <img> Tag",
-                                "CSS background-image",
+                                "HTML <img> Tag", "CSS background-image",
                                 "JSON Object Payload"};
   m_base64SnippetSelect = new ui::Select(snippetFormats, m_base64Panel);
   m_base64SnippetField = new ui::FormField(
       "Output Snippet Format", m_base64SnippetSelect, m_base64Panel);
 
-  QStringList encodeFormats = {"Keep Original File Bytes",
-                               "Re-encode as PNG",
-                               "Re-encode as WEBP",
-                               "Re-encode as JPG"};
+  QStringList encodeFormats = {"Keep Original File Bytes", "Re-encode as PNG",
+                               "Re-encode as WEBP", "Re-encode as JPG"};
   m_base64EncodeSelect = new ui::Select(encodeFormats, m_base64Panel);
-  m_base64EncodeField = new ui::FormField(
-      "Encode Format", m_base64EncodeSelect, m_base64Panel);
+  m_base64EncodeField =
+      new ui::FormField("Encode Format", m_base64EncodeSelect, m_base64Panel);
 
   connect(m_base64SnippetSelect,
           QOverload<int>::of(&QComboBox::currentIndexChanged), this,
@@ -695,9 +666,8 @@ void MainPage::onControllerFileStatus(const QString &filePath, int status,
                                       const QString &detail) {
   DropFileWidget *drop = activeDropWidget();
   if (drop) {
-    drop->setFileStatus(filePath,
-                        static_cast<DropFileWidget::FileStatus>(status),
-                        detail);
+    drop->setFileStatus(
+        filePath, static_cast<DropFileWidget::FileStatus>(status), detail);
   }
 }
 
@@ -743,15 +713,13 @@ void MainPage::executeSvgConvert() {
   }
 
   const QStringList fmtKeys = {"png", "webp", "jpg", "pdf"};
-  const int fmtIdx =
-      m_svgFormatSelect ? m_svgFormatSelect->currentIndex() : 0;
+  const int fmtIdx = m_svgFormatSelect ? m_svgFormatSelect->currentIndex() : 0;
 
   SvgConvertController::Params params;
   params.sourcePaths = sourcePaths;
   params.outputDir = outputDir;
   params.format = fmtKeys.value(fmtIdx, "png");
-  params.scaleMode =
-      m_svgScaleSelect ? m_svgScaleSelect->currentIndex() : 0;
+  params.scaleMode = m_svgScaleSelect ? m_svgScaleSelect->currentIndex() : 0;
   params.customWidth =
       m_svgCustomWidthInput ? m_svgCustomWidthInput->text().toInt() : 512;
   params.customHeight =
@@ -768,8 +736,7 @@ void MainPage::executeSvgConvert() {
   params.whiteBackground =
       (params.format == "jpg") ||
       (m_svgWhiteBgSwitch && m_svgWhiteBgSwitch->isChecked());
-  params.quality =
-      m_svgQualitySlider ? m_svgQualitySlider->getValue() : 90;
+  params.quality = m_svgQualitySlider ? m_svgQualitySlider->getValue() : 90;
 
   m_currentController = m_svgController;
   m_isCancelled = false;
@@ -802,9 +769,8 @@ void MainPage::onSvgConvertFinished(
     ui::Dialog::info(this, "SVG Conversion Complete", msg);
   } else {
     ui::Toast::show(this, "SVG Conversion Failed",
-                    result.error.isEmpty()
-                        ? "Failed to convert SVG files."
-                        : result.error,
+                    result.error.isEmpty() ? "Failed to convert SVG files."
+                                           : result.error,
                     ui::ToastVariant::Destructive);
   }
 }
@@ -829,9 +795,10 @@ void MainPage::executeIcoExport() {
     }
   }
   if (selectedSizes.isEmpty()) {
-    ui::Toast::show(this, "No Icon Sizes Selected",
-                    "Please enable at least one icon resolution (e.g. 32×32 or 256×256).",
-                    ui::ToastVariant::Warning);
+    ui::Toast::show(
+        this, "No Icon Sizes Selected",
+        "Please enable at least one icon resolution (e.g. 32×32 or 256×256).",
+        ui::ToastVariant::Warning);
     return;
   }
 
@@ -895,7 +862,8 @@ void MainPage::onIcoExportFinished(const IcoExportController::Result &result) {
 void MainPage::onBase64LoadFileClicked() {
   const QString filePath = QFileDialog::getOpenFileName(
       this, "Select Image or SVG to Encode", QDir::homePath(),
-      "Images & Vector Files (*.png *.jpg *.jpeg *.webp *.svg *.gif *.bmp *.ico);;All Files (*)");
+      "Images & Vector Files (*.png *.jpg *.jpeg *.webp *.svg *.gif *.bmp "
+      "*.ico);;All Files (*)");
   if (filePath.isEmpty()) {
     return;
   }
@@ -1066,10 +1034,10 @@ void MainPage::onBase64CopyClicked() {
   }
   if (QClipboard *cb = QGuiApplication::clipboard()) {
     cb->setText(text);
-    ui::Toast::show(this, "Copied to Clipboard",
-                    QString("Copied %1 characters to clipboard.")
-                        .arg(text.size()),
-                    ui::ToastVariant::Success);
+    ui::Toast::show(
+        this, "Copied to Clipboard",
+        QString("Copied %1 characters to clipboard.").arg(text.size()),
+        ui::ToastVariant::Success);
   }
 }
 
@@ -1101,8 +1069,9 @@ void MainPage::onBase64DecodeSaveClicked() {
   const int dataIdx = rawText.indexOf("data:", 0, Qt::CaseInsensitive);
   const int b64MarkerIdx = rawText.indexOf(";base64,", 0, Qt::CaseInsensitive);
   if (dataIdx >= 0 && b64MarkerIdx > dataIdx) {
-    mimeHint =
-        rawText.mid(dataIdx + 5, b64MarkerIdx - (dataIdx + 5)).trimmed().toLower();
+    mimeHint = rawText.mid(dataIdx + 5, b64MarkerIdx - (dataIdx + 5))
+                   .trimmed()
+                   .toLower();
     int startPos = b64MarkerIdx + 8;
     int endPos = rawText.size();
     for (int i = startPos; i < rawText.size(); ++i) {
@@ -1127,8 +1096,7 @@ void MainPage::onBase64DecodeSaveClicked() {
   bool isSvgPayload = (mimeHint == "image/svg+xml");
   if (!isSvgPayload) {
     const QByteArray trimmedSample = decodedBytes.left(512).trimmed();
-    if (trimmedSample.startsWith("<svg") ||
-        trimmedSample.startsWith("<?xml")) {
+    if (trimmedSample.startsWith("<svg") || trimmedSample.startsWith("<?xml")) {
       QSvgRenderer testSvg(decodedBytes);
       isSvgPayload = testSvg.isValid();
     }
@@ -1171,18 +1139,18 @@ void MainPage::onBase64DecodeSaveClicked() {
       QDir(QDir::homePath()).filePath("decoded_image." + defaultExt);
   QString saveFilter;
   if (isSvgPayload) {
-    saveFilter =
-        "SVG Vector (*.svg);;PNG Image (*.png);;WEBP Image (*.webp);;JPG Image (*.jpg)";
+    saveFilter = "SVG Vector (*.svg);;PNG Image (*.png);;WEBP Image "
+                 "(*.webp);;JPG Image (*.jpg)";
   } else if (defaultExt == "ico") {
-    saveFilter =
-        "ICO Icon (*.ico);;PNG Image (*.png);;WEBP Image (*.webp);;JPG Image (*.jpg);;BMP Image (*.bmp)";
+    saveFilter = "ICO Icon (*.ico);;PNG Image (*.png);;WEBP Image "
+                 "(*.webp);;JPG Image (*.jpg);;BMP Image (*.bmp)";
   } else {
-    saveFilter =
-        "PNG Image (*.png);;JPG Image (*.jpg);;WEBP Image (*.webp);;BMP Image (*.bmp);;TIFF Image (*.tiff)";
+    saveFilter = "PNG Image (*.png);;JPG Image (*.jpg);;WEBP Image "
+                 "(*.webp);;BMP Image (*.bmp);;TIFF Image (*.tiff)";
   }
 
-  QString outPath = QFileDialog::getSaveFileName(
-      this, "Save Decoded Image", defaultPath, saveFilter);
+  QString outPath = QFileDialog::getSaveFileName(this, "Save Decoded Image",
+                                                 defaultPath, saveFilter);
   if (outPath.isEmpty()) {
     return;
   }
@@ -1219,9 +1187,9 @@ void MainPage::onBase64DecodeSaveClicked() {
     } else if (outExt == defaultExt) {
       savedOk = (saveFile.write(decodedBytes) == decodedBytes.size());
     } else {
-      savedOk = decodedImg.save(
-          &saveFile, outExt.toUpper().toUtf8().constData(),
-          outExt == "png" ? -1 : 90);
+      savedOk =
+          decodedImg.save(&saveFile, outExt.toUpper().toUtf8().constData(),
+                          outExt == "png" ? -1 : 90);
     }
     if (savedOk) {
       savedOk = saveFile.commit();
@@ -1543,10 +1511,9 @@ void MainPage::executeConvertImage() {
       qint64 totalOutputBytes = 0;
       QSet<QString> usedBaseNames;
       QString ext = dragWidget->imageExtensionToString(targetExt).toLower();
-      const bool forceOpaque =
-          (targetExt == DropFileWidget::JPG ||
-           targetExt == DropFileWidget::JPEG ||
-           targetExt == DropFileWidget::BMP);
+      const bool forceOpaque = (targetExt == DropFileWidget::JPG ||
+                                targetExt == DropFileWidget::JPEG ||
+                                targetExt == DropFileWidget::BMP);
 
       for (int i = 0; i < sourcePaths.size(); ++i) {
         if (m_isCancelled)
@@ -1792,8 +1759,7 @@ void MainPage::executeConvertImage() {
 
   // SCENARIO 3: Standard Image / SVG -> Image Conversion (Single & Batch)
   const bool forceOpaque =
-      (targetExt == DropFileWidget::JPG ||
-       targetExt == DropFileWidget::JPEG ||
+      (targetExt == DropFileWidget::JPG || targetExt == DropFileWidget::JPEG ||
        targetExt == DropFileWidget::BMP);
 
   if (sourcePaths.size() == 1) {
@@ -1832,68 +1798,66 @@ void MainPage::executeConvertImage() {
                                 "Converting image");
 
     DropFileWidget *dragWidget = m_dragWidget;
-    QFuture<void> future = QtConcurrent::run(
-        [this, sourcePath, outputPathWithoutExt, outputPathWithExt, quality,
-         targetExt, targetFormatString, dragWidget, forceOpaque]() {
-          QImage image = loadRasterOrSvgImage(sourcePath, forceOpaque);
-          FileStatus status = FileStatus::Failed;
-          QString detail;
-          if (image.isNull()) {
-            detail = "Could not load image";
-          } else if (m_isCancelled) {
-            status = FileStatus::Cancelled;
-            detail = "Cancelled before save";
-          } else if (dragWidget->saveImage(&image, outputPathWithoutExt,
-                                           quality, &targetExt)) {
-            status = FileStatus::Succeeded;
-            detail = QString("Saved as %1")
-                         .arg(QFileInfo(outputPathWithExt).fileName());
-          } else {
-            detail =
-                QString("Failed to save image as %1").arg(targetFormatString);
-          }
+    QFuture<void> future = QtConcurrent::run([this, sourcePath,
+                                              outputPathWithoutExt,
+                                              outputPathWithExt, quality,
+                                              targetExt, targetFormatString,
+                                              dragWidget, forceOpaque]() {
+      QImage image = loadRasterOrSvgImage(sourcePath, forceOpaque);
+      FileStatus status = FileStatus::Failed;
+      QString detail;
+      if (image.isNull()) {
+        detail = "Could not load image";
+      } else if (m_isCancelled) {
+        status = FileStatus::Cancelled;
+        detail = "Cancelled before save";
+      } else if (dragWidget->saveImage(&image, outputPathWithoutExt, quality,
+                                       &targetExt)) {
+        status = FileStatus::Succeeded;
+        detail =
+            QString("Saved as %1").arg(QFileInfo(outputPathWithExt).fileName());
+      } else {
+        detail = QString("Failed to save image as %1").arg(targetFormatString);
+      }
 
-          QMetaObject::invokeMethod(
-              this,
-              [this, sourcePath, status, detail, outputPathWithExt]() {
-                m_dragWidget->setFileStatus(sourcePath, status, detail);
-                m_progressBar->setValue(
-                    status == FileStatus::Cancelled ? 0 : 1, false);
-                setProcessingState(false);
-                m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
+      QMetaObject::invokeMethod(
+          this,
+          [this, sourcePath, status, detail, outputPathWithExt]() {
+            m_dragWidget->setFileStatus(sourcePath, status, detail);
+            m_progressBar->setValue(status == FileStatus::Cancelled ? 0 : 1,
+                                    false);
+            setProcessingState(false);
+            m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
 
-                if (status == FileStatus::Succeeded) {
-                  qint64 origSize = QFileInfo(sourcePath).size();
-                  qint64 outSize = QFileInfo(outputPathWithExt).size();
-                  QString sizeStats;
-                  if (origSize > 0 && outSize > 0) {
-                    double diffPct =
-                        (1.0 - (static_cast<double>(outSize) / origSize)) *
-                        100.0;
-                    sizeStats =
-                        QString("\n\nOriginal: %1\nConverted: %2 (%3% %4)")
-                            .arg(DropFileWidget::formatFileSize(origSize))
-                            .arg(DropFileWidget::formatFileSize(outSize))
-                            .arg(qAbs(diffPct), 0, 'f', 1)
-                            .arg(diffPct >= 0 ? "smaller" : "larger");
-                  }
+            if (status == FileStatus::Succeeded) {
+              qint64 origSize = QFileInfo(sourcePath).size();
+              qint64 outSize = QFileInfo(outputPathWithExt).size();
+              QString sizeStats;
+              if (origSize > 0 && outSize > 0) {
+                double diffPct =
+                    (1.0 - (static_cast<double>(outSize) / origSize)) * 100.0;
+                sizeStats = QString("\n\nOriginal: %1\nConverted: %2 (%3% %4)")
+                                .arg(DropFileWidget::formatFileSize(origSize))
+                                .arg(DropFileWidget::formatFileSize(outSize))
+                                .arg(qAbs(diffPct), 0, 'f', 1)
+                                .arg(diffPct >= 0 ? "smaller" : "larger");
+              }
 
-                  ui::Dialog::info(
-                      this, "Success",
-                      QString("Image converted successfully to %1%2")
-                          .arg(outputPathWithExt)
-                          .arg(sizeStats));
-                } else if (status == FileStatus::Cancelled) {
-                  ui::Toast::show(this, "Cancelled",
-                                  "Image conversion was cancelled.",
-                                  ui::ToastVariant::Default);
-                } else {
-                  ui::Toast::show(this, "Error", detail,
-                                  ui::ToastVariant::Destructive);
-                }
-              },
-              Qt::QueuedConnection);
-        });
+              ui::Dialog::info(this, "Success",
+                               QString("Image converted successfully to %1%2")
+                                   .arg(outputPathWithExt)
+                                   .arg(sizeStats));
+            } else if (status == FileStatus::Cancelled) {
+              ui::Toast::show(this, "Cancelled",
+                              "Image conversion was cancelled.",
+                              ui::ToastVariant::Default);
+            } else {
+              ui::Toast::show(this, "Error", detail,
+                              ui::ToastVariant::Destructive);
+            }
+          },
+          Qt::QueuedConnection);
+    });
     m_futureWatcher->setFuture(future);
   } else {
     QString outputDir = QFileDialog::getExistingDirectory(
@@ -1913,116 +1877,115 @@ void MainPage::executeConvertImage() {
                                  .arg(totalFiles));
 
     DropFileWidget *dragWidget = m_dragWidget;
-    QFuture<void> future = QtConcurrent::run(
-        [this, sourcePaths, outputDir, quality, targetExt, totalFiles,
-         dragWidget, updateFileStatus, updateProgress, forceOpaque]() {
-          int successCount = 0;
-          int failureCount = 0;
-          int completedFiles = 0;
-          qint64 totalOrigBytes = 0;
-          qint64 totalOutputBytes = 0;
-          QSet<QString> usedBaseNames;
-          QString ext = dragWidget->imageExtensionToString(targetExt).toLower();
+    QFuture<void> future = QtConcurrent::run([this, sourcePaths, outputDir,
+                                              quality, targetExt, totalFiles,
+                                              dragWidget, updateFileStatus,
+                                              updateProgress, forceOpaque]() {
+      int successCount = 0;
+      int failureCount = 0;
+      int completedFiles = 0;
+      qint64 totalOrigBytes = 0;
+      qint64 totalOutputBytes = 0;
+      QSet<QString> usedBaseNames;
+      QString ext = dragWidget->imageExtensionToString(targetExt).toLower();
 
-          for (int i = 0; i < totalFiles; ++i) {
-            if (m_isCancelled) {
-              break;
-            }
+      for (int i = 0; i < totalFiles; ++i) {
+        if (m_isCancelled) {
+          break;
+        }
 
-            const QString &sourcePath = sourcePaths.at(i);
-            updateFileStatus(sourcePath, FileStatus::Processing,
-                             "Converting image");
-            updateProgress(completedFiles, totalFiles,
-                           QString("Converting %1 (%2 of %3)...")
-                               .arg(QFileInfo(sourcePath).fileName())
-                               .arg(i + 1)
-                               .arg(totalFiles));
-            QImage image = loadRasterOrSvgImage(sourcePath, forceOpaque);
-            FileStatus status = FileStatus::Failed;
-            QString detail = "Could not load image";
-            if (image.isNull()) {
-              failureCount++;
-            } else {
-              QFileInfo fileInfo(sourcePath);
-              QString baseName = fileInfo.baseName();
-              QString uniqueBaseName = baseName;
-              int suffix = 1;
-              while (usedBaseNames.contains(uniqueBaseName.toLower()) ||
-                     QFile::exists(
-                         QDir(outputDir).filePath(uniqueBaseName + "." + ext))) {
-                uniqueBaseName = QString("%1_%2").arg(baseName).arg(suffix++);
-              }
-              usedBaseNames.insert(uniqueBaseName.toLower());
-
-              if (m_isCancelled)
-                break;
-              QString baseOutputName = QDir(outputDir).filePath(uniqueBaseName);
-              if (dragWidget->saveImage(&image, baseOutputName, quality,
-                                        &targetExt)) {
-                successCount++;
-                totalOrigBytes += fileInfo.size();
-                QString outputFilePath = baseOutputName + "." + ext;
-                totalOutputBytes += QFileInfo(outputFilePath).size();
-                status = FileStatus::Succeeded;
-                detail = QString("Saved as %1.%2").arg(uniqueBaseName).arg(ext);
-              } else {
-                failureCount++;
-                detail = QString("Failed to save as %1").arg(ext.toUpper());
-              }
-            }
-
-            completedFiles++;
-            updateFileStatus(sourcePath, status, detail);
-            updateProgress(completedFiles, totalFiles, QString());
+        const QString &sourcePath = sourcePaths.at(i);
+        updateFileStatus(sourcePath, FileStatus::Processing,
+                         "Converting image");
+        updateProgress(completedFiles, totalFiles,
+                       QString("Converting %1 (%2 of %3)...")
+                           .arg(QFileInfo(sourcePath).fileName())
+                           .arg(i + 1)
+                           .arg(totalFiles));
+        QImage image = loadRasterOrSvgImage(sourcePath, forceOpaque);
+        FileStatus status = FileStatus::Failed;
+        QString detail = "Could not load image";
+        if (image.isNull()) {
+          failureCount++;
+        } else {
+          QFileInfo fileInfo(sourcePath);
+          QString baseName = fileInfo.baseName();
+          QString uniqueBaseName = baseName;
+          int suffix = 1;
+          while (usedBaseNames.contains(uniqueBaseName.toLower()) ||
+                 QFile::exists(
+                     QDir(outputDir).filePath(uniqueBaseName + "." + ext))) {
+            uniqueBaseName = QString("%1_%2").arg(baseName).arg(suffix++);
           }
+          usedBaseNames.insert(uniqueBaseName.toLower());
 
-          const bool cancelled = m_isCancelled && completedFiles < totalFiles;
-          QMetaObject::invokeMethod(
-              this,
-              [this, sourcePaths, completedFiles, cancelled, successCount,
-               failureCount, totalOrigBytes, totalOutputBytes]() {
-                for (int i = completedFiles; i < sourcePaths.size(); ++i) {
-                  m_dragWidget->setFileStatus(sourcePaths.at(i),
-                                              FileStatus::Cancelled,
-                                              "Not processed (cancelled)");
-                }
-                setProcessingState(false);
-                m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
+          if (m_isCancelled)
+            break;
+          QString baseOutputName = QDir(outputDir).filePath(uniqueBaseName);
+          if (dragWidget->saveImage(&image, baseOutputName, quality,
+                                    &targetExt)) {
+            successCount++;
+            totalOrigBytes += fileInfo.size();
+            QString outputFilePath = baseOutputName + "." + ext;
+            totalOutputBytes += QFileInfo(outputFilePath).size();
+            status = FileStatus::Succeeded;
+            detail = QString("Saved as %1.%2").arg(uniqueBaseName).arg(ext);
+          } else {
+            failureCount++;
+            detail = QString("Failed to save as %1").arg(ext.toUpper());
+          }
+        }
 
-                QString title = cancelled ? "Batch Conversion Cancelled"
-                                          : "Batch Conversion Complete";
-                QString message =
-                    QString("%1 image(s) converted successfully.\n%2 image(s) "
-                            "failed.")
-                        .arg(successCount)
-                        .arg(failureCount);
+        completedFiles++;
+        updateFileStatus(sourcePath, status, detail);
+        updateProgress(completedFiles, totalFiles, QString());
+      }
 
-                if (totalOrigBytes > 0 && totalOutputBytes > 0 &&
-                    successCount > 0) {
-                  double diffPct =
-                      (1.0 - (static_cast<double>(totalOutputBytes) /
-                              totalOrigBytes)) *
-                      100.0;
-                  message += QString("\n\nTotal Original: %1\nTotal Converted: "
-                                     "%2 (%3% %4)")
-                                 .arg(DropFileWidget::formatFileSize(
-                                     totalOrigBytes))
-                                 .arg(DropFileWidget::formatFileSize(
-                                     totalOutputBytes))
-                                 .arg(qAbs(diffPct), 0, 'f', 1)
-                                 .arg(diffPct >= 0 ? "smaller" : "larger");
-                }
+      const bool cancelled = m_isCancelled && completedFiles < totalFiles;
+      QMetaObject::invokeMethod(
+          this,
+          [this, sourcePaths, completedFiles, cancelled, successCount,
+           failureCount, totalOrigBytes, totalOutputBytes]() {
+            for (int i = completedFiles; i < sourcePaths.size(); ++i) {
+              m_dragWidget->setFileStatus(sourcePaths.at(i),
+                                          FileStatus::Cancelled,
+                                          "Not processed (cancelled)");
+            }
+            setProcessingState(false);
+            m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
 
-                if (cancelled) {
-                  message += "\n(Operation was stopped early by user)";
-                  ui::Toast::show(this, "Cancelled", message,
-                                  ui::ToastVariant::Default);
-                } else {
-                  ui::Dialog::info(this, title, message);
-                }
-              },
-              Qt::QueuedConnection);
-        });
+            QString title = cancelled ? "Batch Conversion Cancelled"
+                                      : "Batch Conversion Complete";
+            QString message =
+                QString("%1 image(s) converted successfully.\n%2 image(s) "
+                        "failed.")
+                    .arg(successCount)
+                    .arg(failureCount);
+
+            if (totalOrigBytes > 0 && totalOutputBytes > 0 &&
+                successCount > 0) {
+              double diffPct = (1.0 - (static_cast<double>(totalOutputBytes) /
+                                       totalOrigBytes)) *
+                               100.0;
+              message +=
+                  QString("\n\nTotal Original: %1\nTotal Converted: "
+                          "%2 (%3% %4)")
+                      .arg(DropFileWidget::formatFileSize(totalOrigBytes))
+                      .arg(DropFileWidget::formatFileSize(totalOutputBytes))
+                      .arg(qAbs(diffPct), 0, 'f', 1)
+                      .arg(diffPct >= 0 ? "smaller" : "larger");
+            }
+
+            if (cancelled) {
+              message += "\n(Operation was stopped early by user)";
+              ui::Toast::show(this, "Cancelled", message,
+                              ui::ToastVariant::Default);
+            } else {
+              ui::Dialog::info(this, title, message);
+            }
+          },
+          Qt::QueuedConnection);
+    });
     m_futureWatcher->setFuture(future);
   }
 }
