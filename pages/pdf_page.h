@@ -1,13 +1,14 @@
 #ifndef PDF_PAGE_H
 #define PDF_PAGE_H
 
-#include "controllers/compress_controller.h"
-#include "controllers/grayscale_controller.h"
-#include "controllers/images_to_pdf_controller.h"
-#include "controllers/merge_controller.h"
-#include "controllers/organize_controller.h"
-#include "controllers/pdf_to_images_controller.h"
-#include "controllers/split_controller.h"
+#include "controllers/pdf/compress_controller.h"
+#include "controllers/pdf/grayscale_controller.h"
+#include "controllers/pdf/images_to_pdf_controller.h"
+#include "controllers/pdf/markdown_pdf_controller.h"
+#include "controllers/pdf/merge_controller.h"
+#include "controllers/pdf/organize_controller.h"
+#include "controllers/pdf/pdf_to_images_controller.h"
+#include "controllers/pdf/split_controller.h"
 #include "ui-kit/components/button.h"
 #include "ui-kit/components/dialog.h"
 #include "ui-kit/components/form_field.h"
@@ -37,7 +38,8 @@ public:
     Organize,
     PdfToImages,
     ImagesToPdf,
-    Grayscale
+    Grayscale,
+    MarkdownToPdf
   };
 
   explicit PdfPage(QWidget *parent = nullptr);
@@ -80,6 +82,7 @@ private slots:
   void onPdfToImagesFinished(const PdfToImagesController::Result &result);
   void onImagesToPdfFinished(const ImagesToPdfController::Result &result);
   void onGrayscaleFinished(const GrayscaleController::Result &result);
+  void onMarkdownPdfFinished(const MarkdownPdfController::Result &result);
 
 private:
   QVBoxLayout *mainLayout{nullptr};
@@ -88,6 +91,7 @@ private:
 
   DropFileWidget *m_dragWidget{nullptr};
   DropFileWidget *m_imageDragWidget{nullptr};
+  DropFileWidget *m_docDragWidget{nullptr};
 
   QWidget *m_qualityRowWidget{nullptr};
   SliderWidget *m_qualitySlider{nullptr};
@@ -150,6 +154,17 @@ private:
   ui::Select *m_imgPdfMarginSelect{nullptr};
   ui::FormField *m_imgPdfMarginField{nullptr};
 
+  // Markdown / HTML to PDF controls
+  QWidget *m_markdownPanel{nullptr};
+  ui::Select *m_mdPageSizeSelect{nullptr};
+  ui::FormField *m_mdPageSizeField{nullptr};
+  ui::Select *m_mdOrientationSelect{nullptr};
+  ui::FormField *m_mdOrientationField{nullptr};
+  ui::Select *m_mdMarginSelect{nullptr};
+  ui::FormField *m_mdMarginField{nullptr};
+  ui::Select *m_mdFontSizeSelect{nullptr};
+  ui::FormField *m_mdFontSizeField{nullptr};
+
   ui::Progress *m_progressBar{nullptr};
   QLabel *m_progressLabel{nullptr};
   ui::Button *m_processButton{nullptr};
@@ -165,6 +180,7 @@ private:
   PdfToImagesController *m_pdfToImagesController{nullptr};
   ImagesToPdfController *m_imagesToPdfController{nullptr};
   GrayscaleController *m_grayscaleController{nullptr};
+  MarkdownPdfController *m_markdownController{nullptr};
   PdfToolController *m_currentController{nullptr};
 
   DropFileWidget *activeDropWidget() const;
@@ -183,6 +199,7 @@ private:
   void executePdfToImages();
   void executeImagesToPdf();
   void executeGrayscale();
+  void executeMarkdownPdf();
 };
 
 #endif // PDF_PAGE_H

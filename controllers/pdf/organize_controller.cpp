@@ -1,5 +1,5 @@
-#include "controllers/organize_controller.h"
-#include "controllers/pdf_utils.h"
+#include "controllers/pdf/organize_controller.h"
+#include "controllers/pdf/pdf_utils.h"
 
 #include <QDir>
 #include <QFile>

@@ -1,5 +1,5 @@
-#include "controllers/split_controller.h"
-#include "controllers/pdf_utils.h"
+#include "controllers/pdf/split_controller.h"
+#include "controllers/pdf/pdf_utils.h"
 
 #include <QDir>
 #include <QFile>

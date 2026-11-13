@@ -61,24 +61,30 @@ set(PROJECT_PAGES
 )
 
 set(PROJECT_CONTROLLERS
-        controllers/pdf_utils.cpp
-        controllers/pdf_utils.h
-        controllers/pdf_tool_controller.cpp
-        controllers/pdf_tool_controller.h
-        controllers/compress_controller.cpp
-        controllers/compress_controller.h
-        controllers/merge_controller.cpp
-        controllers/merge_controller.h
-        controllers/split_controller.cpp
-        controllers/split_controller.h
-        controllers/organize_controller.cpp
-        controllers/organize_controller.h
-        controllers/pdf_to_images_controller.cpp
-        controllers/pdf_to_images_controller.h
-        controllers/images_to_pdf_controller.cpp
-        controllers/images_to_pdf_controller.h
-        controllers/grayscale_controller.cpp
-        controllers/grayscale_controller.h
+        controllers/pdf/pdf_utils.cpp
+        controllers/pdf/pdf_utils.h
+        controllers/pdf/pdf_tool_controller.cpp
+        controllers/pdf/pdf_tool_controller.h
+        controllers/pdf/compress_controller.cpp
+        controllers/pdf/compress_controller.h
+        controllers/pdf/merge_controller.cpp
+        controllers/pdf/merge_controller.h
+        controllers/pdf/split_controller.cpp
+        controllers/pdf/split_controller.h
+        controllers/pdf/organize_controller.cpp
+        controllers/pdf/organize_controller.h
+        controllers/pdf/pdf_to_images_controller.cpp
+        controllers/pdf/pdf_to_images_controller.h
+        controllers/pdf/images_to_pdf_controller.cpp
+        controllers/pdf/images_to_pdf_controller.h
+        controllers/pdf/grayscale_controller.cpp
+        controllers/pdf/grayscale_controller.h
+        controllers/pdf/markdown_pdf_controller.cpp
+        controllers/pdf/markdown_pdf_controller.h
+        controllers/image/svg_convert_controller.cpp
+        controllers/image/svg_convert_controller.h
+        controllers/image/ico_export_controller.cpp
+        controllers/image/ico_export_controller.h
 )
 
 set(PROJECT_SOURCES

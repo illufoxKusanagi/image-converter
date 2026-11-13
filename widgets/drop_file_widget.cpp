@@ -139,11 +139,17 @@ void DropFileWidget::setupChosenFileWidget() {
 }
 
 void DropFileWidget::setupOrSeparatorLayout(QVBoxLayout *layout) {
-  m_formatLabel = new QLabel(
-      m_typeFile == "PDF"
-          ? "Supports .pdf documents"
-          : "Supports .png, .jpg, .jpeg, .webp, .tiff, .bmp, .gif, .pdf",
-      m_emptyFieldWidget);
+  QString formatText =
+      "Supported formats: PNG, JPG, JPEG, WEBP, TIFF, BMP, GIF, SVG, PDF";
+  if (m_typeFile == "PDF") {
+    formatText = "Supported formats: PDF (.pdf)";
+  } else if (m_typeFile == "SVG") {
+    formatText = "Supported formats: Vector SVG (.svg)";
+  } else if (m_typeFile == "Markdown / HTML") {
+    formatText =
+        "Supported formats: Markdown & HTML (.md, .markdown, .html, .htm)";
+  }
+  m_formatLabel = new QLabel(formatText, m_emptyFieldWidget);
   m_formatLabel->setAlignment(Qt::AlignCenter);
 
   QWidget *orWidget = new QWidget(m_emptyFieldWidget);
@@ -244,7 +250,7 @@ void DropFileWidget::applyThemeStyles() {
                                            c.foreground, QSize(14, 14)));
   }
 
-  QString iconRes = (m_typeFile == "PDF")
+  QString iconRes = (m_typeFile == "PDF" || m_typeFile == "Markdown / HTML")
                         ? ":/icons/icons/lucide-file-text.svg"
                         : ":/icons/icons/lucide-upload-cloud.svg";
   QPixmap coloredIcon = ui::Icon::pixmap(iconRes, c.primary, 48, 48);
@@ -419,13 +425,17 @@ void DropFileWidget::updateFileRowStatus(const QString &path) {
   QString description;
 
   switch (state.status) {
-  case FileStatus::Waiting:
+  case FileStatus::Waiting: {
     text = tr("Waiting");
     description = tr("Waiting to be processed.");
-    iconPath = QFileInfo(path).suffix().compare("pdf", Qt::CaseInsensitive) == 0
-                   ? ":/icons/icons/lucide-file-text.svg"
-                   : ":/icons/icons/lucide-image.svg";
+    const QString suffix = QFileInfo(path).suffix().toLower();
+    const bool isDoc = (suffix == "pdf" || suffix == "md" ||
+                        suffix == "markdown" || suffix == "html" ||
+                        suffix == "htm");
+    iconPath = isDoc ? ":/icons/icons/lucide-file-text.svg"
+                     : ":/icons/icons/lucide-image.svg";
     break;
+  }
   case FileStatus::Processing:
     text = tr("Processing");
     description = tr("Processing file.");
@@ -647,16 +657,17 @@ void DropFileWidget::dropEvent(QDropEvent *event) {
         QString filePath = url.toLocalFile();
         QFileInfo fileInfo(filePath);
         QString ext = fileInfo.suffix().toLower();
+        QStringList validExts = {"png",  "jpg", "jpeg", "webp", "tiff",
+                                 "bmp",  "gif", "svg",  "pdf"};
         if (m_typeFile == "PDF") {
-          if (ext == "pdf") {
-            newPaths.append(QDir::cleanPath(filePath));
-          }
-        } else {
-          QStringList validExts = {"png",  "jpg", "jpeg", "webp",
-                                   "tiff", "bmp", "gif",  "pdf"};
-          if (validExts.contains(ext)) {
-            newPaths.append(QDir::cleanPath(filePath));
-          }
+          validExts = {"pdf"};
+        } else if (m_typeFile == "SVG") {
+          validExts = {"svg"};
+        } else if (m_typeFile == "Markdown / HTML") {
+          validExts = {"md", "markdown", "html", "htm"};
+        }
+        if (validExts.contains(ext)) {
+          newPaths.append(QDir::cleanPath(filePath));
         }
       }
     }
@@ -767,11 +778,19 @@ void DropFileWidget::onBrowseButtonPressed() {
     fileNames = QFileDialog::getOpenFileNames(
         this, "Select PDF Files", QDir::homePath(),
         "PDF Files (*.pdf);;All Files (*)");
+  } else if (m_typeFile == "SVG") {
+    fileNames = QFileDialog::getOpenFileNames(
+        this, "Select SVG Vector Files", QDir::homePath(),
+        "SVG Vector Files (*.svg);;All Files (*)");
+  } else if (m_typeFile == "Markdown / HTML") {
+    fileNames = QFileDialog::getOpenFileNames(
+        this, "Select Markdown or HTML Files", QDir::homePath(),
+        "Markdown & HTML Files (*.md *.markdown *.html *.htm);;All Files (*)");
   } else {
     fileNames = QFileDialog::getOpenFileNames(
         this, "Select Image or PDF Files", QDir::homePath(),
-        "Supported Files (*.png *.jpg *.jpeg *.webp *.tiff *.bmp *.gif *.pdf);;"
-        "Image Files (*.png *.jpg *.jpeg *.webp *.tiff *.bmp *.gif);;"
+        "Images (*.png *.jpg *.jpeg *.webp *.tiff *.bmp *.gif *.svg *.pdf);;"
+        "Image Files (*.png *.jpg *.jpeg *.webp *.tiff *.bmp *.gif *.svg);;"
         "PDF Files (*.pdf);;All Files (*)");
   }
   if (m_isProcessing || fileNames.isEmpty()) {

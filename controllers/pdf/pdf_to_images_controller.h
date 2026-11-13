@@ -1,7 +1,7 @@
 #ifndef PDF_TO_IMAGES_CONTROLLER_H
 #define PDF_TO_IMAGES_CONTROLLER_H
 
-#include "controllers/pdf_tool_controller.h"
+#include "controllers/pdf/pdf_tool_controller.h"
 #include <QString>
 #include <QStringList>
 

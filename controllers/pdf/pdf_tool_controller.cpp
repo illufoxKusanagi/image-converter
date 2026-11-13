@@ -1,4 +1,4 @@
-#include "controllers/pdf_tool_controller.h"
+#include "controllers/pdf/pdf_tool_controller.h"
 
 PdfToolController::PdfToolController(QObject *parent)
     : QObject(parent) {}

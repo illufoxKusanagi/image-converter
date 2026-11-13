@@ -1,5 +1,5 @@
-#include "controllers/grayscale_controller.h"
-#include "controllers/pdf_utils.h"
+#include "controllers/pdf/grayscale_controller.h"
+#include "controllers/pdf/pdf_utils.h"
 
 #include <QDateTime>
 #include <QDir>
