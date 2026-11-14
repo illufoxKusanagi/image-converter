@@ -1,6 +1,7 @@
 #ifndef MERGE_PDF_PANEL_H
 #define MERGE_PDF_PANEL_H
 
+#include "controllers/pdf/merge_controller.h"
 #include "ui-kit/components/button.h"
 #include <QLabel>
 #include <QListWidget>
@@ -45,6 +46,18 @@ public:
    */
   int count() const;
 
+  /**
+   * @brief Validates selected PDFs, prompts for output path, and starts merge.
+   * @param dropPaths Current list of file paths from the drop widget.
+   * @return True if the asynchronous merge job was started; false otherwise.
+   */
+  bool execute(const QStringList &dropPaths);
+
+  /**
+   * @brief Returns the underlying controller managing the merge operation.
+   */
+  PdfToolController *controller() const { return m_controller; }
+
 public slots:
   /**
    * @brief Applies current theme colors, radii, and typography to child widgets.
@@ -67,6 +80,14 @@ signals:
    */
   void syncRequested();
 
+  /**
+   * @brief Emitted when the asynchronous merge job finishes or is cancelled.
+   */
+  void executionFinished();
+
+private slots:
+  void onMergeFinished(const MergeController::Result &result);
+
 private:
   void moveCurrentItem(int delta);
 
@@ -75,6 +96,7 @@ private:
   ui::Button *m_syncBtn{nullptr};
   ui::Button *m_upBtn{nullptr};
   ui::Button *m_downBtn{nullptr};
+  MergeController *m_controller{nullptr};
 };
 
 #endif // MERGE_PDF_PANEL_H

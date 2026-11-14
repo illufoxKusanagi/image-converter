@@ -41,6 +41,24 @@ public:
   void loadFromPaths(const QStringList &paths, bool silentIfEmpty = false);
 
   /**
+   * @brief Validates @p dropPaths, prompts for an output PDF path, and starts
+   * page organization asynchronously.
+   *
+   * Loads page previews when no matching PDF is loaded, verifies the output
+   * path does not overwrite the source PDF, and starts the organize job.
+   *
+   * @param dropPaths Candidate PDF file paths from the drop zone.
+   * @return @c true if the organize job was started; @c false on validation
+   * failure or save-dialog cancellation.
+   */
+  bool execute(const QStringList &dropPaths);
+
+  /**
+   * @brief Returns the underlying organize controller owned by this panel.
+   */
+  PdfToolController *controller() const { return m_controller; }
+
+  /**
    * @brief Returns the ordered list of page operations configured by the user.
    * @return Vector of page operations with original indices and rotations.
    */
@@ -86,6 +104,19 @@ signals:
    */
   void reloadRequested();
 
+  /**
+   * @brief Emitted when the organize controller finishes execution.
+   */
+  void executionFinished();
+
+private slots:
+  /**
+   * @brief Handles completion of the background organize job and notifies the
+   * user.
+   * @param result Outcome details from @c OrganizeController.
+   */
+  void onOrganizeFinished(const OrganizeController::Result &result);
+
 private:
   void updateItemDisplay(QListWidgetItem *item) const;
 
@@ -99,6 +130,7 @@ private:
   ui::Button *m_moveDownBtn{nullptr};
   ui::Button *m_deleteBtn{nullptr};
   ui::Button *m_resetBtn{nullptr};
+  OrganizeController *m_controller{nullptr};
   QString m_sourcePath;
 };
 

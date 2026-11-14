@@ -1,8 +1,10 @@
 #ifndef MARKDOWN_PDF_PANEL_H
 #define MARKDOWN_PDF_PANEL_H
 
+#include "controllers/pdf/markdown_pdf_controller.h"
 #include "ui-kit/components/form_field.h"
 #include "ui-kit/components/select.h"
+#include <QStringList>
 #include <QWidget>
 
 /**
@@ -46,7 +48,34 @@ public:
    */
   int baseFontPt() const;
 
+  /**
+   * @brief Prompts for an output directory and starts Markdown/HTML to PDF conversion.
+   * @param sourcePaths Input Markdown (.md) or HTML (.html) file paths.
+   * @return True if conversion was started, false if validation or prompt cancelled.
+   */
+  bool execute(const QStringList &sourcePaths);
+
+  /**
+   * @brief Returns the underlying Markdown/HTML to PDF controller.
+   * @return Pointer to the owned MarkdownPdfController as PdfToolController.
+   */
+  PdfToolController *controller() const { return m_controller; }
+
+signals:
+  /**
+   * @brief Emitted when the Markdown/HTML to PDF job finishes.
+   */
+  void executionFinished();
+
+private slots:
+  /**
+   * @brief Handles completion of the Markdown/HTML to PDF job and shows feedback.
+   * @param result Execution result emitted by the controller.
+   */
+  void onMarkdownPdfFinished(const MarkdownPdfController::Result &result);
+
 private:
+  MarkdownPdfController *m_controller{nullptr};
   ui::Select *m_pageSizeSelect{nullptr};
   ui::FormField *m_pageSizeField{nullptr};
   ui::Select *m_orientationSelect{nullptr};
