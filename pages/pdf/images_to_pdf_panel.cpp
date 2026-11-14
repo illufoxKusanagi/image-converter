@@ -1,8 +1,12 @@
 #include "images_to_pdf_panel.h"
+#include "ui-kit/components/dialog.h"
+#include "ui-kit/components/toast.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
 #include "widgets/drop_file_widget.h"
 #include <QAbstractItemView>
+#include <QDir>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QHBoxLayout>
 #include <QLatin1String>
@@ -74,6 +78,10 @@ ImagesToPdfPanel::ImagesToPdfPanel(QWidget *parent) : QWidget(parent) {
   mainLayout->addLayout(headerLayout);
   mainLayout->addWidget(m_orderList);
   mainLayout->addLayout(optionsRow);
+
+  m_controller = new ImagesToPdfController(this);
+  connect(m_controller, &ImagesToPdfController::finished, this,
+          &ImagesToPdfPanel::onImagesToPdfFinished, Qt::QueuedConnection);
 
   applyThemeStyles();
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,
@@ -157,6 +165,42 @@ int ImagesToPdfPanel::marginMode() const {
   return m_marginSelect ? m_marginSelect->currentIndex() : 0;
 }
 
+bool ImagesToPdfPanel::execute(const QStringList &dropPaths) {
+  syncFromPaths(dropPaths);
+
+  const QStringList orderedImages = orderedImagePaths();
+  if (orderedImages.isEmpty()) {
+    ui::Toast::show(window() ? window() : this, "No Images Selected",
+                    "Please select at least one image file (PNG, JPG, WEBP, "
+                    "TIFF, BMP, GIF).",
+                    ui::ToastVariant::Warning);
+    return false;
+  }
+
+  const QFileInfo firstInfo(orderedImages.first());
+  const QString defaultOutput =
+      firstInfo.dir().filePath(firstInfo.baseName() + "_merged.pdf");
+  const QString outputPath = QFileDialog::getSaveFileName(
+      this, "Save Merged PDF from Images", defaultOutput, "PDF Files (*.pdf)");
+  if (outputPath.isEmpty()) {
+    return false;
+  }
+
+  if (!m_controller) {
+    return false;
+  }
+
+  ImagesToPdfController::Params params;
+  params.imagePaths = orderedImages;
+  params.outputPath = outputPath;
+  params.pageSizeMode = pageSizeMode();
+  params.orientationMode = orientationMode();
+  params.marginMode = marginMode();
+
+  m_controller->start(params);
+  return true;
+}
+
 void ImagesToPdfPanel::applyThemeStyles() {
   const auto &c = ui::Theme::instance().colors();
   const auto &r = ui::Theme::instance().radius();
@@ -206,6 +250,28 @@ void ImagesToPdfPanel::applyThemeStyles() {
 void ImagesToPdfPanel::moveItemUp() { moveCurrentItem(-1); }
 
 void ImagesToPdfPanel::moveItemDown() { moveCurrentItem(1); }
+
+void ImagesToPdfPanel::onImagesToPdfFinished(
+    const ImagesToPdfController::Result &result) {
+  emit executionFinished();
+
+  QWidget *toastParent = window() ? window() : this;
+  if (result.cancelled) {
+    ui::Toast::show(toastParent, "Cancelled",
+                    "Image-to-PDF creation was cancelled.",
+                    ui::ToastVariant::Default);
+  } else if (result.success) {
+    ui::Dialog::info(
+        this, "Merged PDF Created",
+        QString("Combined %1 image(s) into:\n%2\n\nOutput Size: %3")
+            .arg(result.pageCount)
+            .arg(result.outputPath)
+            .arg(DropFileWidget::formatFileSize(result.outputBytes)));
+  } else {
+    ui::Toast::show(toastParent, "PDF Creation Failed", result.error,
+                    ui::ToastVariant::Destructive);
+  }
+}
 
 void ImagesToPdfPanel::moveCurrentItem(int delta) {
   if (!m_orderList || delta == 0) {

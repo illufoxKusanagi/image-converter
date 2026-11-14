@@ -1,4 +1,8 @@
 #include "markdown_pdf_panel.h"
+#include "ui-kit/components/dialog.h"
+#include "ui-kit/components/toast.h"
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QHBoxLayout>
 #include <QString>
 #include <QStringList>
@@ -22,6 +26,10 @@ ui::FormField *createSelectField(QWidget *parent, QHBoxLayout *layout,
 } // namespace
 
 MarkdownPdfPanel::MarkdownPdfPanel(QWidget *parent) : QWidget(parent) {
+  m_controller = new MarkdownPdfController(this);
+  connect(m_controller, &MarkdownPdfController::finished, this,
+          &MarkdownPdfPanel::onMarkdownPdfFinished, Qt::QueuedConnection);
+
   auto *mdLayout = new QHBoxLayout(this);
   mdLayout->setContentsMargins(0, 0, 0, 0);
   mdLayout->setSpacing(12);
@@ -64,4 +72,64 @@ int MarkdownPdfPanel::baseFontPt() const {
   const QVector<int> fontOptions = {9, 10, 11, 12, 14, 16};
   return fontOptions.value(
       m_fontSizeSelect ? m_fontSizeSelect->currentIndex() : 1, 10);
+}
+
+bool MarkdownPdfPanel::execute(const QStringList &sourcePaths) {
+  if (sourcePaths.isEmpty()) {
+    ui::Toast::show(
+        window() ? window() : this, "No Document Selected",
+        "Please select at least one Markdown (.md) or HTML (.html) file.",
+        ui::ToastVariant::Warning);
+    return false;
+  }
+
+  const QString defaultDir = QFileInfo(sourcePaths.first()).absolutePath();
+  const QString outputDir = QFileDialog::getExistingDirectory(
+      this, "Select Output Directory for Generated PDFs", defaultDir);
+  if (outputDir.isEmpty()) {
+    return false;
+  }
+
+  MarkdownPdfController::Params params;
+  params.sourcePaths = sourcePaths;
+  params.outputDir = outputDir;
+  params.useLetterPageSize = useLetterPageSize();
+  params.landscape = landscape();
+  params.marginPt = marginPt();
+  params.baseFontPt = baseFontPt();
+
+  m_controller->start(params);
+  return true;
+}
+
+void MarkdownPdfPanel::onMarkdownPdfFinished(
+    const MarkdownPdfController::Result &result) {
+  emit executionFinished();
+
+  QWidget *toastParent = window() ? window() : this;
+
+  if (result.cancelled) {
+    ui::Toast::show(toastParent, "Cancelled",
+                    "Document PDF export was cancelled.",
+                    ui::ToastVariant::Default);
+    return;
+  }
+
+  if (result.pdfsCreated > 0) {
+    QString msg = QString("Exported %1 document(s) to PDF in:\n%2")
+                      .arg(result.pdfsCreated)
+                      .arg(result.outputDir);
+    if (result.failedFiles > 0) {
+      msg += QString("\n\n%1 file(s) failed:\n%2")
+                 .arg(result.failedFiles)
+                 .arg(result.error);
+    }
+    ui::Dialog::info(this, "PDF Export Complete", msg);
+  } else {
+    ui::Toast::show(toastParent, "PDF Export Failed",
+                    result.error.isEmpty()
+                        ? "Failed to export Markdown/HTML to PDF."
+                        : result.error,
+                    ui::ToastVariant::Destructive);
+  }
 }

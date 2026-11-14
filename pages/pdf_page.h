@@ -1,14 +1,7 @@
 #ifndef PDF_PAGE_H
 #define PDF_PAGE_H
 
-#include "controllers/pdf/compress_controller.h"
-#include "controllers/pdf/grayscale_controller.h"
-#include "controllers/pdf/images_to_pdf_controller.h"
-#include "controllers/pdf/markdown_pdf_controller.h"
-#include "controllers/pdf/merge_controller.h"
-#include "controllers/pdf/organize_controller.h"
-#include "controllers/pdf/pdf_to_images_controller.h"
-#include "controllers/pdf/split_controller.h"
+#include "controllers/pdf/pdf_tool_controller.h"
 #include "pages/pdf/images_to_pdf_panel.h"
 #include "pages/pdf/markdown_pdf_panel.h"
 #include "pages/pdf/merge_pdf_panel.h"
@@ -48,29 +41,11 @@ private slots:
   void onToolTabChanged(int index);
   void onProcessButtonClicked();
   void onCancelButtonClicked();
-  void onExportFormatChanged(int index);
   void applyThemeStyles();
-
-  // Merge tool slots
-  void syncMergeListFromDropWidget();
-
-  // Organize tool slots
-  void loadOrganizePagesFromSelectedPdf(bool silentIfEmpty = false);
-
-  // Images to PDF tool slots
-  void syncImageListFromDropWidget();
 
   // Controller signal handlers
   void onControllerProgress(int current, int total, const QString &statusText);
   void onControllerFileStatus(const QString &filePath, int status, const QString &detail);
-  void onCompressFinished(const CompressController::Result &result);
-  void onMergeFinished(const MergeController::Result &result);
-  void onSplitFinished(const SplitController::Result &result);
-  void onOrganizeFinished(const OrganizeController::Result &result);
-  void onPdfToImagesFinished(const PdfToImagesController::Result &result);
-  void onImagesToPdfFinished(const ImagesToPdfController::Result &result);
-  void onGrayscaleFinished(const GrayscaleController::Result &result);
-  void onMarkdownPdfFinished(const MarkdownPdfController::Result &result);
 
 private:
   QVBoxLayout *mainLayout{nullptr};
@@ -111,14 +86,6 @@ private:
   bool m_isProcessing{false};
 
   // Controllers
-  CompressController *m_compressController{nullptr};
-  MergeController *m_mergeController{nullptr};
-  SplitController *m_splitController{nullptr};
-  OrganizeController *m_organizeController{nullptr};
-  PdfToImagesController *m_pdfToImagesController{nullptr};
-  ImagesToPdfController *m_imagesToPdfController{nullptr};
-  GrayscaleController *m_grayscaleController{nullptr};
-  MarkdownPdfController *m_markdownController{nullptr};
   PdfToolController *m_currentController{nullptr};
 
   DropFileWidget *activeDropWidget() const;
@@ -129,14 +96,6 @@ private:
   QString cancelButtonTextForMode(PdfToolMode mode) const;
 
   void initControllers();
-  void executeCompress();
-  void executeMerge();
-  void executeSplit();
-  void executeOrganize();
-  void executePdfToImages();
-  void executeImagesToPdf();
-  void executeGrayscale();
-  void executeMarkdownPdf();
 };
 
 #endif // PDF_PAGE_H

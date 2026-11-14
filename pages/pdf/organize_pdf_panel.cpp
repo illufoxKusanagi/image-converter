@@ -1,9 +1,13 @@
 #include "organize_pdf_panel.h"
 #include "controllers/pdf/pdf_utils.h"
+#include "ui-kit/components/dialog.h"
 #include "ui-kit/components/toast.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
+#include "widgets/drop_file_widget.h"
 #include <QAbstractItemView>
+#include <QDir>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QHBoxLayout>
 #include <QIcon>
@@ -100,6 +104,10 @@ OrganizePdfPanel::OrganizePdfPanel(QWidget *parent) : QWidget(parent) {
   mainLayout->addLayout(toolbarLayout);
   mainLayout->addWidget(m_pageList);
 
+  m_controller = new OrganizeController(this);
+  connect(m_controller, &OrganizeController::finished, this,
+          &OrganizePdfPanel::onOrganizeFinished, Qt::QueuedConnection);
+
   applyThemeStyles();
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,
           &OrganizePdfPanel::applyThemeStyles);
@@ -156,6 +164,54 @@ void OrganizePdfPanel::loadFromPaths(const QStringList &paths,
   if (m_pageList->count() > 0) {
     m_pageList->setCurrentRow(0);
   }
+}
+
+bool OrganizePdfPanel::execute(const QStringList &dropPaths) {
+  QWidget *toastParent = window() ? window() : this;
+  if (dropPaths.isEmpty()) {
+    ui::Toast::show(toastParent, "No PDF Selected",
+                    "Please select a PDF file to organize.",
+                    ui::ToastVariant::Warning);
+    return false;
+  }
+
+  if (m_sourcePath != dropPaths.first() || pageCount() == 0) {
+    loadFromPaths(dropPaths, false);
+  }
+  if (pageCount() == 0) {
+    return false;
+  }
+
+  const QVector<OrganizeController::PageOp> ops = pageOps();
+  const QString currentSourcePath = sourcePath();
+  const QFileInfo sourceInfo(currentSourcePath);
+  const QString defaultOutput =
+      sourceInfo.dir().filePath(sourceInfo.baseName() + "_organized.pdf");
+  const QString outputPath = QFileDialog::getSaveFileName(
+      this, "Save Organized PDF", defaultOutput, "PDF Files (*.pdf)");
+  if (outputPath.isEmpty()) {
+    return false;
+  }
+
+  if (pdfutil::isSamePdf(sourceInfo, QFileInfo(outputPath))) {
+    ui::Toast::show(toastParent, "Invalid Output File",
+                    "Choose a different output file. The original PDF must not "
+                    "be overwritten.",
+                    ui::ToastVariant::Destructive);
+    return false;
+  }
+
+  if (!m_controller) {
+    return false;
+  }
+
+  OrganizeController::Params params;
+  params.sourcePath = currentSourcePath;
+  params.outputPath = outputPath;
+  params.pageOps = ops;
+
+  m_controller->start(params);
+  return true;
 }
 
 QVector<OrganizeController::PageOp> OrganizePdfPanel::pageOps() const {
@@ -287,6 +343,28 @@ void OrganizePdfPanel::deleteSelectedPages() {
   }
   for (QListWidgetItem *item : selected) {
     delete m_pageList->takeItem(m_pageList->row(item));
+  }
+}
+
+void OrganizePdfPanel::onOrganizeFinished(
+    const OrganizeController::Result &result) {
+  emit executionFinished();
+
+  QWidget *toastParent = window() ? window() : this;
+  if (result.cancelled) {
+    ui::Toast::show(toastParent, "Cancelled",
+                    "Page organization was cancelled.",
+                    ui::ToastVariant::Default);
+  } else if (result.success) {
+    ui::Dialog::info(
+        this, "Organized PDF Saved",
+        QString("Saved %1 page(s) to:\n%2\n\nOutput Size: %3")
+            .arg(result.pageCount)
+            .arg(result.outputPath)
+            .arg(DropFileWidget::formatFileSize(result.outputBytes)));
+  } else {
+    ui::Toast::show(toastParent, "Failed to Save Organized PDF", result.error,
+                    ui::ToastVariant::Destructive);
   }
 }
 

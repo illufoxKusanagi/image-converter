@@ -1,8 +1,13 @@
 #include "merge_pdf_panel.h"
+#include "controllers/pdf/pdf_utils.h"
+#include "ui-kit/components/dialog.h"
+#include "ui-kit/components/toast.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
 #include "widgets/drop_file_widget.h"
 #include <QAbstractItemView>
+#include <QDir>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QHBoxLayout>
 #include <QListWidgetItem>
@@ -51,6 +56,10 @@ MergePdfPanel::MergePdfPanel(QWidget *parent) : QWidget(parent) {
   applyThemeStyles();
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,
           &MergePdfPanel::applyThemeStyles);
+
+  m_controller = new MergeController(this);
+  connect(m_controller, &MergeController::finished, this,
+          &MergePdfPanel::onMergeFinished, Qt::QueuedConnection);
 }
 
 void MergePdfPanel::syncFromPaths(const QStringList &dropPaths) {
@@ -184,4 +193,71 @@ void MergePdfPanel::moveCurrentItem(int delta) {
   }
   m_orderList->insertItem(targetRow, item);
   m_orderList->setCurrentRow(targetRow);
+}
+
+bool MergePdfPanel::execute(const QStringList &dropPaths) {
+  syncFromPaths(dropPaths);
+
+  const QStringList paths = orderedPaths();
+  QWidget *const toastParent = window() ? window() : this;
+
+  if (paths.size() < 2) {
+    ui::Toast::show(toastParent, "Not Enough PDFs",
+                    "Please select at least 2 PDF files to merge.",
+                    ui::ToastVariant::Warning);
+    return false;
+  }
+
+  const QFileInfo firstInfo(paths.first());
+  const QString defaultOutput =
+      firstInfo.dir().filePath(firstInfo.baseName() + "_merged.pdf");
+  const QString outputPath = QFileDialog::getSaveFileName(
+      this, "Save Merged PDF", defaultOutput, "PDF Files (*.pdf)");
+  if (outputPath.isEmpty()) {
+    return false;
+  }
+
+  const QFileInfo destInfo(outputPath);
+  for (const QString &srcPath : paths) {
+    if (pdfutil::isSamePdf(QFileInfo(srcPath), destInfo)) {
+      ui::Toast::show(
+          toastParent, "Invalid Output File",
+          "The merged PDF destination cannot overwrite one of the input PDFs.",
+          ui::ToastVariant::Destructive);
+      return false;
+    }
+  }
+
+  if (!m_controller) {
+    return false;
+  }
+
+  MergeController::Params params;
+  params.inputPaths = paths;
+  params.outputPath = outputPath;
+
+  m_controller->start(params);
+  return true;
+}
+
+void MergePdfPanel::onMergeFinished(const MergeController::Result &result) {
+  emit executionFinished();
+
+  QWidget *const toastParent = window() ? window() : this;
+  if (result.cancelled) {
+    ui::Toast::show(toastParent, "Cancelled", "PDF merge was cancelled.",
+                    ui::ToastVariant::Default);
+  } else if (result.success) {
+    ui::Dialog::info(
+        this, "PDFs Merged",
+        QString("Merged %1 PDFs (%2 total pages) into:\n%3\n\n"
+                "Output Size: %4")
+            .arg(count())
+            .arg(result.totalPages)
+            .arg(result.outputPath)
+            .arg(DropFileWidget::formatFileSize(result.outputBytes)));
+  } else {
+    ui::Toast::show(toastParent, "PDF Merge Failed", result.error,
+                    ui::ToastVariant::Destructive);
+  }
 }
