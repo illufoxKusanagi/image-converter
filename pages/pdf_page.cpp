@@ -1,13 +1,16 @@
 #include "pages/pdf_page.h"
 #include "controllers/pdf/pdf_utils.h"
+#include "ui-kit/components/dialog.h"
+#include "ui-kit/components/toast.h"
 #include "ui-kit/theme/icon_helper.h"
 #include "ui-kit/theme/style_helper.h"
+#include "ui-kit/theme/theme.h"
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QHBoxLayout>
 #include <QPdfDocument>
-#include <QTransform>
+#include <QPushButton>
+#include <QtGlobal>
 
 PdfPage::PdfPage(QWidget *parent)
     : QWidget(parent), mainLayout(new QVBoxLayout(this)) {
@@ -33,34 +36,7 @@ PdfPage::PdfPage(QWidget *parent)
   m_docDragWidget = new DropFileWidget(this, "Markdown / HTML");
   m_docDragWidget->setVisible(false);
 
-  m_qualityRowWidget = new QWidget(this);
-  QHBoxLayout *attributeLayout = new QHBoxLayout(m_qualityRowWidget);
-  attributeLayout->setContentsMargins(0, 0, 0, 0);
-  attributeLayout->setSpacing(16);
-
-  m_qualitySlider = new SliderWidget(m_qualityRowWidget, "PDF Quality");
-  m_qualitySlider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-  m_qualitySlider->setValue(50);
-
-  QStringList presetOptions = {"Custom", "Web / Email", "Balanced",
-                               "High Quality (preserve images)"};
-  m_presetSelect = new ui::Select(presetOptions, m_qualityRowWidget);
-  m_presetSelect->setCurrentIndex(2); // Default to Balanced (50)
-  m_presetField = new ui::FormField("Compression Preset", m_presetSelect,
-                                    m_qualityRowWidget);
-  m_presetField->setToolTip(
-      "Text and vector graphics are retained. Below quality 80, images may "
-      "lose detail. At quality 80 or above, images are not downsampled or "
-      "newly JPEG-encoded. PDF rewriting can alter forms and annotations "
-      "and invalidates digital signatures. Keep the original PDF.");
-
-  connect(m_presetSelect, QOverload<int>::of(&QComboBox::currentIndexChanged),
-          this, &PdfPage::onPresetChanged);
-  connect(m_qualitySlider, &SliderWidget::valueChanged, this,
-          &PdfPage::onQualitySliderChanged);
-
-  attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignTop);
-  attributeLayout->addWidget(m_presetField, 1, Qt::AlignTop);
+  m_qualityPanel = new PdfQualityPanel(this);
 
   m_optionsStack = new QStackedWidget(this);
   setupToolPanels();
@@ -91,7 +67,7 @@ PdfPage::PdfPage(QWidget *parent)
   mainLayout->addWidget(m_imageDragWidget);
   mainLayout->addWidget(m_docDragWidget);
   mainLayout->addWidget(m_optionsStack);
-  mainLayout->addWidget(m_qualityRowWidget);
+  mainLayout->addWidget(m_qualityPanel);
   mainLayout->addWidget(m_progressLabel);
   mainLayout->addWidget(m_progressBar);
   mainLayout->addWidget(m_processButton, 0, Qt::AlignCenter);
@@ -176,7 +152,7 @@ DropFileWidget *PdfPage::activeDropWidget() const {
 }
 
 void PdfPage::setupToolPanels() {
-  // Page 0: Compress (uses m_qualityRowWidget)
+  // Page 0: Compress (uses m_qualityPanel)
   QWidget *compressDummy = new QWidget(m_optionsStack);
   m_optionsStack->addWidget(compressDummy);
 
@@ -191,215 +167,29 @@ void PdfPage::setupToolPanels() {
   m_optionsStack->addWidget(m_splitPanel);
 
   // Page 3: Organize / Rotate / Delete PDF Pages
-  m_organizePanel = new QWidget(m_optionsStack);
-  QVBoxLayout *organizeLayout = new QVBoxLayout(m_organizePanel);
-  organizeLayout->setContentsMargins(0, 0, 0, 0);
-  organizeLayout->setSpacing(6);
-
-  QHBoxLayout *orgToolbarLayout = new QHBoxLayout();
-  orgToolbarLayout->setContentsMargins(0, 0, 0, 0);
-  orgToolbarLayout->setSpacing(6);
-
-  m_organizeHintLabel =
-      new QLabel("Pages (drag or use buttons to reorder, rotate, or delete):",
-                 m_organizePanel);
-  m_orgLoadBtn =
-      new ui::Button("Load Pages from PDF", ui::ButtonVariant::Secondary,
-                     ui::ButtonSize::Small, m_organizePanel);
-  m_orgRotLeftBtn =
-      new ui::Button("Rotate Left (-90°)", ui::ButtonVariant::Outline,
-                     ui::ButtonSize::Small, m_organizePanel);
-  m_orgRotRightBtn =
-      new ui::Button("Rotate Right (+90°)", ui::ButtonVariant::Outline,
-                     ui::ButtonSize::Small, m_organizePanel);
-  m_orgRot180Btn = new ui::Button("Rotate 180°", ui::ButtonVariant::Outline,
-                                  ui::ButtonSize::Small, m_organizePanel);
-  m_orgMoveUpBtn = new ui::Button("Move Up", ui::ButtonVariant::Outline,
-                                  ui::ButtonSize::Small, m_organizePanel);
-  m_orgMoveDownBtn = new ui::Button("Move Down", ui::ButtonVariant::Outline,
-                                    ui::ButtonSize::Small, m_organizePanel);
-  m_orgDeleteBtn = new ui::Button("Delete Page", ui::ButtonVariant::Destructive,
-                                  ui::ButtonSize::Small, m_organizePanel);
-  m_orgResetBtn = new ui::Button("Reset", ui::ButtonVariant::Ghost,
-                                 ui::ButtonSize::Small, m_organizePanel);
-
-  connect(m_orgLoadBtn, &QPushButton::clicked, this,
+  m_organizePanel = new OrganizePdfPanel(m_optionsStack);
+  connect(m_organizePanel, &OrganizePdfPanel::reloadRequested, this,
           [this]() { loadOrganizePagesFromSelectedPdf(false); });
-  connect(m_orgRotLeftBtn, &QPushButton::clicked, this,
-          [this]() { rotateSelectedOrganizePages(-90); });
-  connect(m_orgRotRightBtn, &QPushButton::clicked, this,
-          [this]() { rotateSelectedOrganizePages(90); });
-  connect(m_orgRot180Btn, &QPushButton::clicked, this,
-          [this]() { rotateSelectedOrganizePages(180); });
-  connect(m_orgMoveUpBtn, &QPushButton::clicked, this,
-          [this]() { moveSelectedOrganizePage(-1); });
-  connect(m_orgMoveDownBtn, &QPushButton::clicked, this,
-          [this]() { moveSelectedOrganizePage(1); });
-  connect(m_orgDeleteBtn, &QPushButton::clicked, this,
-          &PdfPage::deleteSelectedOrganizePages);
-  connect(m_orgResetBtn, &QPushButton::clicked, this,
-          &PdfPage::resetOrganizePages);
-
-  orgToolbarLayout->addWidget(m_orgLoadBtn);
-  orgToolbarLayout->addWidget(m_orgRotLeftBtn);
-  orgToolbarLayout->addWidget(m_orgRotRightBtn);
-  orgToolbarLayout->addWidget(m_orgRot180Btn);
-  orgToolbarLayout->addWidget(m_orgMoveUpBtn);
-  orgToolbarLayout->addWidget(m_orgMoveDownBtn);
-  orgToolbarLayout->addWidget(m_orgDeleteBtn);
-  orgToolbarLayout->addWidget(m_orgResetBtn);
-  orgToolbarLayout->addStretch(1);
-
-  m_organizePageList = new QListWidget(m_organizePanel);
-  m_organizePageList->setViewMode(QListWidget::ListMode);
-  m_organizePageList->setIconSize(QSize(40, 56));
-  m_organizePageList->setSelectionMode(QAbstractItemView::ExtendedSelection);
-  m_organizePageList->setDragDropMode(QAbstractItemView::InternalMove);
-  m_organizePageList->setDefaultDropAction(Qt::MoveAction);
-  m_organizePageList->setFixedHeight(140);
-
-  organizeLayout->addWidget(m_organizeHintLabel);
-  organizeLayout->addLayout(orgToolbarLayout);
-  organizeLayout->addWidget(m_organizePageList);
   m_optionsStack->addWidget(m_organizePanel);
 
   // Page 4: PDF to Images
-  m_pdfToImagesPanel = new QWidget(m_optionsStack);
-  QHBoxLayout *exportLayout = new QHBoxLayout(m_pdfToImagesPanel);
-  exportLayout->setContentsMargins(0, 0, 0, 0);
-  exportLayout->setSpacing(12);
-
-  QStringList exportFormats = {"PNG", "JPG", "WEBP", "TIFF"};
-  m_exportImageFormatSelect = new ui::Select(exportFormats, m_pdfToImagesPanel);
-  m_exportImageFormatField = new ui::FormField(
-      "Image Format", m_exportImageFormatSelect, m_pdfToImagesPanel);
-  connect(m_exportImageFormatSelect,
-          QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+  m_pdfToImagesPanel = new PdfToImagesPanel(m_optionsStack);
+  connect(m_pdfToImagesPanel, &PdfToImagesPanel::exportFormatChanged, this,
           &PdfPage::onExportFormatChanged);
-
-  QStringList dpiOptions = {"72 DPI (Screen)", "150 DPI (Medium)",
-                            "300 DPI (Print)", "600 DPI (High Detail)"};
-  m_exportDpiSelect = new ui::Select(dpiOptions, m_pdfToImagesPanel);
-  m_exportDpiSelect->setCurrentIndex(2); // Default 300 DPI
-  m_exportDpiField = new ui::FormField("Render Resolution", m_exportDpiSelect,
-                                       m_pdfToImagesPanel);
-
-  m_exportPageRangeInput =
-      new ui::Input("All pages, or e.g. 1-3, 5", m_pdfToImagesPanel);
-  m_exportPageRangeField = new ui::FormField(
-      "Page Filter (optional)", m_exportPageRangeInput, m_pdfToImagesPanel);
-
-  exportLayout->addWidget(m_exportImageFormatField, 1, Qt::AlignTop);
-  exportLayout->addWidget(m_exportDpiField, 1, Qt::AlignTop);
-  exportLayout->addWidget(m_exportPageRangeField, 2, Qt::AlignTop);
   m_optionsStack->addWidget(m_pdfToImagesPanel);
 
   // Page 5: Images to Merged PDF
-  m_imagesToPdfPanel = new QWidget(m_optionsStack);
-  QVBoxLayout *imgPdfRootLayout = new QVBoxLayout(m_imagesToPdfPanel);
-  imgPdfRootLayout->setContentsMargins(0, 0, 0, 0);
-  imgPdfRootLayout->setSpacing(8);
-
-  QHBoxLayout *imgOrderHeaderLayout = new QHBoxLayout();
-  imgOrderHeaderLayout->setContentsMargins(0, 0, 0, 0);
-  imgOrderHeaderLayout->setSpacing(8);
-
-  m_imageOrderHintLabel =
-      new QLabel("Image Page Order (drag items or use buttons to reorder):",
-                 m_imagesToPdfPanel);
-  m_imgSyncBtn =
-      new ui::Button("Sync from Drop Zone", ui::ButtonVariant::Secondary,
-                     ui::ButtonSize::Small, m_imagesToPdfPanel);
-  m_imgUpBtn = new ui::Button("Move Up", ui::ButtonVariant::Outline,
-                              ui::ButtonSize::Small, m_imagesToPdfPanel);
-  m_imgDownBtn = new ui::Button("Move Down", ui::ButtonVariant::Outline,
-                                ui::ButtonSize::Small, m_imagesToPdfPanel);
-
-  connect(m_imgSyncBtn, &QPushButton::clicked, this,
+  m_imagesToPdfPanel = new ImagesToPdfPanel(m_optionsStack);
+  connect(m_imagesToPdfPanel, &ImagesToPdfPanel::syncRequested, this,
           &PdfPage::syncImageListFromDropWidget);
-  connect(m_imgUpBtn, &QPushButton::clicked, this, &PdfPage::moveImageItemUp);
-  connect(m_imgDownBtn, &QPushButton::clicked, this,
-          &PdfPage::moveImageItemDown);
-
-  imgOrderHeaderLayout->addWidget(m_imageOrderHintLabel, 1);
-  imgOrderHeaderLayout->addWidget(m_imgSyncBtn);
-  imgOrderHeaderLayout->addWidget(m_imgUpBtn);
-  imgOrderHeaderLayout->addWidget(m_imgDownBtn);
-
-  m_imageOrderList = new QListWidget(m_imagesToPdfPanel);
-  m_imageOrderList->setDragDropMode(QAbstractItemView::InternalMove);
-  m_imageOrderList->setDefaultDropAction(Qt::MoveAction);
-  m_imageOrderList->setSelectionMode(QAbstractItemView::SingleSelection);
-  m_imageOrderList->setFixedHeight(96);
-
-  QHBoxLayout *imgPdfOptionsRow = new QHBoxLayout();
-  imgPdfOptionsRow->setContentsMargins(0, 0, 0, 0);
-  imgPdfOptionsRow->setSpacing(12);
-
-  QStringList pageSizes = {"Fit to Image", "A4 (210 × 297 mm)",
-                           "Letter (8.5 × 11 in)"};
-  m_imgPdfPageSizeSelect = new ui::Select(pageSizes, m_imagesToPdfPanel);
-  m_imgPdfPageSizeField = new ui::FormField("Page Size", m_imgPdfPageSizeSelect,
-                                            m_imagesToPdfPanel);
-
-  QStringList orientations = {"Auto (Match Image)", "Portrait", "Landscape"};
-  m_imgPdfOrientationSelect = new ui::Select(orientations, m_imagesToPdfPanel);
-  m_imgPdfOrientationField = new ui::FormField(
-      "Orientation", m_imgPdfOrientationSelect, m_imagesToPdfPanel);
-
-  QStringList margins = {"No Margin (0 pt)", "Small (18 pt)", "Medium (36 pt)",
-                         "Large (54 pt)"};
-  m_imgPdfMarginSelect = new ui::Select(margins, m_imagesToPdfPanel);
-  m_imgPdfMarginField = new ui::FormField("Page Margin", m_imgPdfMarginSelect,
-                                          m_imagesToPdfPanel);
-
-  imgPdfOptionsRow->addWidget(m_imgPdfPageSizeField, 1, Qt::AlignTop);
-  imgPdfOptionsRow->addWidget(m_imgPdfOrientationField, 1, Qt::AlignTop);
-  imgPdfOptionsRow->addWidget(m_imgPdfMarginField, 1, Qt::AlignTop);
-
-  imgPdfRootLayout->addLayout(imgOrderHeaderLayout);
-  imgPdfRootLayout->addWidget(m_imageOrderList);
-  imgPdfRootLayout->addLayout(imgPdfOptionsRow);
   m_optionsStack->addWidget(m_imagesToPdfPanel);
 
-  // Page 6: Grayscale (uses m_qualityRowWidget)
+  // Page 6: Grayscale (uses m_qualityPanel)
   QWidget *grayscaleDummy = new QWidget(m_optionsStack);
   m_optionsStack->addWidget(grayscaleDummy);
 
   // Page 7: Markdown / HTML to PDF
-  m_markdownPanel = new QWidget(m_optionsStack);
-  QHBoxLayout *mdLayout = new QHBoxLayout(m_markdownPanel);
-  mdLayout->setContentsMargins(0, 0, 0, 0);
-  mdLayout->setSpacing(12);
-
-  QStringList mdPageSizes = {"A4 (210 × 297 mm)", "US Letter (8.5 × 11 in)"};
-  m_mdPageSizeSelect = new ui::Select(mdPageSizes, m_markdownPanel);
-  m_mdPageSizeField =
-      new ui::FormField("Page Size", m_mdPageSizeSelect, m_markdownPanel);
-
-  QStringList mdOrientations = {"Portrait", "Landscape"};
-  m_mdOrientationSelect = new ui::Select(mdOrientations, m_markdownPanel);
-  m_mdOrientationField =
-      new ui::FormField("Orientation", m_mdOrientationSelect, m_markdownPanel);
-
-  QStringList mdMargins = {"Compact (18 pt)", "Standard (36 pt)",
-                           "Wide (54 pt)", "Extra Wide (72 pt)"};
-  m_mdMarginSelect = new ui::Select(mdMargins, m_markdownPanel);
-  m_mdMarginSelect->setCurrentIndex(1); // Standard 36 pt
-  m_mdMarginField =
-      new ui::FormField("Page Margins", m_mdMarginSelect, m_markdownPanel);
-
-  QStringList mdFontSizes = {"9 pt", "10 pt (Default)", "11 pt",
-                             "12 pt", "14 pt", "16 pt"};
-  m_mdFontSizeSelect = new ui::Select(mdFontSizes, m_markdownPanel);
-  m_mdFontSizeSelect->setCurrentIndex(1); // 10 pt
-  m_mdFontSizeField =
-      new ui::FormField("Base Font Size", m_mdFontSizeSelect, m_markdownPanel);
-
-  mdLayout->addWidget(m_mdPageSizeField, 1, Qt::AlignTop);
-  mdLayout->addWidget(m_mdOrientationField, 1, Qt::AlignTop);
-  mdLayout->addWidget(m_mdMarginField, 1, Qt::AlignTop);
-  mdLayout->addWidget(m_mdFontSizeField, 1, Qt::AlignTop);
+  m_markdownPanel = new MarkdownPdfPanel(m_optionsStack);
   m_optionsStack->addWidget(m_markdownPanel);
 }
 
@@ -458,9 +248,11 @@ void PdfPage::onToolTabChanged(int index) {
   if (m_currentTool == PdfToolMode::Merge) {
     syncMergeListFromDropWidget();
   } else if (m_currentTool == PdfToolMode::Organize) {
-    const QStringList paths = m_dragWidget->getFilePaths();
-    if (!paths.isEmpty() && m_organizedSourcePath != paths.first()) {
-      loadOrganizePagesFromSelectedPdf(true);
+    if (m_dragWidget && m_organizePanel) {
+      const QStringList paths = m_dragWidget->getFilePaths();
+      if (!paths.isEmpty() && m_organizePanel->sourcePath() != paths.first()) {
+        loadOrganizePagesFromSelectedPdf(true);
+      }
     }
   } else if (m_currentTool == PdfToolMode::ImagesToPdf) {
     syncImageListFromDropWidget();
@@ -492,18 +284,16 @@ void PdfPage::updateToolModeUi() {
     }
   }
 
-  if (m_qualityRowWidget) {
+  if (m_qualityPanel) {
     const bool showQualityRow =
         (m_currentTool == PdfToolMode::Compress ||
          m_currentTool == PdfToolMode::Grayscale ||
          (m_currentTool == PdfToolMode::PdfToImages &&
-          m_exportImageFormatSelect &&
-          m_exportImageFormatSelect->currentIndex() != 0));
-    m_qualityRowWidget->setVisible(showQualityRow);
-  }
-  if (m_presetField) {
-    m_presetField->setVisible(m_currentTool == PdfToolMode::Compress ||
-                              m_currentTool == PdfToolMode::Grayscale);
+          m_pdfToImagesPanel &&
+          m_pdfToImagesPanel->formatIndex() != 0));
+    m_qualityPanel->setVisible(showQualityRow);
+    m_qualityPanel->setPresetVisible(m_currentTool == PdfToolMode::Compress ||
+                                     m_currentTool == PdfToolMode::Grayscale);
   }
 
   if (m_processButton) {
@@ -523,7 +313,6 @@ void PdfPage::onExportFormatChanged(int index) {
 
 void PdfPage::applyThemeStyles() {
   const auto &c = ui::Theme::instance().colors();
-  const auto &r = ui::Theme::instance().radius();
   const auto &t = ui::Theme::instance().typography();
 
   if (m_progressLabel) {
@@ -531,50 +320,6 @@ void PdfPage::applyThemeStyles() {
     m_progressLabel->setStyleSheet(
         QString("color: %1; background: transparent;")
             .arg(ui::StyleHelper::toHexString(c.mutedForeground)));
-  }
-
-  const QString hintStyle =
-      QString("color: %1; background: transparent;")
-          .arg(ui::StyleHelper::toHexString(c.foreground));
-  for (QLabel *lbl : {m_organizeHintLabel, m_imageOrderHintLabel}) {
-    if (lbl) {
-      lbl->setFont(t.font(t.sizeXs, QFont::DemiBold));
-      lbl->setStyleSheet(hintStyle);
-    }
-  }
-
-  const QString listStyle = QString("QListWidget {"
-                                    "  background-color: %1;"
-                                    "  color: %2;"
-                                    "  border: 1px solid %3;"
-                                    "  border-radius: %4px;"
-                                    "  padding: 4px;"
-                                    "  outline: none;"
-                                    "}"
-                                    "QListWidget::item {"
-                                    "  padding: 5px 8px;"
-                                    "  border-radius: %5px;"
-                                    "}"
-                                    "QListWidget::item:selected {"
-                                    "  background-color: %6;"
-                                    "  color: %2;"
-                                    "}"
-                                    "QListWidget::item:hover {"
-                                    "  background-color: %7;"
-                                    "}")
-                                .arg(ui::StyleHelper::toHexString(c.card))
-                                .arg(ui::StyleHelper::toHexString(c.foreground))
-                                .arg(ui::StyleHelper::toHexString(c.border))
-                                .arg(r.md)
-                                .arg(r.sm)
-                                .arg(ui::StyleHelper::toHexString(c.accent))
-                                .arg(ui::StyleHelper::toHexString(c.secondary));
-
-  for (QListWidget *listWidget : {m_organizePageList, m_imageOrderList}) {
-    if (listWidget) {
-      listWidget->setFont(t.font(t.sizeSm));
-      listWidget->setStyleSheet(listStyle);
-    }
   }
 
   if (m_processButton) {
@@ -585,37 +330,6 @@ void PdfPage::applyThemeStyles() {
     m_cancelButton->setIcon(ui::Icon::get(
         ":/icons/icons/lucide-x.svg", c.destructiveForeground, QSize(16, 16)));
   }
-}
-
-void PdfPage::onPresetChanged(int index) {
-  if (!m_qualitySlider)
-    return;
-  m_qualitySlider->blockSignals(true);
-  if (index == 1) {
-    m_qualitySlider->setValue(20);
-  } else if (index == 2) {
-    m_qualitySlider->setValue(50);
-  } else if (index == 3) {
-    m_qualitySlider->setValue(80);
-  }
-  m_qualitySlider->blockSignals(false);
-}
-
-void PdfPage::onQualitySliderChanged() {
-  if (!m_presetSelect || !m_qualitySlider)
-    return;
-  int val = m_qualitySlider->getValue();
-  m_presetSelect->blockSignals(true);
-  if (val == 20) {
-    m_presetSelect->setCurrentIndex(1);
-  } else if (val == 50) {
-    m_presetSelect->setCurrentIndex(2);
-  } else if (val == 80) {
-    m_presetSelect->setCurrentIndex(3);
-  } else {
-    m_presetSelect->setCurrentIndex(0);
-  }
-  m_presetSelect->blockSignals(false);
 }
 
 void PdfPage::setProcessingState(bool isProcessing) {
@@ -638,9 +352,8 @@ void PdfPage::setProcessingState(bool isProcessing) {
     }
     m_progressBar->setVisible(isProcessing);
   }
-  m_qualitySlider->setEnabled(!isProcessing);
-  if (m_presetSelect) {
-    m_presetSelect->setEnabled(!isProcessing);
+  if (m_qualityPanel) {
+    m_qualityPanel->setControlsEnabled(!isProcessing);
   }
   DropFileWidget *drop = activeDropWidget();
   if (drop) {
@@ -734,7 +447,7 @@ void PdfPage::executeCompress() {
     return;
   }
 
-  const int quality = m_qualitySlider->getValue();
+  const int quality = m_qualityPanel ? m_qualityPanel->quality() : 50;
   CompressController::Params params;
   params.quality = quality;
 
@@ -1015,141 +728,12 @@ void PdfPage::onSplitFinished(const SplitController::Result &result) {
 // Tool 3: Organize / Rotate / Delete PDF Pages
 // ============================================================================
 
-void PdfPage::updateOrganizeItemDisplay(QListWidgetItem *item) const {
-  if (!item) {
-    return;
-  }
-  const int origIndex = item->data(Qt::UserRole).toInt();
-  const int rot = item->data(Qt::UserRole + 1).toInt();
-  const QSizeF ptSize = item->data(Qt::UserRole + 2).toSizeF();
-  const QImage baseThumb = item->data(Qt::UserRole + 3).value<QImage>();
-
-  if (!baseThumb.isNull()) {
-    const QImage rotatedThumb =
-        (rot == 0) ? baseThumb
-                   : baseThumb.transformed(QTransform().rotate(rot),
-                                           Qt::SmoothTransformation);
-    item->setIcon(QIcon(QPixmap::fromImage(rotatedThumb)));
-  }
-
-  item->setText(QString("Page %1 (%2 × %3 pt) — Rotation: %4°")
-                    .arg(origIndex + 1)
-                    .arg(qRound(ptSize.width()))
-                    .arg(qRound(ptSize.height()))
-                    .arg(rot));
-}
-
 void PdfPage::loadOrganizePagesFromSelectedPdf(bool silentIfEmpty) {
-  if (!m_organizePageList || !m_dragWidget) {
+  if (!m_organizePanel || !m_dragWidget) {
     return;
   }
-  const QStringList paths = m_dragWidget->getFilePaths();
-  if (paths.isEmpty()) {
-    m_organizePageList->clear();
-    m_organizedSourcePath.clear();
-    if (!silentIfEmpty) {
-      ui::Toast::show(this, "No PDF Selected",
-                      "Please add a PDF file in the drop zone first.",
-                      ui::ToastVariant::Warning);
-    }
-    return;
-  }
-
-  const QString sourcePath = paths.first();
-  QPdfDocument doc;
-  const auto err = doc.load(sourcePath);
-  if (err != QPdfDocument::Error::None || doc.pageCount() <= 0) {
-    m_organizePageList->clear();
-    m_organizedSourcePath.clear();
-    ui::Toast::show(
-        this, "Cannot Load PDF Pages",
-        QString("Could not open '%1' (damaged or password-protected).")
-            .arg(QFileInfo(sourcePath).fileName()),
-        ui::ToastVariant::Destructive);
-    return;
-  }
-
-  m_organizePageList->clear();
-  m_organizedSourcePath = sourcePath;
-
-  for (int i = 0; i < doc.pageCount(); ++i) {
-    const QSizeF ptSize = doc.pagePointSize(i);
-    const QSize thumbSize(80, 112);
-    const QImage thumb = pdfutil::renderPdfPageOnWhite(doc, i, thumbSize);
-
-    QListWidgetItem *item = new QListWidgetItem(m_organizePageList);
-    item->setData(Qt::UserRole, i);
-    item->setData(Qt::UserRole + 1, 0);
-    item->setData(Qt::UserRole + 2, ptSize);
-    item->setData(Qt::UserRole + 3, thumb);
-    updateOrganizeItemDisplay(item);
-  }
-
-  if (m_organizePageList->count() > 0) {
-    m_organizePageList->setCurrentRow(0);
-  }
+  m_organizePanel->loadFromPaths(m_dragWidget->getFilePaths(), silentIfEmpty);
 }
-
-void PdfPage::rotateSelectedOrganizePages(int deltaDegrees) {
-  if (!m_organizePageList) {
-    return;
-  }
-  const QList<QListWidgetItem *> selected = m_organizePageList->selectedItems();
-  if (selected.isEmpty()) {
-    ui::Toast::show(this, "No Page Selected",
-                    "Select one or more pages in the list to rotate.",
-                    ui::ToastVariant::Warning);
-    return;
-  }
-  for (QListWidgetItem *item : selected) {
-    int rot = (item->data(Qt::UserRole + 1).toInt() + deltaDegrees) % 360;
-    if (rot < 0) {
-      rot += 360;
-    }
-    item->setData(Qt::UserRole + 1, rot);
-    updateOrganizeItemDisplay(item);
-  }
-}
-
-void PdfPage::moveSelectedOrganizePage(int direction) {
-  if (!m_organizePageList) {
-    return;
-  }
-  const int row = m_organizePageList->currentRow();
-  if (row < 0) {
-    return;
-  }
-  const int targetRow = row + direction;
-  if (targetRow >= 0 && targetRow < m_organizePageList->count()) {
-    QListWidgetItem *item = m_organizePageList->takeItem(row);
-    m_organizePageList->insertItem(targetRow, item);
-    m_organizePageList->setCurrentRow(targetRow);
-  }
-}
-
-void PdfPage::deleteSelectedOrganizePages() {
-  if (!m_organizePageList) {
-    return;
-  }
-  const QList<QListWidgetItem *> selected = m_organizePageList->selectedItems();
-  if (selected.isEmpty()) {
-    ui::Toast::show(this, "No Page Selected",
-                    "Select one or more pages in the list to delete.",
-                    ui::ToastVariant::Warning);
-    return;
-  }
-  if (m_organizePageList->count() - selected.size() < 1) {
-    ui::Toast::show(this, "Cannot Delete All Pages",
-                    "At least one page must remain in the document.",
-                    ui::ToastVariant::Warning);
-    return;
-  }
-  for (QListWidgetItem *item : selected) {
-    delete m_organizePageList->takeItem(m_organizePageList->row(item));
-  }
-}
-
-void PdfPage::resetOrganizePages() { loadOrganizePagesFromSelectedPdf(false); }
 
 void PdfPage::executeOrganize() {
   const QStringList paths = m_dragWidget->getFilePaths();
@@ -1160,25 +744,20 @@ void PdfPage::executeOrganize() {
     return;
   }
 
-  if (m_organizedSourcePath != paths.first() ||
-      m_organizePageList->count() == 0) {
-    loadOrganizePagesFromSelectedPdf(false);
-  }
-  if (m_organizePageList->count() == 0) {
+  if (!m_organizePanel) {
     return;
   }
 
-  QVector<OrganizeController::PageOp> pageOps;
-  pageOps.reserve(m_organizePageList->count());
-  for (int i = 0; i < m_organizePageList->count(); ++i) {
-    QListWidgetItem *item = m_organizePageList->item(i);
-    OrganizeController::PageOp op;
-    op.originalPageIndex = item->data(Qt::UserRole).toInt();
-    op.rotationDegrees = item->data(Qt::UserRole + 1).toInt();
-    pageOps.append(op);
+  if (m_organizePanel->sourcePath() != paths.first() ||
+      m_organizePanel->pageCount() == 0) {
+    loadOrganizePagesFromSelectedPdf(false);
+  }
+  if (m_organizePanel->pageCount() == 0) {
+    return;
   }
 
-  const QString sourcePath = m_organizedSourcePath;
+  const QVector<OrganizeController::PageOp> pageOps = m_organizePanel->pageOps();
+  const QString sourcePath = m_organizePanel->sourcePath();
   const QFileInfo sourceInfo(sourcePath);
   const QString defaultOutput =
       sourceInfo.dir().filePath(sourceInfo.baseName() + "_organized.pdf");
@@ -1239,21 +818,16 @@ void PdfPage::executePdfToImages() {
     return;
   }
 
-  const int fmtIndex =
-      m_exportImageFormatSelect ? m_exportImageFormatSelect->currentIndex() : 0;
-  const QStringList formats = {"png", "jpg", "webp", "tiff"};
-  const QString format = formats.value(fmtIndex, "png");
+  const QString format = m_pdfToImagesPanel
+                             ? m_pdfToImagesPanel->selectedFormat()
+                             : QString("png");
   const int effectiveQuality =
-      (format == "png") ? -1 : m_qualitySlider->getValue();
+      (format == "png") ? -1
+                        : (m_qualityPanel ? m_qualityPanel->quality() : 50);
 
-  const int dpiIndex =
-      m_exportDpiSelect ? m_exportDpiSelect->currentIndex() : 2;
-  const QVector<int> dpis = {72, 150, 300, 600};
-  const int dpi = dpis.value(dpiIndex, 300);
-
-  const QString rangeSpec = m_exportPageRangeInput
-                                ? m_exportPageRangeInput->text().trimmed()
-                                : QString();
+  const int dpi = m_pdfToImagesPanel ? m_pdfToImagesPanel->selectedDpi() : 300;
+  const QString rangeSpec =
+      m_pdfToImagesPanel ? m_pdfToImagesPanel->pageRangeSpec() : QString();
 
   if (!rangeSpec.isEmpty()) {
     QPdfDocument checkDoc;
@@ -1332,68 +906,17 @@ void PdfPage::onPdfToImagesFinished(
 // ============================================================================
 
 void PdfPage::syncImageListFromDropWidget() {
-  if (!m_imageOrderList || !m_imageDragWidget) {
-    return;
-  }
-  const QStringList dropPaths = m_imageDragWidget->getFilePaths();
-  QStringList ordered;
-  for (int i = 0; i < m_imageOrderList->count(); ++i) {
-    const QString path =
-        m_imageOrderList->item(i)->data(Qt::UserRole).toString();
-    if (dropPaths.contains(path) && !ordered.contains(path)) {
-      ordered.append(path);
-    }
-  }
-  for (const QString &path : dropPaths) {
-    const QString ext = QFileInfo(path).suffix().toLower();
-    if (ext != "pdf" && !ordered.contains(path)) {
-      ordered.append(path);
-    }
-  }
-
-  m_imageOrderList->clear();
-  for (const QString &path : ordered) {
-    QFileInfo fi(path);
-    QListWidgetItem *item =
-        new QListWidgetItem(QString("%1 (%2)")
-                                .arg(fi.fileName())
-                                .arg(DropFileWidget::formatFileSize(fi.size())),
-                            m_imageOrderList);
-    item->setData(Qt::UserRole, path);
-    item->setToolTip(path);
-  }
-}
-
-void PdfPage::moveImageItemUp() {
-  if (!m_imageOrderList)
-    return;
-  const int row = m_imageOrderList->currentRow();
-  if (row > 0) {
-    QListWidgetItem *item = m_imageOrderList->takeItem(row);
-    m_imageOrderList->insertItem(row - 1, item);
-    m_imageOrderList->setCurrentRow(row - 1);
-  }
-}
-
-void PdfPage::moveImageItemDown() {
-  if (!m_imageOrderList)
-    return;
-  const int row = m_imageOrderList->currentRow();
-  if (row >= 0 && row < m_imageOrderList->count() - 1) {
-    QListWidgetItem *item = m_imageOrderList->takeItem(row);
-    m_imageOrderList->insertItem(row + 1, item);
-    m_imageOrderList->setCurrentRow(row + 1);
+  if (m_imagesToPdfPanel && m_imageDragWidget) {
+    m_imagesToPdfPanel->syncFromPaths(m_imageDragWidget->getFilePaths());
   }
 }
 
 void PdfPage::executeImagesToPdf() {
   syncImageListFromDropWidget();
 
-  QStringList orderedImages;
-  for (int i = 0; i < m_imageOrderList->count(); ++i) {
-    orderedImages.append(
-        m_imageOrderList->item(i)->data(Qt::UserRole).toString());
-  }
+  const QStringList orderedImages =
+      m_imagesToPdfPanel ? m_imagesToPdfPanel->orderedImagePaths()
+                         : QStringList();
 
   if (orderedImages.isEmpty()) {
     ui::Toast::show(this, "No Images Selected",
@@ -1413,11 +936,11 @@ void PdfPage::executeImagesToPdf() {
   }
 
   const int pageSizeIndex =
-      m_imgPdfPageSizeSelect ? m_imgPdfPageSizeSelect->currentIndex() : 0;
+      m_imagesToPdfPanel ? m_imagesToPdfPanel->pageSizeMode() : 0;
   const int orientIndex =
-      m_imgPdfOrientationSelect ? m_imgPdfOrientationSelect->currentIndex() : 0;
+      m_imagesToPdfPanel ? m_imagesToPdfPanel->orientationMode() : 0;
   const int marginIndex =
-      m_imgPdfMarginSelect ? m_imgPdfMarginSelect->currentIndex() : 0;
+      m_imagesToPdfPanel ? m_imagesToPdfPanel->marginMode() : 0;
 
   ImagesToPdfController::Params params;
   params.imagePaths = orderedImages;
@@ -1465,7 +988,7 @@ void PdfPage::executeGrayscale() {
     return;
   }
 
-  const int quality = m_qualitySlider->getValue();
+  const int quality = m_qualityPanel ? m_qualityPanel->quality() : 50;
   GrayscaleController::Params params;
   params.quality = quality;
 
@@ -1583,20 +1106,14 @@ void PdfPage::executeMarkdownPdf() {
     return;
   }
 
-  const QVector<int> marginOptions = {18, 36, 54, 72};
-  const QVector<int> fontOptions = {9, 10, 11, 12, 14, 16};
-
   MarkdownPdfController::Params params;
   params.sourcePaths = sourcePaths;
   params.outputDir = outputDir;
   params.useLetterPageSize =
-      (m_mdPageSizeSelect && m_mdPageSizeSelect->currentIndex() == 1);
-  params.landscape =
-      (m_mdOrientationSelect && m_mdOrientationSelect->currentIndex() == 1);
-  params.marginPt = marginOptions.value(
-      m_mdMarginSelect ? m_mdMarginSelect->currentIndex() : 1, 36);
-  params.baseFontPt = fontOptions.value(
-      m_mdFontSizeSelect ? m_mdFontSizeSelect->currentIndex() : 1, 10);
+      m_markdownPanel ? m_markdownPanel->useLetterPageSize() : false;
+  params.landscape = m_markdownPanel ? m_markdownPanel->landscape() : false;
+  params.marginPt = m_markdownPanel ? m_markdownPanel->marginPt() : 36;
+  params.baseFontPt = m_markdownPanel ? m_markdownPanel->baseFontPt() : 10;
 
   m_currentController = m_markdownController;
   setProcessingState(true);
