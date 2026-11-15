@@ -54,6 +54,14 @@ set(PROJECT_STYLES
 set(PROJECT_PAGES
         pages/main_page.cpp
         pages/main_page.h
+        pages/image/base64_panel.cpp
+        pages/image/base64_panel.h
+        pages/image/convert_image_panel.cpp
+        pages/image/convert_image_panel.h
+        pages/image/ico_packager_panel.cpp
+        pages/image/ico_packager_panel.h
+        pages/image/svg_options_panel.cpp
+        pages/image/svg_options_panel.h
         pages/pdf_page.cpp
         pages/pdf_page.h
         pages/pdf/images_to_pdf_panel.cpp
