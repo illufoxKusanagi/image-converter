@@ -103,6 +103,8 @@ set(PROJECT_CONTROLLERS
         controllers/pdf/grayscale_controller.h
         controllers/pdf/markdown_pdf_controller.cpp
         controllers/pdf/markdown_pdf_controller.h
+        controllers/image/image_convert_controller.cpp
+        controllers/image/image_convert_controller.h
         controllers/image/svg_convert_controller.cpp
         controllers/image/svg_convert_controller.h
         controllers/image/ico_export_controller.cpp
