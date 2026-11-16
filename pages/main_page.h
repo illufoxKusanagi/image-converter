@@ -61,7 +61,6 @@ private:
   ui::Button *m_cancelButton{nullptr};
 
   PdfToolController *m_currentController{nullptr};
-  bool m_isCancelled{false};
   bool m_isProcessing{false};
 
   DropFileWidget *activeDropWidget() const;

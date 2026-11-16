@@ -22,12 +22,9 @@ MainPage::MainPage(QWidget *parent)
 }
 
 MainPage::~MainPage() {
-  m_isCancelled = true;
-  if (m_convertImagePanel && m_convertImagePanel->isRunning()) {
-    m_convertImagePanel->cancel();
-  }
   for (PdfToolController *ctrl :
-       {m_svgPanel ? m_svgPanel->controller() : nullptr,
+       {m_convertImagePanel ? m_convertImagePanel->controller() : nullptr,
+        m_svgPanel ? m_svgPanel->controller() : nullptr,
         m_icoPanel ? m_icoPanel->controller() : nullptr}) {
     if (ctrl && ctrl->isRunning()) {
       ctrl->cancelAndWait();
@@ -36,40 +33,9 @@ MainPage::~MainPage() {
 }
 
 void MainPage::initControllers() {
-  if (m_convertImagePanel) {
-    connect(m_convertImagePanel, &ConvertImagePanel::progressConfigured, this,
-            [this](int min, int max, bool indeterminate,
-                   const QString &initialText) {
-              if (m_progressBar) {
-                m_progressBar->setRange(min, max);
-                m_progressBar->setValue(0, false);
-                m_progressBar->setIndeterminate(indeterminate);
-              }
-              if (m_progressLabel && !initialText.isEmpty()) {
-                m_progressLabel->setText(initialText);
-              }
-            });
-    connect(m_convertImagePanel, &ConvertImagePanel::progressUpdated, this,
-            [this](int completed, int total, const QString &labelText) {
-              if (m_progressBar) {
-                if (total > 0) {
-                  m_progressBar->setIndeterminate(false);
-                  m_progressBar->setRange(0, total);
-                  m_progressBar->setValue(completed, false);
-                } else {
-                  m_progressBar->setIndeterminate(true);
-                }
-              }
-              if (m_progressLabel && !labelText.isEmpty()) {
-                m_progressLabel->setText(labelText);
-              }
-            });
-    connect(m_convertImagePanel, &ConvertImagePanel::executionFinished, this,
-            [this]() { setProcessingState(false); });
-  }
-
   for (PdfToolController *ctrl :
-       {m_svgPanel ? m_svgPanel->controller() : nullptr,
+       {m_convertImagePanel ? m_convertImagePanel->controller() : nullptr,
+        m_svgPanel ? m_svgPanel->controller() : nullptr,
         m_icoPanel ? m_icoPanel->controller() : nullptr}) {
     if (!ctrl) {
       continue;
@@ -80,6 +46,10 @@ void MainPage::initControllers() {
             &MainPage::onControllerFileStatus, Qt::QueuedConnection);
   }
 
+  if (m_convertImagePanel) {
+    connect(m_convertImagePanel, &ConvertImagePanel::executionFinished, this,
+            [this]() { setProcessingState(false); });
+  }
   if (m_svgPanel) {
     connect(m_svgPanel, &SvgOptionsPanel::executionFinished, this,
             [this]() { setProcessingState(false); });
@@ -92,7 +62,8 @@ void MainPage::initControllers() {
 
 bool MainPage::isAnyJobRunning() const {
   return m_isProcessing ||
-         (m_convertImagePanel && m_convertImagePanel->isRunning()) ||
+         (m_convertImagePanel && m_convertImagePanel->controller() &&
+          m_convertImagePanel->controller()->isRunning()) ||
          (m_svgPanel && m_svgPanel->controller() &&
           m_svgPanel->controller()->isRunning()) ||
          (m_icoPanel && m_icoPanel->controller() &&
@@ -305,9 +276,8 @@ void MainPage::setProcessingState(bool isProcessing) {
     if (isProcessing) {
       drop->beginProcessing();
     } else {
-      const bool cancelled = m_currentController
-                                 ? m_currentController->isCancelled()
-                                 : m_isCancelled;
+      const bool cancelled =
+          m_currentController && m_currentController->isCancelled();
       drop->finishProcessing(cancelled);
     }
   }
@@ -320,7 +290,6 @@ void MainPage::setProcessingState(bool isProcessing) {
   }
 
   if (!isProcessing) {
-    m_isCancelled = false;
     m_currentController = nullptr;
   }
 }
@@ -329,12 +298,8 @@ void MainPage::onCancelButtonClicked() {
   if (!m_isProcessing) {
     return;
   }
-  m_isCancelled = true;
   if (m_currentController) {
     m_currentController->cancel();
-  }
-  if (m_convertImagePanel && m_convertImagePanel->isRunning()) {
-    m_convertImagePanel->cancel();
   }
   if (m_cancelButton) {
     m_cancelButton->setText("Cancelling...");
@@ -374,14 +339,13 @@ void MainPage::onProcessButtonClicked() {
 
   switch (m_currentTool) {
   case ImageToolMode::ConvertImage:
-    m_isCancelled = false;
-    m_currentController = nullptr;
-    if (m_convertImagePanel && m_convertImagePanel->execute(m_dragWidget)) {
+    if (m_convertImagePanel && m_dragWidget &&
+        m_convertImagePanel->execute(m_dragWidget->getFilePaths())) {
+      m_currentController = m_convertImagePanel->controller();
       setProcessingState(true);
     }
     break;
   case ImageToolMode::SvgToRaster:
-    m_isCancelled = false;
     if (m_svgPanel && m_svgDragWidget &&
         m_svgPanel->execute(m_svgDragWidget->getFilePaths())) {
       m_currentController = m_svgPanel->controller();
@@ -389,7 +353,6 @@ void MainPage::onProcessButtonClicked() {
     }
     break;
   case ImageToolMode::IcoPackager:
-    m_isCancelled = false;
     if (m_icoPanel && m_dragWidget &&
         m_icoPanel->execute(m_dragWidget->getFilePaths())) {
       m_currentController = m_icoPanel->controller();
