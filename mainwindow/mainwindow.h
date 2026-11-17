@@ -1,7 +1,6 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "pages/gallery_page.h"
 #include "pages/main_page.h"
 #include "pages/pdf_page.h"
 #include "ui-kit/components/button.h"
@@ -31,7 +30,6 @@ private:
   QWidget *m_centralWidget{nullptr};
   MainPage *m_mainPage{nullptr};
   PdfPage *m_pdfPage{nullptr};
-  GalleryPage *m_galleryPage{nullptr};
 };
 
 #endif // MAINWINDOW_H

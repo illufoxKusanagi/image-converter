@@ -8,12 +8,8 @@
 #include <QThread>
 #include <QVariant>
 
-DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
-                               SliderWidget *sliderWidget,
-                               ImageExtension *sourceExtension)
-    : QGroupBox(parent), m_sliderWidget(sliderWidget),
-      m_sourceExtension(sourceExtension), m_qualityValue(100),
-      m_typeFile(typeFile), m_isDragHovered(false) {
+DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile)
+    : QGroupBox(parent), m_typeFile(typeFile), m_isDragHovered(false) {
   setObjectName("DropFileWidget");
   mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(12, 12, 12, 12);
@@ -27,11 +23,6 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile,
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
   setLayout(mainLayout);
 
-  if (m_sliderWidget) {
-    m_qualityValue = m_sliderWidget->getValue();
-    connect(m_sliderWidget, &SliderWidget::valueChanged, this,
-            &DropFileWidget::onSliderValueChanged);
-  }
   connect(m_browseButton, &QPushButton::clicked, this,
           &DropFileWidget::onBrowseButtonPressed);
   setAcceptDrops(true);
@@ -592,27 +583,6 @@ void DropFileWidget::moveFileDown(int index) {
 
 void DropFileWidget::onClearAllPressed() { clearFiles(); }
 
-QPixmap DropFileWidget::createColoredIcon(const QString &iconPath,
-                                          const QColor &color, int width,
-                                          int height) {
-  QPixmap originalPixmap(iconPath);
-  if (originalPixmap.isNull()) {
-    return QPixmap();
-  }
-  originalPixmap = originalPixmap.scaled(width, height, Qt::KeepAspectRatio,
-                                         Qt::SmoothTransformation);
-  QPixmap coloredPixmap(originalPixmap.size());
-  coloredPixmap.fill(Qt::transparent);
-  QPainter painter(&coloredPixmap);
-  painter.setCompositionMode(QPainter::CompositionMode_Source);
-  painter.drawPixmap(0, 0, originalPixmap);
-  painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-  painter.fillRect(coloredPixmap.rect(), color);
-  painter.end();
-
-  return coloredPixmap;
-}
-
 void DropFileWidget::dragEnterEvent(QDragEnterEvent *event) {
   if (m_isProcessing) {
     event->ignore();
@@ -694,8 +664,7 @@ void DropFileWidget::clearFiles() {
   updateWidgetVisibility();
 }
 
-QString DropFileWidget::imageExtensionToString(
-    const ImageExtension &sourceExtension) const {
+QString DropFileWidget::imageExtensionToString(ImageExtension sourceExtension) {
   switch (sourceExtension) {
   case JPG:
     return "jpg";
@@ -729,45 +698,21 @@ QString DropFileWidget::formatFileSize(qint64 bytes) {
 }
 
 bool DropFileWidget::saveImage(const QImage *image, const QString &outputPath,
-                               const int quality,
-                               const ImageExtension *sourceExtension) {
-  if (!image || image->isNull() || !sourceExtension) {
+                               int quality, ImageExtension sourceExtension) {
+  if (!image || image->isNull()) {
     return false;
   }
-  QString format = imageExtensionToString(*sourceExtension).toLower();
+  QString format = imageExtensionToString(sourceExtension).toLower();
   if (format.isEmpty()) {
     return false;
   }
-  int effectiveQuality = (*sourceExtension == PNG) ? -1 : quality;
+  int effectiveQuality = (sourceExtension == PNG) ? -1 : quality;
   QString finalPath = outputPath;
   if (!finalPath.endsWith("." + format, Qt::CaseInsensitive)) {
     finalPath += "." + format;
   }
   return image->save(finalPath, format.toUpper().toUtf8().constData(),
                      effectiveQuality);
-}
-
-void DropFileWidget::convertImage(const QString &sourcePath) {
-  if (sourcePath.isEmpty() || !m_sourceExtension) {
-    return;
-  }
-  QImage img(sourcePath);
-  if (img.isNull()) {
-    return;
-  }
-  QFileInfo fi(sourcePath);
-  QString targetExtStr = imageExtensionToString(*m_sourceExtension).toLower();
-  QString defaultPath =
-      fi.dir().filePath(fi.completeBaseName() + "." + targetExtStr);
-  QString filter = QString("%1 Files (*.%2);;All Files (*)")
-                       .arg(targetExtStr.toUpper(), targetExtStr);
-  QString outputPath = QFileDialog::getSaveFileName(
-      this, "Save Converted Image", defaultPath, filter);
-  if (outputPath.isEmpty()) {
-    return;
-  }
-  int quality = m_sliderWidget ? m_sliderWidget->getValue() : 100;
-  saveImage(&img, outputPath, quality, m_sourceExtension);
 }
 
 void DropFileWidget::onBrowseButtonPressed() {
@@ -803,10 +748,4 @@ void DropFileWidget::onBrowseButtonPressed() {
     }
   }
   updateWidgetVisibility();
-}
-
-void DropFileWidget::onSliderValueChanged() {
-  if (m_sliderWidget) {
-    m_qualityValue = m_sliderWidget->getValue();
-  }
 }
