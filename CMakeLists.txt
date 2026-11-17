@@ -15,39 +15,13 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets Pdf Concurre
 add_subdirectory(ui-kit)
 
 set(PROJECT_WIDGETS
-        widgets/button_action.cpp
-        widgets/button_action.h
-        widgets/button_toggle.cpp
-        widgets/button_toggle.h
-        widgets/input_dropdown.cpp
-        widgets/input_dropdown.h
-        widgets/input_field.cpp
-        widgets/input_field.h
-        widgets/input_upload.cpp
-        widgets/input_upload.h
-        widgets/input_invalid.cpp
-        widgets/input_invalid.h
-        widgets/input_widget.cpp
-        widgets/input_widget.h
-        widgets/sidebar_panel.cpp
-        widgets/sidebar_panel.h
-        widgets/button_sidebar_active.cpp
-        widgets/button_sidebar_active.h
-        widgets/button_sidebar_widget.cpp
-        widgets/button_sidebar_widget.h
         widgets/drop_file_widget.h
         widgets/drop_file_widget.cpp
         widgets/slider_widget.h
         widgets/slider_widget.cpp
-        widgets/message_box_widget.cpp
-        widgets/message_box_widget.h
 )
 
 set(PROJECT_STYLES
-        styles/colors.h
-        styles/text_style.h
-        resources/input_type.h
-        resources/icon_type.h
         resources/icons.qrc
 )
 
@@ -78,8 +52,6 @@ set(PROJECT_PAGES
         pages/pdf/pdf_to_images_panel.h
         pages/pdf/split_pdf_panel.cpp
         pages/pdf/split_pdf_panel.h
-        pages/gallery_page.cpp
-        pages/gallery_page.h
 )
 
 set(PROJECT_CONTROLLERS

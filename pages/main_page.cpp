@@ -92,15 +92,11 @@ void MainPage::setupImageLayout() {
   connect(m_toolTabs, &ui::Tabs::currentChanged, this,
           &MainPage::onToolTabChanged);
 
-  // Build option panels before DropFileWidget so m_dragWidget receives valid
-  // non-null pointers to m_convertImagePanel's slider and target extension.
   m_optionsStack = new QStackedWidget(this);
   setupToolPanels();
 
   m_topWorkspaceStack = new QStackedWidget(this);
-  m_dragWidget = new DropFileWidget(
-      m_topWorkspaceStack, "Image", m_convertImagePanel->qualitySlider(),
-      m_convertImagePanel->targetExtensionPtr());
+  m_dragWidget = new DropFileWidget(m_topWorkspaceStack, "Image");
   m_svgDragWidget = new DropFileWidget(m_topWorkspaceStack, "SVG");
   m_base64Card = new Base64WorkspaceCard(m_topWorkspaceStack);
   m_base64Card->setOptionsPanel(m_base64Panel);

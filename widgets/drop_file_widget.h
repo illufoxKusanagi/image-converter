@@ -6,7 +6,6 @@
 #include "ui-kit/components/separator.h"
 #include "ui-kit/components/spinner.h"
 #include "ui-kit/theme/theme.h"
-#include "widgets/slider_widget.h"
 #include <QDir>
 #include <QDragEnterEvent>
 #include <QDragLeaveEvent>
@@ -38,9 +37,7 @@ public:
   };
   Q_ENUM(FileStatus)
 
-  explicit DropFileWidget(QWidget *parent = nullptr, QString typeFile = "File",
-                          SliderWidget *sliderWidget = nullptr,
-                          ImageExtension *sourceExtension = nullptr);
+  explicit DropFileWidget(QWidget *parent = nullptr, QString typeFile = "File");
   QString getFilePath() const;
   QString filePath() const { return getFilePath(); }
   QStringList getFilePaths() const;
@@ -54,13 +51,10 @@ public:
   void removeFileAt(int index);
   void moveFileUp(int index);
   void moveFileDown(int index);
-  QString imageExtensionToString(const ImageExtension &sourceExtension) const;
-  bool saveImage(const QImage *image, const QString &outputPath,
-                 const int quality, const ImageExtension *sourceExtension);
+  static QString imageExtensionToString(ImageExtension sourceExtension);
+  static bool saveImage(const QImage *image, const QString &outputPath,
+                        int quality, ImageExtension sourceExtension);
   static QString formatFileSize(qint64 bytes);
-
-public slots:
-  void convertImage(const QString &sourcePath);
 
 protected:
   void dragEnterEvent(QDragEnterEvent *event) override;
@@ -70,7 +64,6 @@ protected:
 
 private slots:
   void onBrowseButtonPressed();
-  void onSliderValueChanged();
   void onClearAllPressed();
   void applyThemeStyles();
 
@@ -91,15 +84,11 @@ private:
   };
 
   QVBoxLayout *mainLayout;
-  SliderWidget *m_sliderWidget;
-  ImageExtension *m_sourceExtension;
   ui::Button *m_browseButton;
   QLabel *m_icon;
   QLabel *m_emptyLabel;
   QLabel *m_formatLabel;
   QLabel *m_orLabel;
-  int m_qualityValue;
-  QString m_sourcePath;
   QStringList m_filePaths;
   QHash<QString, FileState> m_fileStates;
   QHash<QString, FileRow> m_fileRows;
@@ -124,8 +113,6 @@ private:
   void rebuildFileList();
   void updateFileRowStatus(const QString &path);
   void updateProcessingControls();
-  QPixmap createColoredIcon(const QString &iconPath, const QColor &color,
-                            int width, int height);
 };
 
 #endif // DROPFILEWIDGET_H

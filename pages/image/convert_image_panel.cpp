@@ -65,14 +65,6 @@ QImage ConvertImagePanel::loadRasterOrSvgImage(const QString &path,
   return ImageConvertController::loadRasterOrSvgImage(path, forceOpaqueWhite);
 }
 
-SliderWidget *ConvertImagePanel::qualitySlider() const {
-  return m_qualitySlider;
-}
-
-DropFileWidget::ImageExtension *ConvertImagePanel::targetExtensionPtr() {
-  return &m_targetExtension;
-}
-
 void ConvertImagePanel::syncProcessingState(bool isProcessing) {
   if (isProcessing) {
     if (m_targetExtensionSelect) {

@@ -28,9 +28,6 @@ public:
   static QImage loadRasterOrSvgImage(const QString &path,
                                      bool forceOpaqueWhite = false);
 
-  SliderWidget *qualitySlider() const;
-  DropFileWidget::ImageExtension *targetExtensionPtr();
-
   void syncProcessingState(bool isProcessing);
   bool execute(const QStringList &sourcePaths);
   PdfToolController *controller() const { return m_controller; }
