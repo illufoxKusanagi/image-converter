@@ -11,7 +11,6 @@
 #include <QMarginsF>
 #include <QPageSize>
 #include <QPainter>
-#include <QPdfDocument>
 #include <QPdfWriter>
 #include <QRect>
 #include <QRectF>
@@ -103,8 +102,8 @@ QImage ImageConvertController::loadRasterOrSvgImage(const QString &path,
   return img;
 }
 
-QString ImageConvertController::extensionToString(
-    DropFileWidget::ImageExtension ext) {
+QString
+ImageConvertController::extensionToString(DropFileWidget::ImageExtension ext) {
   switch (ext) {
   case DropFileWidget::JPG:
     return "jpg";
@@ -150,9 +149,8 @@ bool ImageConvertController::saveImageToFormat(
 void ImageConvertController::start(const Params &params) {
   waitForRunningJob();
   m_isCancelled = false;
-  QFuture<void> future = QtConcurrent::run([this, params]() {
-    runJob(params);
-  });
+  QFuture<void> future =
+      QtConcurrent::run([this, params]() { runJob(params); });
   m_watcher.setFuture(future);
 }
 
@@ -161,9 +159,6 @@ void ImageConvertController::runJob(const Params &params) {
   switch (params.mode) {
   case Mode::ImagesToPdf:
     result = runImagesToPdf(params);
-    break;
-  case Mode::PdfToImages:
-    result = runPdfToImages(params);
     break;
   case Mode::SingleImage:
     result = runSingleImage(params);
@@ -242,9 +237,8 @@ ImageConvertController::runImagesToPdf(const Params &params) {
 
     QImage processedImg = origImage.convertToFormat(QImage::Format_RGB888);
     if (clampedQuality < 95) {
-      const QSize scaledSize(
-          qMax(1, qRound(origImage.width() * scaleFactor)),
-          qMax(1, qRound(origImage.height() * scaleFactor)));
+      const QSize scaledSize(qMax(1, qRound(origImage.width() * scaleFactor)),
+                             qMax(1, qRound(origImage.height() * scaleFactor)));
       processedImg = processedImg.scaled(scaledSize, Qt::KeepAspectRatio,
                                          Qt::SmoothTransformation);
       QByteArray jpegBytes;
@@ -326,10 +320,9 @@ ImageConvertController::runImagesToPdf(const Params &params) {
   for (const QString &path : includedPaths) {
     emit fileStatusChanged(
         path,
-        static_cast<int>(saved
-                             ? FileStatus::Succeeded
-                             : (cancelled ? FileStatus::Cancelled
-                                          : FileStatus::Failed)),
+        static_cast<int>(
+            saved ? FileStatus::Succeeded
+                  : (cancelled ? FileStatus::Cancelled : FileStatus::Failed)),
         saved ? QString("Saved in %1").arg(QFileInfo(outputPath).fileName())
               : (cancelled ? "PDF creation cancelled; no output saved"
                            : "Failed to save PDF"));
@@ -339,12 +332,11 @@ ImageConvertController::runImagesToPdf(const Params &params) {
                            "Failed to add image to PDF");
   }
   for (int i = startedFiles; i < sourcePaths.size(); ++i) {
-    emit fileStatusChanged(
-        sourcePaths.at(i),
-        static_cast<int>(cancelled ? FileStatus::Cancelled
-                                   : FileStatus::Failed),
-        cancelled ? "Not processed (cancelled)"
-                  : "Not processed: PDF creation failed");
+    emit fileStatusChanged(sourcePaths.at(i),
+                           static_cast<int>(cancelled ? FileStatus::Cancelled
+                                                      : FileStatus::Failed),
+                           cancelled ? "Not processed (cancelled)"
+                                     : "Not processed: PDF creation failed");
   }
 
   result.success = saved;
@@ -353,243 +345,6 @@ ImageConvertController::runImagesToPdf(const Params &params) {
   result.skippedCount = skippedCount;
   result.totalOrigBytes = totalOrigBytes;
   result.totalOutputBytes = saved ? QFileInfo(outputPath).size() : 0;
-  return result;
-}
-
-ImageConvertController::Result
-ImageConvertController::runPdfToImages(const Params &params) {
-  Result result;
-  result.mode = Mode::PdfToImages;
-  result.outputDir = params.outputDir;
-
-  const QStringList &sourcePaths = params.sourcePaths;
-  const QString &outputDir = params.outputDir;
-  const int quality = params.quality;
-  const DropFileWidget::ImageExtension targetExt = params.targetExtension;
-  const QString ext = params.targetFormat.toLower();
-  const int totalFiles = sourcePaths.size();
-
-  if (totalFiles > 0) {
-    emit progressChanged(0, totalFiles == 1 ? 0 : totalFiles,
-                         QString("Processing %1 (file 1 of %2)...")
-                             .arg(QFileInfo(sourcePaths.first()).fileName())
-                             .arg(totalFiles));
-  }
-
-  int totalExtracted = 0;
-  int failedCount = 0;
-  int completedFiles = 0;
-  int startedFiles = 0;
-  qint64 totalOutputBytes = 0;
-  QSet<QString> usedBaseNames;
-  const bool forceOpaque =
-      (targetExt == DropFileWidget::JPG || targetExt == DropFileWidget::JPEG ||
-       targetExt == DropFileWidget::BMP);
-
-  for (int i = 0; i < sourcePaths.size(); ++i) {
-    if (m_isCancelled.load()) {
-      break;
-    }
-
-    const QString &sourcePath = sourcePaths.at(i);
-    startedFiles++;
-    emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Processing),
-                           "Loading source");
-    emit progressChanged(completedFiles, totalFiles == 1 ? 0 : totalFiles,
-                         QString("Processing %1 (file %2 of %3)...")
-                             .arg(QFileInfo(sourcePath).fileName())
-                             .arg(i + 1)
-                             .arg(sourcePaths.size()));
-
-    if (QFileInfo(sourcePath).suffix().toLower() == "pdf") {
-      QPdfDocument doc;
-      if (doc.load(sourcePath) != QPdfDocument::Error::None) {
-        failedCount++;
-        completedFiles++;
-        emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed),
-                               "Could not load PDF");
-        if (totalFiles > 1) {
-          emit progressChanged(completedFiles, totalFiles, QString());
-        }
-        continue;
-      }
-
-      const int pageCount = doc.pageCount();
-      if (pageCount <= 0) {
-        failedCount++;
-        completedFiles++;
-        emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed),
-                               "PDF contains no pages");
-        if (totalFiles > 1) {
-          emit progressChanged(completedFiles, totalFiles, QString());
-        }
-        continue;
-      }
-
-      if (totalFiles == 1) {
-        const QString fileLabel =
-            QString("Processing %1 (file 1 of 1)...")
-                .arg(QFileInfo(sourcePath).fileName());
-        emit progressChanged(0, pageCount, fileLabel);
-      }
-
-      const auto updatePageProgress = [this, totalFiles, pageCount,
-                                       &completedFiles](int completedPages,
-                                                        const QString &label) {
-        emit progressChanged(totalFiles == 1 ? completedPages : completedFiles,
-                             totalFiles == 1 ? pageCount : totalFiles, label);
-      };
-
-      int completedPages = 0;
-      int extractedPages = 0;
-      int failedPages = 0;
-      const QString baseName = QFileInfo(sourcePath).baseName();
-
-      for (int p = 0; p < pageCount; ++p) {
-        if (m_isCancelled.load()) {
-          break;
-        }
-
-        emit fileStatusChanged(
-            sourcePath, static_cast<int>(FileStatus::Processing),
-            QString("Page %1 of %2").arg(p + 1).arg(pageCount));
-        updatePageProgress(
-            completedPages,
-            QString("Extracting %1 (file %2 of %3, page %4 of %5)...")
-                .arg(QFileInfo(sourcePath).fileName())
-                .arg(i + 1)
-                .arg(sourcePaths.size())
-                .arg(p + 1)
-                .arg(pageCount));
-
-        const QSizeF ptSize = doc.pagePointSize(p);
-        const int extractDpi =
-            (quality <= 0)
-                ? 72
-                : (72 + static_cast<int>((quality / 100.0) * (600 - 72)));
-        const qreal scale = extractDpi / 72.0;
-        const QSize renderSize(
-            qMax(1, static_cast<int>(ptSize.width() * scale)),
-            qMax(1, static_cast<int>(ptSize.height() * scale)));
-        QImage pageImg = doc.render(p, renderSize);
-
-        if (pageImg.isNull()) {
-          failedCount++;
-          failedPages++;
-          completedPages++;
-          updatePageProgress(completedPages, QString());
-          continue;
-        }
-
-        if (pageImg.hasAlphaChannel()) {
-          QImage opaquePage(pageImg.size(), QImage::Format_RGB32);
-          if (opaquePage.isNull()) {
-            failedCount++;
-            failedPages++;
-            completedPages++;
-            updatePageProgress(completedPages, QString());
-            continue;
-          }
-          opaquePage.fill(Qt::white);
-          opaquePage.setDotsPerMeterX(pageImg.dotsPerMeterX());
-          opaquePage.setDotsPerMeterY(pageImg.dotsPerMeterY());
-          {
-            QPainter painter(&opaquePage);
-            painter.drawImage(0, 0, pageImg);
-          }
-          pageImg = opaquePage;
-        }
-
-        const QString pageStem = QString("%1_page%2").arg(baseName).arg(p + 1);
-        const QString uniqueName =
-            resolveUniqueBaseName(pageStem, outputDir, ext, usedBaseNames);
-
-        if (m_isCancelled.load()) {
-          break;
-        }
-
-        const QString baseOutputPath = QDir(outputDir).filePath(uniqueName);
-        if (saveImageToFormat(pageImg, baseOutputPath, quality, targetExt)) {
-          totalExtracted++;
-          extractedPages++;
-          totalOutputBytes += QFileInfo(baseOutputPath + "." + ext).size();
-        } else {
-          failedCount++;
-          failedPages++;
-        }
-
-        completedPages++;
-        updatePageProgress(completedPages, QString());
-      }
-
-      if (extractedPages + failedPages < pageCount) {
-        emit fileStatusChanged(
-            sourcePath, static_cast<int>(FileStatus::Cancelled),
-            QString("Cancelled: %1 of %2 pages saved; %3 failed")
-                .arg(extractedPages)
-                .arg(pageCount)
-                .arg(failedPages));
-        break;
-      } else if (failedPages > 0) {
-        emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed),
-                               QString("%1 of %2 pages saved; %3 failed")
-                                   .arg(extractedPages)
-                                   .arg(pageCount)
-                                   .arg(failedPages));
-      } else {
-        emit fileStatusChanged(sourcePath,
-                               static_cast<int>(FileStatus::Succeeded),
-                               QString("Saved %1 page(s)").arg(extractedPages));
-      }
-    } else {
-      const QImage image = loadRasterOrSvgImage(sourcePath, forceOpaque);
-      FileStatus status = FileStatus::Failed;
-      QString detail = "Could not load image";
-      if (image.isNull()) {
-        failedCount++;
-      } else {
-        const QString baseName = QFileInfo(sourcePath).baseName();
-        const QString uniqueName =
-            resolveUniqueBaseName(baseName, outputDir, ext, usedBaseNames);
-
-        const QString baseOutputPath = QDir(outputDir).filePath(uniqueName);
-        if (m_isCancelled.load()) {
-          status = FileStatus::Cancelled;
-          detail = "Cancelled before save";
-        } else if (saveImageToFormat(image, baseOutputPath, quality,
-                                     targetExt)) {
-          totalExtracted++;
-          totalOutputBytes += QFileInfo(baseOutputPath + "." + ext).size();
-          status = FileStatus::Succeeded;
-          detail = QString("Saved as %1.%2").arg(uniqueName).arg(ext);
-        } else {
-          failedCount++;
-          detail = QString("Failed to save as %1").arg(ext.toUpper());
-        }
-      }
-      emit fileStatusChanged(sourcePath, static_cast<int>(status), detail);
-      if (status == FileStatus::Cancelled) {
-        break;
-      }
-    }
-
-    completedFiles++;
-    if (totalFiles > 1) {
-      emit progressChanged(completedFiles, totalFiles, QString());
-    }
-  }
-
-  for (int i = startedFiles; i < sourcePaths.size(); ++i) {
-    emit fileStatusChanged(sourcePaths.at(i),
-                           static_cast<int>(FileStatus::Cancelled),
-                           "Not processed (cancelled)");
-  }
-
-  result.cancelled = m_isCancelled.load() && completedFiles < totalFiles;
-  result.success = !result.cancelled && totalExtracted > 0;
-  result.successCount = totalExtracted;
-  result.failedCount = failedCount;
-  result.totalOutputBytes = totalOutputBytes;
   return result;
 }
 
@@ -608,9 +363,9 @@ ImageConvertController::runSingleImage(const Params &params) {
   const QString outputPathWithoutExt =
       outFi.dir().filePath(outFi.completeBaseName());
 
-  emit progressChanged(
-      0, 0,
-      QString("Converting %1 (1 of 1)...").arg(QFileInfo(sourcePath).fileName()));
+  emit progressChanged(0, 0,
+                       QString("Converting %1 (1 of 1)...")
+                           .arg(QFileInfo(sourcePath).fileName()));
   emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Processing),
                          "Converting image");
 
@@ -625,7 +380,8 @@ ImageConvertController::runSingleImage(const Params &params) {
   } else if (saveImageToFormat(image, outputPathWithoutExt, params.quality,
                                params.targetExtension)) {
     status = FileStatus::Succeeded;
-    detail = QString("Saved as %1").arg(QFileInfo(outputPathWithExt).fileName());
+    detail =
+        QString("Saved as %1").arg(QFileInfo(outputPathWithExt).fileName());
   } else {
     detail = QString("Failed to save image as %1").arg(params.targetFormat);
   }

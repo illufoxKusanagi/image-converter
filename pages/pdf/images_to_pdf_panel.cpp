@@ -1,5 +1,6 @@
 #include "images_to_pdf_panel.h"
 #include "ui-kit/components/dialog.h"
+#include "ui-kit/components/scroll_area.h"
 #include "ui-kit/components/toast.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
@@ -244,6 +245,7 @@ void ImagesToPdfPanel::applyThemeStyles() {
 
     m_orderList->setFont(t.font(t.sizeSm));
     m_orderList->setStyleSheet(listStyle);
+    ui::ScrollArea::applyScrollBarStyles(m_orderList);
   }
 }
 

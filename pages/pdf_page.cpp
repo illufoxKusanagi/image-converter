@@ -290,7 +290,7 @@ void PdfPage::updateToolModeUi() {
          m_currentTool == PdfToolMode::Grayscale ||
          (m_currentTool == PdfToolMode::PdfToImages &&
           m_pdfToImagesPanel &&
-          m_pdfToImagesPanel->formatIndex() != 0));
+          m_pdfToImagesPanel->supportsQuality()));
     m_qualityPanel->setVisible(showQualityRow);
     m_qualityPanel->setPresetVisible(m_currentTool == PdfToolMode::Compress ||
                                      m_currentTool == PdfToolMode::Grayscale);

@@ -19,6 +19,11 @@
 
 namespace {
 
+struct EncodedFrame {
+  int size{0};
+  QByteArray pngBytes;
+};
+
 void appendUInt16LE(QByteArray &out, uint16_t val) {
   const uint16_t le = qToLittleEndian<uint16_t>(val);
   out.append(reinterpret_cast<const char *>(&le), sizeof(uint16_t));
@@ -27,6 +32,75 @@ void appendUInt16LE(QByteArray &out, uint16_t val) {
 void appendUInt32LE(QByteArray &out, uint32_t val) {
   const uint32_t le = qToLittleEndian<uint32_t>(val);
   out.append(reinterpret_cast<const char *>(&le), sizeof(uint32_t));
+}
+
+QString resolveUniqueIcoName(const QString &outputDir,
+                             const QFileInfo &sourceInfo,
+                             const QString &desiredStem,
+                             QSet<QString> &usedFileNames) {
+  QString uniqueStem = desiredStem;
+  int suffix = 1;
+  while (true) {
+    const QString candidateName = uniqueStem + ".ico";
+    const QString candidatePath = QDir(outputDir).filePath(candidateName);
+    const QFileInfo candidateInfo(candidatePath);
+    const bool collidesWithSource =
+        pdfutil::isSamePdf(sourceInfo, candidateInfo);
+    if (!usedFileNames.contains(candidateName.toLower()) &&
+        !QFile::exists(candidatePath) && !collidesWithSource) {
+      usedFileNames.insert(candidateName.toLower());
+      return candidateName;
+    }
+    uniqueStem = QString("%1_%2").arg(desiredStem).arg(suffix++);
+  }
+}
+
+bool writeIcoFile(const QString &outPath,
+                  const QVector<EncodedFrame> &frames) {
+  if (frames.isEmpty()) {
+    return false;
+  }
+
+  QByteArray icoHeader;
+  icoHeader.reserve(6 + 16 * frames.size());
+  appendUInt16LE(icoHeader, 0); // idReserved = 0
+  appendUInt16LE(icoHeader, 1); // idType = 1 (ICO)
+  appendUInt16LE(icoHeader, static_cast<uint16_t>(frames.size()));
+
+  uint32_t offset = static_cast<uint32_t>(6 + 16 * frames.size());
+  for (const EncodedFrame &ef : frames) {
+    const uint8_t bWidth = (ef.size >= 256) ? 0 : static_cast<uint8_t>(ef.size);
+    const uint8_t bHeight = (ef.size >= 256) ? 0 : static_cast<uint8_t>(ef.size);
+    icoHeader.append(static_cast<char>(bWidth));
+    icoHeader.append(static_cast<char>(bHeight));
+    icoHeader.append(static_cast<char>(0)); // bColorCount
+    icoHeader.append(static_cast<char>(0)); // bReserved
+    appendUInt16LE(icoHeader, 1);           // wPlanes = 1
+    appendUInt16LE(icoHeader, 32);          // wBitCount = 32
+    const uint32_t bytesInRes = static_cast<uint32_t>(ef.pngBytes.size());
+    appendUInt32LE(icoHeader, bytesInRes);
+    appendUInt32LE(icoHeader, offset);
+    offset += bytesInRes;
+  }
+
+  QSaveFile saveFile(outPath);
+  saveFile.setDirectWriteFallback(false);
+  bool writeOk = saveFile.open(QIODevice::WriteOnly);
+  if (writeOk) {
+    writeOk = (saveFile.write(icoHeader) == icoHeader.size());
+  }
+  if (writeOk) {
+    for (const EncodedFrame &ef : frames) {
+      if (saveFile.write(ef.pngBytes) != ef.pngBytes.size()) {
+        writeOk = false;
+        break;
+      }
+    }
+  }
+  if (writeOk) {
+    writeOk = saveFile.commit();
+  }
+  return writeOk;
 }
 
 } // namespace
@@ -133,10 +207,6 @@ void IcoExportController::runJob(const Params &params) {
       }
     }
 
-    struct EncodedFrame {
-      int size{0};
-      QByteArray pngBytes;
-    };
     QVector<EncodedFrame> frames;
     frames.reserve(validSizes.size());
     QString frameError;
@@ -210,82 +280,56 @@ void IcoExportController::runJob(const Params &params) {
     const QString baseStem = sourceInfo.completeBaseName().isEmpty()
                                  ? QStringLiteral("icon")
                                  : sourceInfo.completeBaseName();
-    QString uniqueStem = baseStem;
-    int suffix = 1;
-    while (true) {
-      const QString candidateName = uniqueStem + ".ico";
-      const QString candidatePath = QDir(params.outputDir).filePath(candidateName);
-      const QFileInfo candidateInfo(candidatePath);
-      const bool collidesWithSource =
-          pdfutil::isSamePdf(sourceInfo, candidateInfo);
-      if (!usedFileNames.contains(candidateName.toLower()) &&
-          !QFile::exists(candidatePath) && !collidesWithSource) {
+
+    int filesWrittenForSource = 0;
+    QString writeError;
+
+    for (const EncodedFrame &ef : frames) {
+      const QString singleStem =
+          QString("%1_%2x%2").arg(baseStem).arg(ef.size);
+      const QString singleFileName = resolveUniqueIcoName(
+          params.outputDir, sourceInfo, singleStem, usedFileNames);
+      const QString singleIcoPath =
+          QDir(params.outputDir).filePath(singleFileName);
+
+      if (!writeIcoFile(singleIcoPath, {ef})) {
+        writeError = QString("Failed to write '%1'.").arg(singleFileName);
         break;
       }
-      uniqueStem = QString("%1_%2").arg(baseStem).arg(suffix++);
-    }
-    const QString outFileName = uniqueStem + ".ico";
-    usedFileNames.insert(outFileName.toLower());
-    const QString outIcoPath = QDir(params.outputDir).filePath(outFileName);
-
-    QByteArray icoHeader;
-    icoHeader.reserve(6 + 16 * frames.size());
-    appendUInt16LE(icoHeader, 0); // idReserved = 0
-    appendUInt16LE(icoHeader, 1); // idType = 1 (ICO)
-    appendUInt16LE(icoHeader, static_cast<uint16_t>(frames.size()));
-
-    uint32_t offset = static_cast<uint32_t>(6 + 16 * frames.size());
-    for (const EncodedFrame &ef : frames) {
-      const uint8_t bWidth = (ef.size >= 256) ? 0 : static_cast<uint8_t>(ef.size);
-      const uint8_t bHeight = (ef.size >= 256) ? 0 : static_cast<uint8_t>(ef.size);
-      icoHeader.append(static_cast<char>(bWidth));
-      icoHeader.append(static_cast<char>(bHeight));
-      icoHeader.append(static_cast<char>(0)); // bColorCount
-      icoHeader.append(static_cast<char>(0)); // bReserved
-      appendUInt16LE(icoHeader, 1);           // wPlanes = 1
-      appendUInt16LE(icoHeader, 32);          // wBitCount = 32
-      const uint32_t bytesInRes = static_cast<uint32_t>(ef.pngBytes.size());
-      appendUInt32LE(icoHeader, bytesInRes);
-      appendUInt32LE(icoHeader, offset);
-      offset += bytesInRes;
+      iconsCreated++;
+      filesWrittenForSource++;
     }
 
-    QSaveFile saveFile(outIcoPath);
-    saveFile.setDirectWriteFallback(false);
-    bool writeOk = saveFile.open(QIODevice::WriteOnly);
-    if (writeOk) {
-      writeOk = (saveFile.write(icoHeader) == icoHeader.size());
-    }
-    if (writeOk) {
-      for (const EncodedFrame &ef : frames) {
-        if (saveFile.write(ef.pngBytes) != ef.pngBytes.size()) {
-          writeOk = false;
-          break;
-        }
+    if (writeError.isEmpty() && frames.size() > 1) {
+      const QString multiFileName = resolveUniqueIcoName(
+          params.outputDir, sourceInfo, baseStem, usedFileNames);
+      const QString multiIcoPath =
+          QDir(params.outputDir).filePath(multiFileName);
+
+      if (!writeIcoFile(multiIcoPath, frames)) {
+        writeError = QString("Failed to write '%1'.").arg(multiFileName);
+      } else {
+        iconsCreated++;
+        filesWrittenForSource++;
       }
     }
-    if (writeOk) {
-      writeOk = saveFile.commit();
-    }
 
-    if (!writeOk) {
+    if (!writeError.isEmpty()) {
       failedFiles++;
-      const QString err = QString("Failed to write '%1'.").arg(outFileName);
-      errors.append(QString("%1: %2").arg(sourceInfo.fileName(), err));
+      errors.append(QString("%1: %2").arg(sourceInfo.fileName(), writeError));
       emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed),
-                             err);
+                             writeError);
       continue;
     }
 
-    iconsCreated++;
     emit fileStatusChanged(
         sourcePath, static_cast<int>(FileStatus::Succeeded),
-        QString("Saved %1 (%2 resolution(s))")
-            .arg(outFileName)
-            .arg(frames.size()));
+        QString("Saved %1 .ico file(s)").arg(filesWrittenForSource));
     emit progressChanged(
         i + 1, totalFiles,
-        QString("Created %1 of %2 icon(s)").arg(i + 1).arg(totalFiles));
+        QString("Processed %1 of %2 source image(s)")
+            .arg(i + 1)
+            .arg(totalFiles));
   }
 
   result.success = (iconsCreated > 0 && failedFiles == 0 && !m_isCancelled);

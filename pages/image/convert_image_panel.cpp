@@ -136,6 +136,17 @@ bool ConvertImagePanel::execute(const QStringList &sourcePaths) {
     return false;
   }
 
+  for (const QString &p : sourcePaths) {
+    if (QFileInfo(p).suffix().compare("pdf", Qt::CaseInsensitive) == 0) {
+      QWidget *toastParent = window() ? window() : this;
+      ui::Toast::show(toastParent, "PDF Input Not Supported Here",
+                      "Please use PDF Tools -> PDF to Images to extract pages "
+                      "from PDF files.",
+                      ui::ToastVariant::Warning);
+      return false;
+    }
+  }
+
   const DropFileWidget::ImageExtension targetExt = m_targetExtension;
   const QString targetFormatString =
       ImageConvertController::extensionToString(targetExt);
@@ -173,28 +184,7 @@ bool ConvertImagePanel::execute(const QStringList &sourcePaths) {
     return true;
   }
 
-  // SCENARIO 2: Input contains PDF -> Extract PDF Pages into Images
-  bool hasPdfInput = false;
-  for (const QString &p : sourcePaths) {
-    if (QFileInfo(p).suffix().toLower() == "pdf") {
-      hasPdfInput = true;
-      break;
-    }
-  }
-  if (hasPdfInput) {
-    const QString outputDir = QFileDialog::getExistingDirectory(
-        this, "Select Output Directory for Extracted Images", QDir::homePath());
-    if (outputDir.isEmpty()) {
-      return false;
-    }
-
-    params.mode = ImageConvertController::Mode::PdfToImages;
-    params.outputDir = outputDir;
-    m_controller->start(params);
-    return true;
-  }
-
-  // SCENARIO 3: Standard Image / SVG -> Image Conversion (Single & Batch)
+  // SCENARIO 2: Standard Image / SVG -> Image Conversion (Single & Batch)
   params.forceOpaque =
       (targetExt == DropFileWidget::JPG || targetExt == DropFileWidget::JPEG ||
        targetExt == DropFileWidget::BMP);
@@ -266,27 +256,6 @@ void ConvertImagePanel::onConvertFinished(
                       ui::ToastVariant::Default);
     } else {
       ui::Toast::show(toastParent, "Error", "Failed to create PDF!",
-                      ui::ToastVariant::Destructive);
-    }
-    break;
-  }
-  case ImageConvertController::Mode::PdfToImages: {
-    if (result.cancelled) {
-      ui::Toast::show(toastParent, "Cancelled", "Extraction was cancelled.",
-                      ui::ToastVariant::Default);
-    } else if (result.successCount > 0) {
-      QString msg =
-          QString("Extracted %1 image(s) to:\n%2\n\nTotal Size: %3")
-              .arg(result.successCount)
-              .arg(result.outputDir)
-              .arg(DropFileWidget::formatFileSize(result.totalOutputBytes));
-      if (result.failedCount > 0) {
-        msg += QString("\n(%1 failed)").arg(result.failedCount);
-      }
-      ui::Dialog::info(this, "Success", msg);
-    } else {
-      ui::Toast::show(toastParent, "Error",
-                      "Failed to extract images from PDF!",
                       ui::ToastVariant::Destructive);
     }
     break;

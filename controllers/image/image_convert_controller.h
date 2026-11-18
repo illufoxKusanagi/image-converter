@@ -13,7 +13,6 @@ class ImageConvertController : public PdfToolController {
 public:
   enum class Mode {
     ImagesToPdf = 0,
-    PdfToImages,
     SingleImage,
     BatchImage
   };
@@ -63,7 +62,6 @@ signals:
 private:
   void runJob(const Params &params);
   Result runImagesToPdf(const Params &params);
-  Result runPdfToImages(const Params &params);
   Result runSingleImage(const Params &params);
   Result runBatchImage(const Params &params);
 };
