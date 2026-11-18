@@ -18,7 +18,8 @@ IcoPackagerPanel::IcoPackagerPanel(QWidget *parent) : QWidget(parent) {
 
   m_hintLabel = new QLabel(
       "Checked icon resolutions are rendered with smooth aspect-preserving "
-      "scaling and packed into a single multi-resolution .ico file:",
+      "scaling and exported as separate .ico files (<name>_16x16.ico, ...) "
+      "plus a combined multi-size .ico:",
       this);
   m_hintLabel->setWordWrap(true);
 
@@ -145,7 +146,7 @@ void IcoPackagerPanel::onIcoExportFinished(
       sizeLabels.append(QString("%1×%1").arg(sz));
     }
     QString msg =
-        QString("Created %1 multi-resolution .ico file(s) (%2 px) in:\n%3")
+        QString("Exported %1 .ico file(s) (%2 px) in:\n%3")
             .arg(result.iconsCreated)
             .arg(sizeLabels.join(", "))
             .arg(result.outputDir);
