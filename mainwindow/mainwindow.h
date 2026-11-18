@@ -6,6 +6,7 @@
 #include "ui-kit/components/button.h"
 #include "ui-kit/components/card.h"
 #include "ui-kit/components/tabs.h"
+#include "ui-kit/theme/i18n.h"
 #include "ui-kit/theme/theme.h"
 #include <QHBoxLayout>
 #include <QLabel>
@@ -22,9 +23,12 @@ public:
 private slots:
   void applyThemeStyles();
   void onThemeToggleClicked();
+  void onLanguageToggleClicked();
+  void retranslateUi();
 
 private:
   ui::Tabs *m_tabs{nullptr};
+  ui::Button *m_langToggleBtn{nullptr};
   ui::Button *m_themeToggleBtn{nullptr};
   QLabel *m_titleLabel{nullptr};
   QWidget *m_centralWidget{nullptr};

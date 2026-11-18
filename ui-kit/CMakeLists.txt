@@ -16,6 +16,8 @@ set(UI_KIT_THEME_SOURCES
     theme/tokens.h
     theme/theme.h
     theme/theme.cpp
+    theme/i18n.h
+    theme/i18n.cpp
     theme/style_helper.h
     theme/animation_helper.h
     theme/icon_helper.h

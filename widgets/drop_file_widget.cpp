@@ -31,7 +31,10 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile)
 
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,
           &DropFileWidget::applyThemeStyles);
+  connect(&ui::I18n::instance(), &ui::I18n::languageChanged, this,
+          &DropFileWidget::retranslateUi);
   applyThemeStyles();
+  retranslateUi();
 }
 
 void DropFileWidget::updateDropZoneStyle() {
@@ -63,10 +66,9 @@ void DropFileWidget::setupEmptyFileWidget() {
   emptyFieldLayout->setAlignment(Qt::AlignCenter);
 
   m_icon = new QLabel(m_emptyFieldWidget);
-  m_emptyLabel = new QLabel("Choose your " + m_typeFile + "(s) or drag here...",
-                            m_emptyFieldWidget);
+  m_emptyLabel = new QLabel(m_emptyFieldWidget);
 
-  m_browseButton = new ui::Button("Browse Files", ui::ButtonVariant::Outline,
+  m_browseButton = new ui::Button(QString(), ui::ButtonVariant::Outline,
                                   ui::ButtonSize::Default, m_emptyFieldWidget);
   m_browseButton->setMinimumWidth(140);
 
@@ -89,9 +91,9 @@ void DropFileWidget::setupChosenFileWidget() {
 
   QHBoxLayout *headerLayout = new QHBoxLayout();
   headerLayout->setContentsMargins(4, 0, 4, 0);
-  m_chosenHeaderLabel = new QLabel("Selected Files", this);
+  m_chosenHeaderLabel = new QLabel(this);
 
-  m_clearAllButton = new ui::Button("Clear All", ui::ButtonVariant::Ghost,
+  m_clearAllButton = new ui::Button(QString(), ui::ButtonVariant::Ghost,
                                     ui::ButtonSize::Small, this);
   connect(m_clearAllButton, &QPushButton::clicked, this,
           &DropFileWidget::onClearAllPressed);
@@ -117,7 +119,7 @@ void DropFileWidget::setupChosenFileWidget() {
 
   QHBoxLayout *footerLayout = new QHBoxLayout();
   footerLayout->setContentsMargins(0, 0, 0, 0);
-  m_addMoreButton = new ui::Button("+ Add More Files", ui::ButtonVariant::Ghost,
+  m_addMoreButton = new ui::Button(QString(), ui::ButtonVariant::Ghost,
                                    ui::ButtonSize::Small, this);
   connect(m_addMoreButton, &QPushButton::clicked, this,
           &DropFileWidget::onBrowseButtonPressed);
@@ -131,17 +133,7 @@ void DropFileWidget::setupChosenFileWidget() {
 }
 
 void DropFileWidget::setupOrSeparatorLayout(QVBoxLayout *layout) {
-  QString formatText =
-      "Supported formats: PNG, JPG, JPEG, WEBP, TIFF, BMP, GIF, SVG";
-  if (m_typeFile == "PDF") {
-    formatText = "Supported formats: PDF (.pdf)";
-  } else if (m_typeFile == "SVG") {
-    formatText = "Supported formats: Vector SVG (.svg)";
-  } else if (m_typeFile == "Markdown / HTML") {
-    formatText =
-        "Supported formats: Markdown & HTML (.md, .markdown, .html, .htm)";
-  }
-  m_formatLabel = new QLabel(formatText, m_emptyFieldWidget);
+  m_formatLabel = new QLabel(m_emptyFieldWidget);
   m_formatLabel->setAlignment(Qt::AlignCenter);
 
   QWidget *orWidget = new QWidget(m_emptyFieldWidget);
@@ -150,7 +142,7 @@ void DropFileWidget::setupOrSeparatorLayout(QVBoxLayout *layout) {
   orLayout->setSpacing(8);
   orLayout->setContentsMargins(40, 0, 40, 0);
 
-  m_orLabel = new QLabel("or", orWidget);
+  m_orLabel = new QLabel(orWidget);
   m_orLabel->setAlignment(Qt::AlignCenter);
 
   ui::Separator *lineAbove = new ui::Separator(Qt::Horizontal, orWidget);
@@ -162,6 +154,65 @@ void DropFileWidget::setupOrSeparatorLayout(QVBoxLayout *layout) {
 
   layout->addWidget(m_formatLabel, 0, Qt::AlignCenter);
   layout->addWidget(orWidget);
+}
+
+QString DropFileWidget::localizedTypeLabel() const {
+  if (m_typeFile == QStringLiteral("PDF")) {
+    return tr("PDF");
+  }
+  if (m_typeFile == QStringLiteral("SVG")) {
+    return tr("SVG");
+  }
+  if (m_typeFile == QStringLiteral("Markdown / HTML")) {
+    return tr("Markdown / HTML");
+  }
+  if (m_typeFile == QStringLiteral("Image")) {
+    return tr("Image");
+  }
+  if (m_typeFile == QStringLiteral("File")) {
+    return tr("File");
+  }
+  return m_typeFile;
+}
+
+QString DropFileWidget::supportedFormatsText() const {
+  if (m_typeFile == QStringLiteral("PDF")) {
+    return tr("Supported formats: PDF (.pdf)");
+  }
+  if (m_typeFile == QStringLiteral("SVG")) {
+    return tr("Supported formats: Vector SVG (.svg)");
+  }
+  if (m_typeFile == QStringLiteral("Markdown / HTML")) {
+    return tr(
+        "Supported formats: Markdown & HTML (.md, .markdown, .html, .htm)");
+  }
+  return tr("Supported formats: PNG, JPG, JPEG, WEBP, TIFF, BMP, GIF, SVG");
+}
+
+void DropFileWidget::retranslateUi() {
+  if (m_emptyLabel) {
+    m_emptyLabel->setText(
+        tr("Choose your %1(s) or drag here...").arg(localizedTypeLabel()));
+  }
+  if (m_formatLabel) {
+    m_formatLabel->setText(supportedFormatsText());
+  }
+  if (m_orLabel) {
+    m_orLabel->setText(tr("or"));
+  }
+  if (m_browseButton) {
+    m_browseButton->setText(tr("Browse Files"));
+  }
+  if (m_chosenHeaderLabel) {
+    m_chosenHeaderLabel->setText(tr("Selected Files"));
+  }
+  if (m_clearAllButton) {
+    m_clearAllButton->setText(tr("Clear All"));
+  }
+  if (m_addMoreButton) {
+    m_addMoreButton->setText(tr("+ Add More Files"));
+  }
+  rebuildFileList();
 }
 
 void DropFileWidget::applyThemeStyles() {
@@ -331,7 +382,7 @@ void DropFileWidget::rebuildFileList() {
     QPushButton *upBtn = new QPushButton(card);
     upBtn->setFixedSize(20, 20);
     upBtn->setCursor(Qt::PointingHandCursor);
-    upBtn->setToolTip("Move up");
+    upBtn->setToolTip(tr("Move up"));
     upBtn->setEnabled(i > 0);
     upBtn->setIcon(ui::Icon::get(":/icons/icons/lucide-chevron-up.svg",
                                  i > 0 ? c.mutedForeground : c.border,
@@ -343,7 +394,7 @@ void DropFileWidget::rebuildFileList() {
     QPushButton *downBtn = new QPushButton(card);
     downBtn->setFixedSize(20, 20);
     downBtn->setCursor(Qt::PointingHandCursor);
-    downBtn->setToolTip("Move down");
+    downBtn->setToolTip(tr("Move down"));
     downBtn->setEnabled(i < m_filePaths.size() - 1);
     downBtn->setIcon(
         ui::Icon::get(":/icons/icons/lucide-chevron-down.svg",
@@ -357,7 +408,7 @@ void DropFileWidget::rebuildFileList() {
     QPushButton *removeBtn = new QPushButton(card);
     removeBtn->setFixedSize(20, 20);
     removeBtn->setCursor(Qt::PointingHandCursor);
-    removeBtn->setToolTip("Remove file");
+    removeBtn->setToolTip(tr("Remove file"));
     removeBtn->setIcon(ui::Icon::get(":/icons/icons/lucide-x.svg",
                                      c.mutedForeground, QSize(14, 14)));
     removeBtn->setStyleSheet(
@@ -382,10 +433,13 @@ void DropFileWidget::rebuildFileList() {
   updateProcessingControls();
 
   QString countStr = m_filePaths.size() == 1
-                         ? "1 file selected"
-                         : QString("%1 files selected").arg(m_filePaths.size());
+                         ? tr("1 file selected")
+                         : tr("%1 files selected").arg(m_filePaths.size());
   if (m_chosenHeaderLabel) {
-    m_chosenHeaderLabel->setText(countStr + " • " + formatFileSize(totalBytes));
+    m_chosenHeaderLabel->setText(
+        m_filePaths.isEmpty()
+            ? tr("Selected Files")
+            : countStr + QStringLiteral(" • ") + formatFileSize(totalBytes));
   }
 }
 
@@ -676,11 +730,11 @@ QString DropFileWidget::imageExtensionToString(ImageExtension sourceExtension) {
 
 QString DropFileWidget::formatFileSize(qint64 bytes) {
   if (bytes < 1024) {
-    return QString("%1 B").arg(bytes);
+    return tr("%1 B").arg(bytes);
   } else if (bytes < 1024 * 1024) {
-    return QString("%1 KB").arg(bytes / 1024.0, 0, 'f', 1);
+    return tr("%1 KB").arg(bytes / 1024.0, 0, 'f', 1);
   } else {
-    return QString("%1 MB").arg(bytes / (1024.0 * 1024.0), 0, 'f', 1);
+    return tr("%1 MB").arg(bytes / (1024.0 * 1024.0), 0, 'f', 1);
   }
 }
 
@@ -705,25 +759,26 @@ bool DropFileWidget::saveImage(const QImage *image, const QString &outputPath,
 void DropFileWidget::onBrowseButtonPressed() {
   if (m_isProcessing)
     return;
-  QStringList fileNames;
-  if (m_typeFile == "PDF") {
-    fileNames = QFileDialog::getOpenFileNames(
-        this, "Select PDF Files", QDir::homePath(),
-        "PDF Files (*.pdf);;All Files (*)");
-  } else if (m_typeFile == "SVG") {
-    fileNames = QFileDialog::getOpenFileNames(
-        this, "Select SVG Vector Files", QDir::homePath(),
-        "SVG Vector Files (*.svg);;All Files (*)");
-  } else if (m_typeFile == "Markdown / HTML") {
-    fileNames = QFileDialog::getOpenFileNames(
-        this, "Select Markdown or HTML Files", QDir::homePath(),
+  QString dialogTitle;
+  QString filter;
+  if (m_typeFile == QStringLiteral("PDF")) {
+    dialogTitle = tr("Select PDF Files");
+    filter = tr("PDF Files (*.pdf);;All Files (*)");
+  } else if (m_typeFile == QStringLiteral("SVG")) {
+    dialogTitle = tr("Select SVG Vector Files");
+    filter = tr("SVG Vector Files (*.svg);;All Files (*)");
+  } else if (m_typeFile == QStringLiteral("Markdown / HTML")) {
+    dialogTitle = tr("Select Markdown or HTML Files");
+    filter = tr(
         "Markdown & HTML Files (*.md *.markdown *.html *.htm);;All Files (*)");
   } else {
-    fileNames = QFileDialog::getOpenFileNames(
-        this, "Select Image Files", QDir::homePath(),
+    dialogTitle = tr("Select Image Files");
+    filter = tr(
         "Images (*.png *.jpg *.jpeg *.webp *.tiff *.bmp *.gif *.svg);;"
         "All Files (*)");
   }
+  const QStringList fileNames = QFileDialog::getOpenFileNames(
+      this, dialogTitle, QDir::homePath(), filter);
   if (m_isProcessing || fileNames.isEmpty()) {
     return;
   }
