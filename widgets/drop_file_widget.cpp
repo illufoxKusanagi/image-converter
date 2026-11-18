@@ -1,5 +1,6 @@
 #include "drop_file_widget.h"
 #include "ui-kit/components/badge.h"
+#include "ui-kit/components/scroll_area.h"
 #include "ui-kit/components/separator.h"
 #include "ui-kit/theme/icon_helper.h"
 #include "ui-kit/theme/style_helper.h"
@@ -131,7 +132,7 @@ void DropFileWidget::setupChosenFileWidget() {
 
 void DropFileWidget::setupOrSeparatorLayout(QVBoxLayout *layout) {
   QString formatText =
-      "Supported formats: PNG, JPG, JPEG, WEBP, TIFF, BMP, GIF, SVG, PDF";
+      "Supported formats: PNG, JPG, JPEG, WEBP, TIFF, BMP, GIF, SVG";
   if (m_typeFile == "PDF") {
     formatText = "Supported formats: PDF (.pdf)";
   } else if (m_typeFile == "SVG") {
@@ -213,22 +214,8 @@ void DropFileWidget::applyThemeStyles() {
 
   if (m_fileScrollArea) {
     m_fileScrollArea->setStyleSheet(
-        QString("QScrollArea { background: transparent; border: none; }"
-                "QScrollBar:vertical {"
-                "  border: none;"
-                "  background: transparent;"
-                "  width: 6px;"
-                "  border-radius: 3px;"
-                "}"
-                "QScrollBar::handle:vertical {"
-                "  background: %1;"
-                "  min-height: 20px;"
-                "  border-radius: 3px;"
-                "}"
-                "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {"
-                "  height: 0px;"
-                "}")
-            .arg(ui::StyleHelper::toHexString(c.border)));
+        "QScrollArea { background: transparent; border: none; }");
+    ui::ScrollArea::applyScrollBarStyles(m_fileScrollArea);
   }
 
   if (m_browseButton) {
@@ -627,8 +614,8 @@ void DropFileWidget::dropEvent(QDropEvent *event) {
         QString filePath = url.toLocalFile();
         QFileInfo fileInfo(filePath);
         QString ext = fileInfo.suffix().toLower();
-        QStringList validExts = {"png",  "jpg", "jpeg", "webp", "tiff",
-                                 "bmp",  "gif", "svg",  "pdf"};
+        QStringList validExts = {"png",  "jpg", "jpeg", "webp",
+                                 "tiff", "bmp", "gif",  "svg"};
         if (m_typeFile == "PDF") {
           validExts = {"pdf"};
         } else if (m_typeFile == "SVG") {
@@ -733,10 +720,9 @@ void DropFileWidget::onBrowseButtonPressed() {
         "Markdown & HTML Files (*.md *.markdown *.html *.htm);;All Files (*)");
   } else {
     fileNames = QFileDialog::getOpenFileNames(
-        this, "Select Image or PDF Files", QDir::homePath(),
-        "Images (*.png *.jpg *.jpeg *.webp *.tiff *.bmp *.gif *.svg *.pdf);;"
-        "Image Files (*.png *.jpg *.jpeg *.webp *.tiff *.bmp *.gif *.svg);;"
-        "PDF Files (*.pdf);;All Files (*)");
+        this, "Select Image Files", QDir::homePath(),
+        "Images (*.png *.jpg *.jpeg *.webp *.tiff *.bmp *.gif *.svg);;"
+        "All Files (*)");
   }
   if (m_isProcessing || fileNames.isEmpty()) {
     return;

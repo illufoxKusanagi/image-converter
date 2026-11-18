@@ -1,6 +1,7 @@
 #include "scroll_area.h"
 #include "../theme/style_helper.h"
 #include "../theme/theme.h"
+#include <QAbstractScrollArea>
 #include <QScrollBar>
 #include <QVariant>
 
@@ -17,11 +18,92 @@ ScrollArea::ScrollArea(QWidget *parent) : QScrollArea(parent) {
   applyThemeStyles();
 }
 
-void ScrollArea::applyThemeStyles() {
+QString ScrollArea::scrollBarStyleSheet() {
   const auto &theme = Theme::instance();
   const auto &c = theme.colors();
   const auto &s = theme.spacing();
   const auto &r = theme.radius();
+
+  const QString handleRest =
+      StyleHelper::toRgbaString(StyleHelper::withAlphaF(c.mutedForeground, 0.40));
+  const QString handleHover =
+      StyleHelper::toRgbaString(StyleHelper::withAlphaF(c.mutedForeground, 0.70));
+  const QString handleActive = StyleHelper::toHexString(c.ring);
+  const QString handleDisabled = StyleHelper::toHexString(c.border);
+
+  return QString(
+             "QScrollBar {"
+             "  background: transparent;"
+             "  border: none;"
+             "}"
+             "QScrollBar:vertical {"
+             "  width: %1px;"
+             "  margin: 2px 0px;"
+             "}"
+             "QScrollBar:horizontal {"
+             "  height: %1px;"
+             "  margin: 0px 2px;"
+             "}"
+             "QScrollBar::handle {"
+             "  background-color: %2;"
+             "  border: none;"
+             "  border-radius: %3px;"
+             "}"
+             "QScrollBar::handle:vertical { min-height: %4px; }"
+             "QScrollBar::handle:horizontal { min-width: %4px; }"
+             "QScrollBar::handle:hover {"
+             "  background-color: %5;"
+             "}"
+             "QScrollBar::handle:focus, QScrollBar::handle:pressed {"
+             "  background-color: %6;"
+             "}"
+             "QScrollBar::handle:disabled {"
+             "  background-color: %7;"
+             "}"
+             "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {"
+             "  height: 0px;"
+             "  border: none;"
+             "  background: transparent;"
+             "}"
+             "QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {"
+             "  width: 0px;"
+             "  border: none;"
+             "  background: transparent;"
+             "}"
+             "QScrollBar::up-arrow, QScrollBar::down-arrow, "
+             "QScrollBar::left-arrow, QScrollBar::right-arrow {"
+             "  width: 0px;"
+             "  height: 0px;"
+             "  background: none;"
+             "}"
+             "QScrollBar::add-page, QScrollBar::sub-page {"
+             "  background: transparent;"
+             "}")
+      .arg(s.space2)
+      .arg(handleRest)
+      .arg(r.sm)
+      .arg(s.space6)
+      .arg(handleHover)
+      .arg(handleActive)
+      .arg(handleDisabled);
+}
+
+void ScrollArea::applyScrollBarStyles(QAbstractScrollArea *area) {
+  if (!area) {
+    return;
+  }
+
+  const QString style = scrollBarStyleSheet();
+  if (QScrollBar *hBar = area->horizontalScrollBar()) {
+    hBar->setStyleSheet(style);
+  }
+  if (QScrollBar *vBar = area->verticalScrollBar()) {
+    vBar->setStyleSheet(style);
+  }
+}
+
+void ScrollArea::applyThemeStyles() {
+  const auto &c = Theme::instance().colors();
 
   viewport()->setProperty("uiScrollAreaViewport", true);
   setStyleSheet(
@@ -39,61 +121,8 @@ void ScrollArea::applyThemeStyles() {
               "}")
           .arg(StyleHelper::toHexString(c.background)));
 
-  const QString scrollBarStyle =
-      QString(
-          "QScrollBar {"
-          "  background-color: %1;"
-          "  border: none;"
-          "  margin: %2px;"
-          "}"
-          "QScrollBar:vertical { width: %3px; }"
-          "QScrollBar:horizontal { height: %3px; }"
-          "QScrollBar::handle {"
-          "  background-color: %4;"
-          "  border: 1px solid %4;"
-          "  border-radius: %5px;"
-          "}"
-          "QScrollBar::handle:vertical { min-height: %6px; }"
-          "QScrollBar::handle:horizontal { min-width: %6px; }"
-          "QScrollBar::handle:hover {"
-          "  background-color: %7;"
-          "  border-color: %7;"
-          "}"
-          "QScrollBar::handle:focus { border-color: %8; }"
-          "QScrollBar::handle:pressed {"
-          "  background-color: %8;"
-          "  border-color: %8;"
-          "}"
-          "QScrollBar::handle:disabled {"
-          "  background-color: %9;"
-          "  border-color: %9;"
-          "}"
-          "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {"
-          "  height: %2px;"
-          "  border: none;"
-          "  background: transparent;"
-          "}"
-          "QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {"
-          "  width: %2px;"
-          "  border: none;"
-          "  background: transparent;"
-          "}"
-          "QScrollBar::add-page, QScrollBar::sub-page {"
-          "  background: transparent;"
-          "}")
-          .arg(StyleHelper::toHexString(c.muted))
-          .arg(s.space0)
-          .arg(s.space3)
-          .arg(StyleHelper::toHexString(c.mutedForeground))
-          .arg(r.sm)
-          .arg(s.space6)
-          .arg(StyleHelper::toHexString(c.foreground))
-          .arg(StyleHelper::toHexString(c.ring))
-          .arg(StyleHelper::toHexString(c.border));
-
   // Style only our own scrollbars, never scrollbars inside the content widget.
-  horizontalScrollBar()->setStyleSheet(scrollBarStyle);
-  verticalScrollBar()->setStyleSheet(scrollBarStyle);
+  applyScrollBarStyles(this);
 }
 
 } // namespace ui

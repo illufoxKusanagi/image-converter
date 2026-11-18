@@ -31,19 +31,28 @@ void PdfToImagesController::runJob(const Params &params) {
   result.dpi = params.dpi;
 
   const QStringList &sourcePaths = params.sourcePaths;
-  const QString &format = params.format.toLower();
-  const int effectiveQuality = (format == "png") ? -1 : params.quality;
+  const QString format = params.format.toLower();
+  const int effectiveQuality =
+      (format == "png" || format == "bmp" || format == "gif") ? -1
+                                                              : params.quality;
   const int dpi = params.dpi;
 
   emit progressChanged(0, sourcePaths.size(), "Exporting PDF pages to images...");
 
   int totalExportedImages = 0;
   int failedDocs = 0;
+  qint64 totalOutputBytes = 0;
   QStringList errors;
   QSet<QString> usedFileNames;
 
   for (int i = 0; i < sourcePaths.size(); ++i) {
     if (m_isCancelled) {
+      for (int remainingIdx = i; remainingIdx < sourcePaths.size();
+           ++remainingIdx) {
+        emit fileStatusChanged(sourcePaths.at(remainingIdx),
+                               static_cast<int>(FileStatus::Cancelled),
+                               "Export cancelled");
+      }
       break;
     }
     const QString &sourcePath = sourcePaths.at(i);
@@ -54,12 +63,14 @@ void PdfToImagesController::runJob(const Params &params) {
         QString("Rendering pages to %1 at %2 DPI")
             .arg(format.toUpper())
             .arg(dpi));
-    emit progressChanged(
-        i, sourcePaths.size(),
-        QString("Exporting %1 (%2 of %3)...")
-            .arg(sourceInfo.fileName())
-            .arg(i + 1)
-            .arg(sourcePaths.size()));
+    if (sourcePaths.size() > 1) {
+      emit progressChanged(
+          i, sourcePaths.size(),
+          QString("Exporting %1 (%2 of %3)...")
+              .arg(sourceInfo.fileName())
+              .arg(i + 1)
+              .arg(sourcePaths.size()));
+    }
 
     QPdfDocument doc;
     if (doc.load(sourceInfo.absoluteFilePath()) != QPdfDocument::Error::None ||
@@ -68,6 +79,11 @@ void PdfToImagesController::runJob(const Params &params) {
       const QString err = "Cannot open PDF (damaged or encrypted).";
       errors.append(QString("%1: %2").arg(sourceInfo.fileName(), err));
       emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed), err);
+      if (sourcePaths.size() > 1) {
+        emit progressChanged(
+            i + 1, sourcePaths.size(),
+            QString("Processed %1 of %2").arg(i + 1).arg(sourcePaths.size()));
+      }
       continue;
     }
 
@@ -83,6 +99,11 @@ void PdfToImagesController::runJob(const Params &params) {
         failedDocs++;
         errors.append(QString("%1: %2").arg(sourceInfo.fileName(), rangeErr));
         emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed), rangeErr);
+        if (sourcePaths.size() > 1) {
+          emit progressChanged(
+              i + 1, sourcePaths.size(),
+              QString("Processed %1 of %2").arg(i + 1).arg(sourcePaths.size()));
+        }
         continue;
       }
       for (const auto &r : ranges) {
@@ -96,21 +117,35 @@ void PdfToImagesController::runJob(const Params &params) {
 
     int exportedForThisPdf = 0;
     QString docError;
-    for (int pageNum : targetPages) {
+    const QImage::Format imgFormat =
+        (format == "jpg" || format == "bmp") ? QImage::Format_RGB32
+                                             : QImage::Format_ARGB32;
+    for (int pIdx = 0; pIdx < targetPages.size(); ++pIdx) {
       if (m_isCancelled) {
         break;
       }
+      const int pageNum = targetPages.at(pIdx);
+      if (sourcePaths.size() == 1) {
+        emit progressChanged(pIdx, targetPages.size(),
+                             QString("Exporting %1 (page %2 of %3)...")
+                                 .arg(sourceInfo.fileName())
+                                 .arg(pIdx + 1)
+                                 .arg(targetPages.size()));
+      }
+
       const int pageIdx = pageNum - 1;
       const QSizeF ptSize = doc.pagePointSize(pageIdx);
       const QSize pixelSize(qMax(1, qRound(ptSize.width() * dpi / 72.0)),
                             qMax(1, qRound(ptSize.height() * dpi / 72.0)));
 
-      const QImage::Format imgFormat =
-          (format == "jpg") ? QImage::Format_RGB32 : QImage::Format_ARGB32;
       const QImage pageImg =
           pdfutil::renderPdfPageOnWhite(doc, pageIdx, pixelSize, imgFormat);
       if (pageImg.isNull()) {
         docError = QString("Failed to render page %1.").arg(pageNum);
+        break;
+      }
+
+      if (m_isCancelled) {
         break;
       }
 
@@ -140,6 +175,10 @@ void PdfToImagesController::runJob(const Params &params) {
       }
       exportedForThisPdf++;
       totalExportedImages++;
+      totalOutputBytes += QFileInfo(outImagePath).size();
+      if (sourcePaths.size() == 1) {
+        emit progressChanged(pIdx + 1, targetPages.size(), QString());
+      }
     }
 
     doc.close();
@@ -159,7 +198,7 @@ void PdfToImagesController::runJob(const Params &params) {
                              docError);
     }
 
-    if (!m_isCancelled) {
+    if (sourcePaths.size() > 1 && !m_isCancelled) {
       emit progressChanged(
           i + 1, sourcePaths.size(),
           QString("Exported %1 of %2").arg(i + 1).arg(sourcePaths.size()));
@@ -174,6 +213,7 @@ void PdfToImagesController::runJob(const Params &params) {
   result.success = (totalExportedImages > 0 && failedDocs == 0);
   result.cancelled = m_isCancelled.load();
   result.imagesExported = totalExportedImages;
+  result.totalOutputBytes = totalOutputBytes;
   result.failedDocs = failedDocs;
   result.errors = errors;
   if (!errors.isEmpty()) {

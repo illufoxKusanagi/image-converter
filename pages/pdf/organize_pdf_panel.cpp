@@ -1,6 +1,7 @@
 #include "organize_pdf_panel.h"
 #include "controllers/pdf/pdf_utils.h"
 #include "ui-kit/components/dialog.h"
+#include "ui-kit/components/scroll_area.h"
 #include "ui-kit/components/toast.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
@@ -282,6 +283,7 @@ void OrganizePdfPanel::applyThemeStyles() {
 
     m_pageList->setFont(t.font(t.sizeSm));
     m_pageList->setStyleSheet(listStyle);
+    ui::ScrollArea::applyScrollBarStyles(m_pageList);
   }
 }
 

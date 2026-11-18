@@ -4,6 +4,7 @@
 #include "controllers/pdf/pdf_tool_controller.h"
 #include <QString>
 #include <QStringList>
+#include <QtGlobal>
 
 class PdfToImagesController : public PdfToolController {
   Q_OBJECT
@@ -22,6 +23,7 @@ public:
     bool success{false};
     bool cancelled{false};
     int imagesExported{0};
+    qint64 totalOutputBytes{0};
     int failedDocs{0};
     QString outputDir;
     QString format;

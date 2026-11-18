@@ -2,6 +2,7 @@
 #include "controllers/pdf/pdf_utils.h"
 #include "ui-kit/components/dialog.h"
 #include "ui-kit/components/toast.h"
+#include "widgets/drop_file_widget.h"
 #include <QComboBox>
 #include <QDir>
 #include <QFileDialog>
@@ -18,7 +19,7 @@ PdfToImagesPanel::PdfToImagesPanel(QWidget *parent) : QWidget(parent) {
   exportLayout->setContentsMargins(0, 0, 0, 0);
   exportLayout->setSpacing(12);
 
-  const QStringList exportFormats = {"PNG", "JPG", "WEBP", "TIFF"};
+  const QStringList exportFormats = {"PNG", "JPG", "WEBP", "TIFF", "BMP", "GIF"};
   m_formatSelect = new ui::Select(exportFormats, this);
   m_formatField = new ui::FormField("Image Format", m_formatSelect, this);
   connect(m_formatSelect, QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -44,8 +45,13 @@ PdfToImagesPanel::PdfToImagesPanel(QWidget *parent) : QWidget(parent) {
 }
 
 QString PdfToImagesPanel::selectedFormat() const {
-  const QStringList formats = {"png", "jpg", "webp", "tiff"};
+  const QStringList formats = {"png", "jpg", "webp", "tiff", "bmp", "gif"};
   return formats.value(formatIndex(), "png");
+}
+
+bool PdfToImagesPanel::supportsQuality() const {
+  const QString format = selectedFormat();
+  return format == "jpg" || format == "webp" || format == "tiff";
 }
 
 int PdfToImagesPanel::formatIndex() const {
@@ -73,7 +79,7 @@ bool PdfToImagesPanel::execute(const QStringList &sourcePaths, int quality) {
   }
 
   const QString format = selectedFormat();
-  const int effectiveQuality = (format == "png") ? -1 : quality;
+  const int effectiveQuality = supportsQuality() ? quality : -1;
   const int dpi = selectedDpi();
   const QString rangeSpec = pageRangeSpec();
 
@@ -127,18 +133,22 @@ void PdfToImagesPanel::onPdfToImagesFinished(
   } else if (result.imagesExported > 0 && result.failedDocs == 0) {
     ui::Dialog::info(
         this, "PDF Pages Exported",
-        QString("Exported %1 %2 image(s) at %3 DPI to:\n%4")
+        QString("Exported %1 %2 image(s) at %3 DPI to:\n%4\n\nTotal Size: %5")
             .arg(result.imagesExported)
             .arg(result.format.toUpper())
             .arg(result.dpi)
-            .arg(result.outputDir));
+            .arg(result.outputDir)
+            .arg(DropFileWidget::formatFileSize(result.totalOutputBytes)));
   } else if (result.imagesExported > 0) {
-    ui::Dialog::info(this, "Export Completed with Warnings",
-                     QString("Exported %1 %2 image(s) to:\n%3\n\nErrors:\n%4")
-                         .arg(result.imagesExported)
-                         .arg(result.format.toUpper())
-                         .arg(result.outputDir)
-                         .arg(result.errors.join("\n")));
+    ui::Dialog::info(
+        this, "Export Completed with Warnings",
+        QString("Exported %1 %2 image(s) at %3 DPI to:\n%4\n\nTotal Size: %5\n\nErrors:\n%6")
+            .arg(result.imagesExported)
+            .arg(result.format.toUpper())
+            .arg(result.dpi)
+            .arg(result.outputDir)
+            .arg(DropFileWidget::formatFileSize(result.totalOutputBytes))
+            .arg(result.errors.join("\n")));
   } else {
     ui::Toast::show(toastParent, "Export Failed",
                     result.errors.isEmpty()

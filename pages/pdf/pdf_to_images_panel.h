@@ -29,13 +29,22 @@ public:
 
   /**
    * @brief Returns the lowercase output image format key.
-   * @return One of "png", "jpg", "webp", or "tiff" (defaults to "png").
+   * @return One of "png", "jpg", "webp", "tiff", "bmp", or "gif" (defaults to
+   * "png").
    */
   QString selectedFormat() const;
 
   /**
+   * @brief Returns whether the selected format supports quality compression.
+   * @return True for "jpg", "webp", and "tiff"; false for "png", "bmp", and
+   * "gif".
+   */
+  bool supportsQuality() const;
+
+  /**
    * @brief Returns the active image format selector index.
-   * @return 0 for PNG, 1 for JPG, 2 for WEBP, 3 for TIFF.
+   * @return 0 for PNG, 1 for JPG, 2 for WEBP, 3 for TIFF, 4 for BMP, 5 for
+   * GIF.
    */
   int formatIndex() const;
 
@@ -55,7 +64,8 @@ public:
   /**
    * @brief Validates inputs, prompts for an output directory, and starts export.
    * @param sourcePaths List of source PDF file paths to export.
-   * @param quality Output quality (0-100) for lossy formats; ignored for PNG.
+   * @param quality Output quality (0-100) for quality-configurable formats;
+   * ignored for PNG, BMP, and GIF.
    * @return True if export was started; false on validation failure or cancel.
    */
   bool execute(const QStringList &sourcePaths, int quality);

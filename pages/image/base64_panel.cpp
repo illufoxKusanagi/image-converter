@@ -1,5 +1,6 @@
 #include "pages/image/base64_panel.h"
 #include "pages/image/convert_image_panel.h"
+#include "ui-kit/components/scroll_area.h"
 #include "ui-kit/components/toast.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
@@ -397,6 +398,7 @@ void Base64WorkspaceCard::applyThemeStyles() {
             .arg(ui::StyleHelper::toHexString(c.foreground))
             .arg(ui::StyleHelper::toHexString(c.border))
             .arg(r.md));
+    ui::ScrollArea::applyScrollBarStyles(m_textEdit);
   }
 }
 
