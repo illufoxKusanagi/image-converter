@@ -1,4 +1,5 @@
 #include "mainwindow/mainwindow.h"
+#include "ui-kit/theme/i18n.h"
 #include "ui-kit/theme/theme.h"
 #include <QApplication>
 #include <QIcon>
@@ -10,6 +11,7 @@ int main(int argc, char *argv[]) {
 
   QCoreApplication::setOrganizationName("Illufox Kusanagi");
   QCoreApplication::setApplicationName("Image Converter");
+  ui::I18n::instance().loadSavedLanguage();
 
   QIcon appIcon;
   appIcon.addFile(":/icons/icons/icon-logo.png", QSize(16, 16));

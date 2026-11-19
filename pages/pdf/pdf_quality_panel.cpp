@@ -2,12 +2,14 @@
 #include "controllers/pdf/pdf_utils.h"
 #include "ui-kit/components/dialog.h"
 #include "ui-kit/components/toast.h"
+#include "ui-kit/theme/i18n.h"
 #include "widgets/drop_file_widget.h"
 #include <QComboBox>
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QHBoxLayout>
+#include <QSignalBlocker>
 #include <QSizePolicy>
 #include <QStringList>
 #include <QtGlobal>
@@ -40,8 +42,8 @@ bool promptPdfJobTargets(QWidget *dialogParent, QWidget *toastHost,
                          const QString &batchDialogTitle,
                          PdfJobTargets &outTargets) {
   if (sourcePaths.isEmpty()) {
-    ui::Toast::show(toastHost, "No PDF Selected",
-                    "Please select at least one PDF file.",
+    ui::Toast::show(toastHost, PdfQualityPanel::tr("No PDF Selected"),
+                    PdfQualityPanel::tr("Please select at least one PDF file."),
                     ui::ToastVariant::Warning);
     return false;
   }
@@ -52,7 +54,7 @@ bool promptPdfJobTargets(QWidget *dialogParent, QWidget *toastHost,
     const QString outputPath = QFileDialog::getSaveFileName(
         dialogParent, saveDialogTitle,
         sourceInfo.dir().filePath(sourceInfo.baseName() + defaultSuffix),
-        "PDF Files (*.pdf)");
+        PdfQualityPanel::tr("PDF Files (*.pdf)"));
 
     if (outputPath.isEmpty()) {
       return false;
@@ -60,9 +62,10 @@ bool promptPdfJobTargets(QWidget *dialogParent, QWidget *toastHost,
 
     if (pdfutil::isSamePdf(sourceInfo, QFileInfo(outputPath))) {
       ui::Toast::show(
-          toastHost, "Invalid Output File",
-          "Choose a different output file. The original PDF must not "
-          "be overwritten.",
+          toastHost, PdfQualityPanel::tr("Invalid Output File"),
+          PdfQualityPanel::tr(
+              "Choose a different output file. The original PDF must not "
+              "be overwritten."),
           ui::ToastVariant::Destructive);
       return false;
     }
@@ -121,8 +124,9 @@ void appendBatchFooter(QString &message, const QStringList &errors,
     message += "\n\n" + errors.join("\n");
   }
   if (cancelled) {
-    message += QString("\n%1 PDF(s) not completed due to cancellation.")
-                   .arg(qMax(0, notCompleted));
+    message +=
+        PdfQualityPanel::tr("\n%1 PDF(s) not completed due to cancellation.")
+            .arg(qMax(0, notCompleted));
   }
 }
 
@@ -133,26 +137,29 @@ PdfQualityPanel::PdfQualityPanel(QWidget *parent) : QWidget(parent) {
   attributeLayout->setContentsMargins(0, 0, 0, 0);
   attributeLayout->setSpacing(16);
 
-  m_qualitySlider = new SliderWidget(this, "PDF Quality");
+  m_qualitySlider = new SliderWidget(this, tr("PDF Quality"));
   m_qualitySlider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
   m_qualitySlider->setValue(50);
 
-  const QStringList presetOptions = {"Custom", "Web / Email", "Balanced",
-                                     "High Quality (preserve images)"};
+  const QStringList presetOptions = {tr("Custom"), tr("Web / Email"),
+                                     tr("Balanced"),
+                                     tr("High Quality (preserve images)")};
   m_presetSelect = new ui::Select(presetOptions, this);
   m_presetSelect->setCurrentIndex(2); // Default to Balanced (50)
   m_presetField =
-      new ui::FormField("Compression Preset", m_presetSelect, this);
+      new ui::FormField(tr("Compression Preset"), m_presetSelect, this);
   m_presetField->setToolTip(
-      "Text and vector graphics are retained. Below quality 80, images may "
-      "lose detail. At quality 80 or above, images are not downsampled or "
-      "newly JPEG-encoded. PDF rewriting can alter forms and annotations "
-      "and invalidates digital signatures. Keep the original PDF.");
+      tr("Text and vector graphics are retained. Below quality 80, images may "
+         "lose detail. At quality 80 or above, images are not downsampled or "
+         "newly JPEG-encoded. PDF rewriting can alter forms and annotations "
+         "and invalidates digital signatures. Keep the original PDF."));
 
   connect(m_presetSelect, QOverload<int>::of(&QComboBox::currentIndexChanged),
           this, &PdfQualityPanel::onPresetChanged);
   connect(m_qualitySlider, &SliderWidget::valueChanged, this,
           &PdfQualityPanel::onQualitySliderChanged);
+  connect(&ui::I18n::instance(), &ui::I18n::languageChanged, this,
+          &PdfQualityPanel::retranslateUi);
 
   attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignTop);
   attributeLayout->addWidget(m_presetField, 1, Qt::AlignTop);
@@ -163,6 +170,30 @@ PdfQualityPanel::PdfQualityPanel(QWidget *parent) : QWidget(parent) {
           &PdfQualityPanel::onCompressFinished, Qt::QueuedConnection);
   connect(m_grayscaleController, &GrayscaleController::finished, this,
           &PdfQualityPanel::onGrayscaleFinished, Qt::QueuedConnection);
+}
+
+void PdfQualityPanel::retranslateUi() {
+  if (m_qualitySlider) {
+    m_qualitySlider->setTitle(tr("PDF Quality"));
+  }
+  if (m_presetField) {
+    m_presetField->setLabel(tr("Compression Preset"));
+    m_presetField->setToolTip(
+        tr("Text and vector graphics are retained. Below quality 80, images may "
+           "lose detail. At quality 80 or above, images are not downsampled or "
+           "newly JPEG-encoded. PDF rewriting can alter forms and annotations "
+           "and invalidates digital signatures. Keep the original PDF."));
+  }
+  if (m_presetSelect) {
+    QSignalBlocker blocker(m_presetSelect);
+    const QStringList presetOptions = {tr("Custom"), tr("Web / Email"),
+                                       tr("Balanced"),
+                                       tr("High Quality (preserve images)")};
+    for (int i = 0; i < presetOptions.size() && i < m_presetSelect->count();
+         ++i) {
+      m_presetSelect->setItemText(i, presetOptions.at(i));
+    }
+  }
 }
 
 int PdfQualityPanel::quality() const {
@@ -219,16 +250,16 @@ bool PdfQualityPanel::executeCompress(const QStringList &sourcePaths) {
   QWidget *toastHost = window() ? window() : this;
   return launchQualityJob<CompressController, CompressController::Params>(
       this, toastHost, m_compressController, sourcePaths, quality(),
-      "Save Compressed PDF", "_compressed.pdf",
-      "Select Output Directory for Compressed PDFs", m_lastBatchCount);
+      tr("Save Compressed PDF"), "_compressed.pdf",
+      tr("Select Output Directory for Compressed PDFs"), m_lastBatchCount);
 }
 
 bool PdfQualityPanel::executeGrayscale(const QStringList &sourcePaths) {
   QWidget *toastHost = window() ? window() : this;
   return launchQualityJob<GrayscaleController, GrayscaleController::Params>(
       this, toastHost, m_grayscaleController, sourcePaths, quality(),
-      "Save Grayscale PDF", "_grayscale.pdf",
-      "Select Output Directory for Grayscale PDFs", m_lastBatchCount);
+      tr("Save Grayscale PDF"), "_grayscale.pdf",
+      tr("Select Output Directory for Grayscale PDFs"), m_lastBatchCount);
 }
 
 void PdfQualityPanel::onCompressFinished(
@@ -245,9 +276,9 @@ void PdfQualityPanel::onCompressFinished(
                                result.origBytes)
               : 0.0;
       ui::Dialog::info(
-          this, "PDF Compressed",
-          QString("Saved to: %1\n\nOriginal: %2\nCompressed: %3 "
-                  "(%4% smaller)")
+          this, tr("PDF Compressed"),
+          tr("Saved to: %1\n\nOriginal: %2\nCompressed: %3 "
+             "(%4% smaller)")
               .arg(result.singleOutputPath)
               .arg(DropFileWidget::formatFileSize(result.origBytes))
               .arg(DropFileWidget::formatFileSize(result.outBytes))
@@ -255,17 +286,17 @@ void PdfQualityPanel::onCompressFinished(
     } else if (result.status ==
                CompressController::Result::Status::Unchanged) {
       ui::Dialog::info(
-          this, "No Reduction Achieved",
-          "These settings did not produce a smaller PDF. "
-          "The original PDF and destination were left unchanged.");
+          this, tr("No Reduction Achieved"),
+          tr("These settings did not produce a smaller PDF. "
+             "The original PDF and destination were left unchanged."));
     } else if (result.status ==
                CompressController::Result::Status::Cancelled) {
-      ui::Toast::show(toastHost, "Cancelled",
-                      "PDF compression was cancelled.",
+      ui::Toast::show(toastHost, tr("Cancelled"),
+                      tr("PDF compression was cancelled."),
                       ui::ToastVariant::Default);
     } else {
-      ui::Toast::show(toastHost, "PDF Compression Failed",
-                      result.errors.isEmpty() ? "Compression failed."
+      ui::Toast::show(toastHost, tr("PDF Compression Failed"),
+                      result.errors.isEmpty() ? tr("Compression failed.")
                                               : result.errors.first(),
                       ui::ToastVariant::Destructive);
     }
@@ -274,11 +305,11 @@ void PdfQualityPanel::onCompressFinished(
 
   const bool isCancelled =
       result.status == CompressController::Result::Status::Cancelled;
-  const QString title = isCancelled ? "Batch Compression Cancelled"
-                                    : "Batch Compression Complete";
+  const QString title = isCancelled ? tr("Batch Compression Cancelled")
+                                    : tr("Batch Compression Complete");
   QString message =
-      QString("%1 PDF(s) compressed.\n%2 PDF(s) unchanged (no output "
-              "saved).\n%3 PDF(s) failed.")
+      tr("%1 PDF(s) compressed.\n%2 PDF(s) unchanged (no output "
+         "saved).\n%3 PDF(s) failed.")
           .arg(result.successCount)
           .arg(result.unchangedCount)
           .arg(result.failCount);
@@ -287,12 +318,14 @@ void PdfQualityPanel::onCompressFinished(
     const double diffPct =
         (1.0 - (static_cast<double>(result.outBytes) / result.origBytes)) *
         100.0;
-    message +=
-        QString("\n\nTotal Original: %1\nTotal Compressed: %2 (%3% %4)")
-            .arg(DropFileWidget::formatFileSize(result.origBytes))
-            .arg(DropFileWidget::formatFileSize(result.outBytes))
-            .arg(qAbs(diffPct), 0, 'f', 1)
-            .arg(diffPct >= 0 ? "smaller" : "larger");
+    const QString summaryFmt =
+        (diffPct >= 0)
+            ? tr("\n\nTotal Original: %1\nTotal Compressed: %2 (%3% smaller)")
+            : tr("\n\nTotal Original: %1\nTotal Compressed: %2 (%3% larger)");
+    message += summaryFmt
+                   .arg(DropFileWidget::formatFileSize(result.origBytes))
+                   .arg(DropFileWidget::formatFileSize(result.outBytes))
+                   .arg(qAbs(diffPct), 0, 'f', 1);
   }
 
   appendBatchFooter(message, result.errors, isCancelled,
@@ -309,32 +342,32 @@ void PdfQualityPanel::onGrayscaleFinished(
   if (!result.isBatch) {
     if (result.success) {
       ui::Dialog::info(
-          this, "Grayscale PDF Saved",
-          QString("Saved to: %1\n\nOriginal Size: %2\nGrayscale Size: %3")
+          this, tr("Grayscale PDF Saved"),
+          tr("Saved to: %1\n\nOriginal Size: %2\nGrayscale Size: %3")
               .arg(result.singleOutputPath)
               .arg(DropFileWidget::formatFileSize(result.origBytes))
               .arg(DropFileWidget::formatFileSize(result.outBytes)));
     } else if (result.cancelled) {
-      ui::Toast::show(toastHost, "Cancelled",
-                      "Grayscale conversion was cancelled.",
+      ui::Toast::show(toastHost, tr("Cancelled"),
+                      tr("Grayscale conversion was cancelled."),
                       ui::ToastVariant::Default);
     } else {
-      ui::Toast::show(toastHost, "Grayscale Conversion Failed", result.error,
-                      ui::ToastVariant::Destructive);
+      ui::Toast::show(toastHost, tr("Grayscale Conversion Failed"),
+                      result.error, ui::ToastVariant::Destructive);
     }
     return;
   }
 
   const QString title = result.cancelled
-                            ? "Batch Grayscale Conversion Cancelled"
-                            : "Batch Grayscale Conversion Complete";
-  QString message = QString("%1 PDF(s) converted to grayscale.\n"
-                            "%2 PDF(s) failed.")
+                            ? tr("Batch Grayscale Conversion Cancelled")
+                            : tr("Batch Grayscale Conversion Complete");
+  QString message = tr("%1 PDF(s) converted to grayscale.\n"
+                       "%2 PDF(s) failed.")
                         .arg(result.successCount)
                         .arg(result.failCount);
 
   if (result.origBytes > 0 && result.outBytes > 0 && result.successCount > 0) {
-    message += QString("\n\nTotal Original: %1\nTotal Grayscale: %2")
+    message += tr("\n\nTotal Original: %1\nTotal Grayscale: %2")
                    .arg(DropFileWidget::formatFileSize(result.origBytes))
                    .arg(DropFileWidget::formatFileSize(result.outBytes));
   }

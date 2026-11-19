@@ -35,11 +35,12 @@ void OrganizeController::runJob(const Params &params) {
   result.outputPath = params.outputPath;
   result.pageCount = params.pageOps.size();
 
-  emit progressChanged(0, params.pageOps.size(),
-                       QString("Saving %1 organized page(s)...").arg(params.pageOps.size()));
+  emit progressChanged(
+      0, params.pageOps.size(),
+      tr("Saving %1 organized page(s)...").arg(params.pageOps.size()));
   emit fileStatusChanged(params.sourcePath,
                          static_cast<int>(FileStatus::Processing),
-                         "Writing organized PDF");
+                         tr("Writing organized PDF"));
 
   QString error;
   bool succeeded = false;
@@ -49,7 +50,7 @@ void OrganizeController::runJob(const Params &params) {
   QPdfDocument sourceDoc;
   const auto loadErr = sourceDoc.load(params.sourcePath);
   if (loadErr != QPdfDocument::Error::None || sourceDoc.pageCount() <= 0) {
-    error = "Cannot open source PDF.";
+    error = tr("Cannot open source PDF.");
   } else {
     QTemporaryDir tempDir(
         destinationInfo.absoluteDir().filePath(".pdf-organize-XXXXXX"));
@@ -68,7 +69,7 @@ void OrganizeController::runJob(const Params &params) {
         const PageOp &op = params.pageOps.at(i);
         if (op.originalPageIndex < 0 ||
             op.originalPageIndex >= sourceDoc.pageCount()) {
-          error = "Page index out of bounds.";
+          error = tr("Page index out of bounds.");
           break;
         }
 
@@ -88,7 +89,7 @@ void OrganizeController::runJob(const Params &params) {
         if (!painter) {
           painter = std::make_unique<QPainter>(&writer);
           if (!painter->isActive()) {
-            error = "Failed to initialize PDF writer.";
+            error = tr("Failed to initialize PDF writer.");
             break;
           }
         } else {
@@ -101,7 +102,7 @@ void OrganizeController::runJob(const Params &params) {
         QImage pageImg =
             pdfutil::renderPdfPageOnWhite(sourceDoc, op.originalPageIndex, renderSize);
         if (pageImg.isNull()) {
-          error = QString("Failed to render page %1.")
+          error = tr("Failed to render page %1.")
                       .arg(op.originalPageIndex + 1);
           break;
         }
@@ -118,7 +119,9 @@ void OrganizeController::runJob(const Params &params) {
         if (!m_isCancelled) {
           emit progressChanged(
               i + 1, params.pageOps.size(),
-              QString("Rendered page %1 of %2...").arg(i + 1).arg(params.pageOps.size()));
+              tr("Rendered page %1 of %2...")
+                  .arg(i + 1)
+                  .arg(params.pageOps.size()));
         }
       }
 
@@ -130,7 +133,7 @@ void OrganizeController::runJob(const Params &params) {
         QPdfDocument verifyDoc;
         if (verifyDoc.load(candidatePath) != QPdfDocument::Error::None ||
             verifyDoc.pageCount() != params.pageOps.size()) {
-          error = "Organized PDF failed validation.";
+          error = tr("Organized PDF failed validation.");
         } else {
           verifyDoc.close();
           if (pdfutil::savePdfAtomically(candidatePath,
@@ -149,11 +152,11 @@ void OrganizeController::runJob(const Params &params) {
   if (m_isCancelled) {
     emit fileStatusChanged(params.sourcePath,
                            static_cast<int>(FileStatus::Cancelled),
-                           "Operation cancelled");
+                           tr("Operation cancelled"));
   } else if (succeeded) {
     emit fileStatusChanged(
         params.sourcePath, static_cast<int>(FileStatus::Succeeded),
-        QString("Saved organized PDF to %1").arg(params.outputPath));
+        tr("Saved organized PDF to %1").arg(params.outputPath));
   } else {
     emit fileStatusChanged(params.sourcePath,
                            static_cast<int>(FileStatus::Failed), error);

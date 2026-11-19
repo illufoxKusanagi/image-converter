@@ -37,7 +37,8 @@ void PdfToImagesController::runJob(const Params &params) {
                                                               : params.quality;
   const int dpi = params.dpi;
 
-  emit progressChanged(0, sourcePaths.size(), "Exporting PDF pages to images...");
+  emit progressChanged(0, sourcePaths.size(),
+                       tr("Exporting PDF pages to images..."));
 
   int totalExportedImages = 0;
   int failedDocs = 0;
@@ -51,7 +52,7 @@ void PdfToImagesController::runJob(const Params &params) {
            ++remainingIdx) {
         emit fileStatusChanged(sourcePaths.at(remainingIdx),
                                static_cast<int>(FileStatus::Cancelled),
-                               "Export cancelled");
+                               tr("Export cancelled"));
       }
       break;
     }
@@ -60,13 +61,13 @@ void PdfToImagesController::runJob(const Params &params) {
 
     emit fileStatusChanged(
         sourcePath, static_cast<int>(FileStatus::Processing),
-        QString("Rendering pages to %1 at %2 DPI")
+        tr("Rendering pages to %1 at %2 DPI")
             .arg(format.toUpper())
             .arg(dpi));
     if (sourcePaths.size() > 1) {
       emit progressChanged(
           i, sourcePaths.size(),
-          QString("Exporting %1 (%2 of %3)...")
+          tr("Exporting %1 (%2 of %3)...")
               .arg(sourceInfo.fileName())
               .arg(i + 1)
               .arg(sourcePaths.size()));
@@ -76,13 +77,13 @@ void PdfToImagesController::runJob(const Params &params) {
     if (doc.load(sourceInfo.absoluteFilePath()) != QPdfDocument::Error::None ||
         doc.pageCount() <= 0) {
       failedDocs++;
-      const QString err = "Cannot open PDF (damaged or encrypted).";
+      const QString err = tr("Cannot open PDF (damaged or encrypted).");
       errors.append(QString("%1: %2").arg(sourceInfo.fileName(), err));
       emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed), err);
       if (sourcePaths.size() > 1) {
         emit progressChanged(
             i + 1, sourcePaths.size(),
-            QString("Processed %1 of %2").arg(i + 1).arg(sourcePaths.size()));
+            tr("Processed %1 of %2").arg(i + 1).arg(sourcePaths.size()));
       }
       continue;
     }
@@ -102,7 +103,7 @@ void PdfToImagesController::runJob(const Params &params) {
         if (sourcePaths.size() > 1) {
           emit progressChanged(
               i + 1, sourcePaths.size(),
-              QString("Processed %1 of %2").arg(i + 1).arg(sourcePaths.size()));
+              tr("Processed %1 of %2").arg(i + 1).arg(sourcePaths.size()));
         }
         continue;
       }
@@ -127,7 +128,7 @@ void PdfToImagesController::runJob(const Params &params) {
       const int pageNum = targetPages.at(pIdx);
       if (sourcePaths.size() == 1) {
         emit progressChanged(pIdx, targetPages.size(),
-                             QString("Exporting %1 (page %2 of %3)...")
+                             tr("Exporting %1 (page %2 of %3)...")
                                  .arg(sourceInfo.fileName())
                                  .arg(pIdx + 1)
                                  .arg(targetPages.size()));
@@ -141,7 +142,7 @@ void PdfToImagesController::runJob(const Params &params) {
       const QImage pageImg =
           pdfutil::renderPdfPageOnWhite(doc, pageIdx, pixelSize, imgFormat);
       if (pageImg.isNull()) {
-        docError = QString("Failed to render page %1.").arg(pageNum);
+        docError = tr("Failed to render page %1.").arg(pageNum);
         break;
       }
 
@@ -169,7 +170,7 @@ void PdfToImagesController::runJob(const Params &params) {
           !pageImg.save(&saveFile, format.toUpper().toUtf8().constData(),
                         effectiveQuality) ||
           !saveFile.commit()) {
-        docError = QString("Failed to save image '%1'.")
+        docError = tr("Failed to save image '%1'.")
                        .arg(QFileInfo(outImagePath).fileName());
         break;
       }
@@ -185,11 +186,11 @@ void PdfToImagesController::runJob(const Params &params) {
 
     if (m_isCancelled) {
       emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Cancelled),
-                             "Export cancelled");
+                             tr("Export cancelled"));
     } else if (docError.isEmpty() && exportedForThisPdf > 0) {
       emit fileStatusChanged(
           sourcePath, static_cast<int>(FileStatus::Succeeded),
-          QString("Exported %1 %2 image(s) to %3")
+          tr("Exported %1 %2 image(s) to %3")
               .arg(exportedForThisPdf)
               .arg(format.toUpper())
               .arg(params.outputDir));
@@ -201,7 +202,7 @@ void PdfToImagesController::runJob(const Params &params) {
     if (sourcePaths.size() > 1 && !m_isCancelled) {
       emit progressChanged(
           i + 1, sourcePaths.size(),
-          QString("Exported %1 of %2").arg(i + 1).arg(sourcePaths.size()));
+          tr("Exported %1 of %2").arg(i + 1).arg(sourcePaths.size()));
     }
 
     if (!docError.isEmpty() && !m_isCancelled) {

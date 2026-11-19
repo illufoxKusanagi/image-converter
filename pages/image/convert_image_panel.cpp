@@ -1,6 +1,7 @@
 #include "pages/image/convert_image_panel.h"
 #include "ui-kit/components/dialog.h"
 #include "ui-kit/components/toast.h"
+#include "ui-kit/theme/i18n.h"
 #include <QComboBox>
 #include <QDir>
 #include <QFileDialog>
@@ -25,7 +26,8 @@ QString formatSizeDiffStats(qint64 origBytes, qint64 outBytes,
       .arg(outLabel)
       .arg(DropFileWidget::formatFileSize(outBytes))
       .arg(qAbs(diffPct), 0, 'f', 1)
-      .arg(diffPct >= 0 ? "smaller" : "larger");
+      .arg(diffPct >= 0 ? ConvertImagePanel::tr("smaller")
+                        : ConvertImagePanel::tr("larger"));
 }
 
 } // namespace
@@ -36,7 +38,7 @@ ConvertImagePanel::ConvertImagePanel(QWidget *parent)
   attributeLayout->setContentsMargins(0, 0, 0, 0);
   attributeLayout->setSpacing(16);
 
-  m_qualitySlider = new SliderWidget(this, "Image Quality");
+  m_qualitySlider = new SliderWidget(this, tr("Image Quality"));
   m_qualitySlider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
   m_qualitySlider->setMinimumWidth(250);
 
@@ -45,7 +47,7 @@ ConvertImagePanel::ConvertImagePanel(QWidget *parent)
   m_targetExtensionSelect = new ui::Select(extensionOptions, this);
   m_targetExtensionSelect->setFixedHeight(36);
   m_targetExtensionField =
-      new ui::FormField("Target Format", m_targetExtensionSelect, this);
+      new ui::FormField(tr("Target Format"), m_targetExtensionSelect, this);
   m_targetExtensionField->setMinimumWidth(160);
 
   connect(m_targetExtensionSelect,
@@ -53,11 +55,13 @@ ConvertImagePanel::ConvertImagePanel(QWidget *parent)
           &ConvertImagePanel::onExtensionChanged);
   connect(m_controller, &ImageConvertController::finished, this,
           &ConvertImagePanel::onConvertFinished, Qt::QueuedConnection);
+  connect(&ui::I18n::instance(), &ui::I18n::languageChanged, this,
+          &ConvertImagePanel::retranslateUi);
 
   attributeLayout->addWidget(m_qualitySlider, 1, Qt::AlignTop);
   attributeLayout->addWidget(m_targetExtensionField, 1, Qt::AlignTop);
 
-  onExtensionChanged(m_targetExtensionSelect->currentIndex());
+  retranslateUi();
 }
 
 QImage ConvertImagePanel::loadRasterOrSvgImage(const QString &path,
@@ -66,6 +70,7 @@ QImage ConvertImagePanel::loadRasterOrSvgImage(const QString &path,
 }
 
 void ConvertImagePanel::syncProcessingState(bool isProcessing) {
+  m_isProcessing = isProcessing;
   if (isProcessing) {
     if (m_targetExtensionSelect) {
       m_targetExtensionSelect->setEnabled(false);
@@ -83,6 +88,18 @@ void ConvertImagePanel::syncProcessingState(bool isProcessing) {
   }
 }
 
+void ConvertImagePanel::retranslateUi() {
+  if (m_targetExtensionField) {
+    m_targetExtensionField->setLabel(tr("Target Format"));
+  }
+  if (m_targetExtensionSelect) {
+    onExtensionChanged(m_targetExtensionSelect->currentIndex());
+  }
+  if (m_isProcessing && m_qualitySlider) {
+    m_qualitySlider->setEnabled(false);
+  }
+}
+
 void ConvertImagePanel::onExtensionChanged(int index) {
   if (!m_qualitySlider) {
     return;
@@ -90,36 +107,36 @@ void ConvertImagePanel::onExtensionChanged(int index) {
 
   if (index == 0) {
     m_targetExtension = DropFileWidget::ImageExtension::JPG;
-    m_qualitySlider->setEnabled(true);
-    m_qualitySlider->setTitle("Image Quality");
+    m_qualitySlider->setEnabled(!m_isProcessing);
+    m_qualitySlider->setTitle(tr("Image Quality"));
   } else if (index == 1) {
     m_targetExtension = DropFileWidget::ImageExtension::JPEG;
-    m_qualitySlider->setEnabled(true);
-    m_qualitySlider->setTitle("Image Quality");
+    m_qualitySlider->setEnabled(!m_isProcessing);
+    m_qualitySlider->setTitle(tr("Image Quality"));
   } else if (index == 2) {
     m_targetExtension = DropFileWidget::ImageExtension::PNG;
     m_qualitySlider->setEnabled(false);
-    m_qualitySlider->setTitle("PNG (Lossless - Quality N/A)");
+    m_qualitySlider->setTitle(tr("PNG (Lossless - Quality N/A)"));
   } else if (index == 3) {
     m_targetExtension = DropFileWidget::ImageExtension::WEBP;
-    m_qualitySlider->setEnabled(true);
-    m_qualitySlider->setTitle("Image Quality");
+    m_qualitySlider->setEnabled(!m_isProcessing);
+    m_qualitySlider->setTitle(tr("Image Quality"));
   } else if (index == 4) {
     m_targetExtension = DropFileWidget::ImageExtension::TIFF;
-    m_qualitySlider->setEnabled(true);
-    m_qualitySlider->setTitle("Image Quality");
+    m_qualitySlider->setEnabled(!m_isProcessing);
+    m_qualitySlider->setTitle(tr("Image Quality"));
   } else if (index == 5) {
     m_targetExtension = DropFileWidget::ImageExtension::BMP;
     m_qualitySlider->setEnabled(false);
-    m_qualitySlider->setTitle("BMP (Uncompressed)");
+    m_qualitySlider->setTitle(tr("BMP (Uncompressed)"));
   } else if (index == 6) {
     m_targetExtension = DropFileWidget::ImageExtension::GIF;
     m_qualitySlider->setEnabled(false);
-    m_qualitySlider->setTitle("GIF (Indexed Color)");
+    m_qualitySlider->setTitle(tr("GIF (Indexed Color)"));
   } else if (index == 7) {
     m_targetExtension = DropFileWidget::ImageExtension::PDF;
-    m_qualitySlider->setEnabled(true);
-    m_qualitySlider->setTitle("PDF Image Quality");
+    m_qualitySlider->setEnabled(!m_isProcessing);
+    m_qualitySlider->setTitle(tr("PDF Image Quality"));
   }
 }
 
@@ -130,8 +147,8 @@ bool ConvertImagePanel::execute(const QStringList &sourcePaths) {
 
   if (sourcePaths.isEmpty()) {
     QWidget *toastParent = window() ? window() : this;
-    ui::Toast::show(toastParent, "No Files Selected",
-                    "Please select at least one file.",
+    ui::Toast::show(toastParent, tr("No Files Selected"),
+                    tr("Please select at least one file."),
                     ui::ToastVariant::Warning);
     return false;
   }
@@ -139,10 +156,11 @@ bool ConvertImagePanel::execute(const QStringList &sourcePaths) {
   for (const QString &p : sourcePaths) {
     if (QFileInfo(p).suffix().compare("pdf", Qt::CaseInsensitive) == 0) {
       QWidget *toastParent = window() ? window() : this;
-      ui::Toast::show(toastParent, "PDF Input Not Supported Here",
-                      "Please use PDF Tools -> PDF to Images to extract pages "
-                      "from PDF files.",
-                      ui::ToastVariant::Warning);
+      ui::Toast::show(
+          toastParent, tr("PDF Input Not Supported Here"),
+          tr("Please use PDF Tools -> PDF to Images to extract pages "
+             "from PDF files."),
+          ui::ToastVariant::Warning);
       return false;
     }
   }
@@ -172,8 +190,9 @@ bool ConvertImagePanel::execute(const QStringList &sourcePaths) {
     }
 
     const QString outputPath = QFileDialog::getSaveFileName(
-        this, sourcePaths.size() == 1 ? "Save PDF" : "Save Merged PDF",
-        suggestedName, "PDF Files (*.pdf)");
+        this,
+        sourcePaths.size() == 1 ? tr("Save PDF") : tr("Save Merged PDF"),
+        suggestedName, tr("PDF Files (*.pdf)"));
     if (outputPath.isEmpty()) {
       return false;
     }
@@ -199,7 +218,7 @@ bool ConvertImagePanel::execute(const QStringList &sourcePaths) {
             .filePath(QFileInfo(sourcePath).baseName() + "_converted");
 
     QString outputPathWithExt = QFileDialog::getSaveFileName(
-        this, "Save Image As", suggestedName, filter);
+        this, tr("Save Image As"), suggestedName, filter);
     if (outputPathWithExt.isEmpty()) {
       return false;
     }
@@ -216,7 +235,7 @@ bool ConvertImagePanel::execute(const QStringList &sourcePaths) {
   }
 
   const QString outputDir = QFileDialog::getExistingDirectory(
-      this, "Select Output Directory", QDir::homePath());
+      this, tr("Select Output Directory"), QDir::homePath());
   if (outputDir.isEmpty()) {
     return false;
   }
@@ -237,25 +256,27 @@ void ConvertImagePanel::onConvertFinished(
   case ImageConvertController::Mode::ImagesToPdf: {
     if (result.success) {
       const QString sizeStats =
-          QString("\n\nTotal Original: %1\nPDF Size: %2")
+          QString("\n\n") +
+          tr("Total Original: %1\nPDF Size: %2")
               .arg(DropFileWidget::formatFileSize(result.totalOrigBytes))
               .arg(DropFileWidget::formatFileSize(result.totalOutputBytes));
       QString msg =
           (result.successCount == 1)
-              ? QString("Image converted to PDF successfully!%1").arg(sizeStats)
-              : QString("Successfully merged %1 images into PDF!%2")
+              ? tr("Image converted to PDF successfully!%1").arg(sizeStats)
+              : tr("Successfully merged %1 images into PDF!%2")
                     .arg(result.successCount)
                     .arg(sizeStats);
       if (result.skippedCount > 0) {
-        msg += QString("\n(%1 invalid image(s) skipped)")
-                   .arg(result.skippedCount);
+        msg += "\n" +
+               tr("(%1 invalid image(s) skipped)").arg(result.skippedCount);
       }
-      ui::Dialog::info(this, "Success", msg);
+      ui::Dialog::info(this, tr("Success"), msg);
     } else if (result.cancelled) {
-      ui::Toast::show(toastParent, "Cancelled", "PDF creation was cancelled.",
+      ui::Toast::show(toastParent, tr("Cancelled"),
+                      tr("PDF creation was cancelled."),
                       ui::ToastVariant::Default);
     } else {
-      ui::Toast::show(toastParent, "Error", "Failed to create PDF!",
+      ui::Toast::show(toastParent, tr("Error"), tr("Failed to create PDF!"),
                       ui::ToastVariant::Destructive);
     }
     break;
@@ -263,39 +284,39 @@ void ConvertImagePanel::onConvertFinished(
   case ImageConvertController::Mode::SingleImage: {
     if (result.success) {
       const QString sizeStats = formatSizeDiffStats(
-          result.totalOrigBytes, result.totalOutputBytes, "Original",
-          "Converted");
-      ui::Dialog::info(this, "Success",
-                       QString("Image converted successfully to %1%2")
+          result.totalOrigBytes, result.totalOutputBytes, tr("Original"),
+          tr("Converted"));
+      ui::Dialog::info(this, tr("Success"),
+                       tr("Image converted successfully to %1%2")
                            .arg(result.outputPath)
                            .arg(sizeStats));
     } else if (result.cancelled) {
-      ui::Toast::show(toastParent, "Cancelled",
-                      "Image conversion was cancelled.",
+      ui::Toast::show(toastParent, tr("Cancelled"),
+                      tr("Image conversion was cancelled."),
                       ui::ToastVariant::Default);
     } else {
-      ui::Toast::show(toastParent, "Error", result.error,
+      ui::Toast::show(toastParent, tr("Error"), result.error,
                       ui::ToastVariant::Destructive);
     }
     break;
   }
   case ImageConvertController::Mode::BatchImage: {
-    const QString title = result.cancelled ? "Batch Conversion Cancelled"
-                                           : "Batch Conversion Complete";
+    const QString title = result.cancelled ? tr("Batch Conversion Cancelled")
+                                           : tr("Batch Conversion Complete");
     QString message =
-        QString("%1 image(s) converted successfully.\n%2 image(s) failed.")
+        tr("%1 image(s) converted successfully.\n%2 image(s) failed.")
             .arg(result.successCount)
             .arg(result.failedCount);
 
     if (result.successCount > 0) {
-      message += formatSizeDiffStats(result.totalOrigBytes,
-                                     result.totalOutputBytes, "Total Original",
-                                     "Total Converted");
+      message += formatSizeDiffStats(
+          result.totalOrigBytes, result.totalOutputBytes, tr("Total Original"),
+          tr("Total Converted"));
     }
 
     if (result.cancelled) {
-      message += "\n(Operation was stopped early by user)";
-      ui::Toast::show(toastParent, "Cancelled", message,
+      message += "\n" + tr("(Operation was stopped early by user)");
+      ui::Toast::show(toastParent, tr("Cancelled"), message,
                       ui::ToastVariant::Default);
     } else {
       ui::Dialog::info(this, title, message);

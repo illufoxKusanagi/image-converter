@@ -107,22 +107,24 @@ CompressController::compressPdf(const QString &inputPath,
   result.originalBytes = sourceInfo.size();
   const QDateTime sourceModified = sourceInfo.lastModified();
   if (!sourceInfo.isFile() || result.originalBytes <= 0) {
-    result.error = "The input PDF is missing or empty.";
+    result.error = tr("The input PDF is missing or empty.");
     return result;
   }
   if (pdfutil::isSamePdf(sourceInfo, destinationInfo)) {
-    result.error = "Choose a different output file. The original PDF must not "
-                   "be overwritten.";
+    result.error =
+        tr("Choose a different output file. The original PDF must not "
+           "be overwritten.");
     return result;
   }
 
   const QString executable = pdfutil::findGhostscriptExecutable();
   if (executable.isEmpty()) {
-    result.error = "Ghostscript is required for PDF compression. Install the "
-                   "ghostscript package on Linux or include the complete "
-                   "gs runtime beside the Windows application. For an "
-                   "extracted runtime, set IMAGECONVERTER_GHOSTSCRIPT to its "
-                   "executable's full path. No PDF was changed.";
+    result.error =
+        tr("Ghostscript is required for PDF compression. Install the "
+           "ghostscript package on Linux or include the complete "
+           "gs runtime beside the Windows application. For an "
+           "extracted runtime, set IMAGECONVERTER_GHOSTSCRIPT to its "
+           "executable's full path. No PDF was changed.");
     return result;
   }
 
@@ -130,18 +132,20 @@ CompressController::compressPdf(const QString &inputPath,
   const auto sourceError = sourceDocument.load(sourceInfo.absoluteFilePath());
   if (sourceError != QPdfDocument::Error::None ||
       sourceDocument.pageCount() <= 0) {
-    result.error = QString("Cannot open the input PDF (PDF error %1). "
-                           "Check whether it is damaged or password-protected.")
-                       .arg(static_cast<int>(sourceError));
+    result.error =
+        tr("Cannot open the input PDF (PDF error %1). "
+           "Check whether it is damaged or password-protected.")
+            .arg(static_cast<int>(sourceError));
     return result;
   }
 
   QTemporaryDir temporaryDirectory(
       destinationInfo.absoluteDir().filePath(".pdf-compress-XXXXXX"));
   if (!temporaryDirectory.isValid()) {
-    result.error = QString("Cannot create temporary output in the destination "
-                           "directory: %1")
-                       .arg(temporaryDirectory.errorString());
+    result.error =
+        tr("Cannot create temporary output in the destination "
+           "directory: %1")
+            .arg(temporaryDirectory.errorString());
     return result;
   }
   const QString candidatePath = temporaryDirectory.filePath("candidate.pdf");
@@ -158,8 +162,9 @@ CompressController::compressPdf(const QString &inputPath,
   const auto candidateError = candidateDocument.load(candidatePath);
   if (candidateError != QPdfDocument::Error::None ||
       candidateDocument.pageCount() != sourceDocument.pageCount()) {
-    result.error = "The compressed PDF failed validation (unreadable output "
-                   "or changed page count). No destination was replaced.";
+    result.error =
+        tr("The compressed PDF failed validation (unreadable output "
+           "or changed page count). No destination was replaced.");
     return result;
   }
   for (int page = 0; page < sourceDocument.pageCount(); ++page) {
@@ -171,8 +176,8 @@ CompressController::compressPdf(const QString &inputPath,
     const QSizeF after = candidateDocument.pagePointSize(page);
     if (qAbs(before.width() - after.width()) > 0.5 ||
         qAbs(before.height() - after.height()) > 0.5) {
-      result.error = "The compressed PDF changed page dimensions. "
-                     "No destination was replaced.";
+      result.error = tr("The compressed PDF changed page dimensions. "
+                        "No destination was replaced.");
       return result;
     }
   }
@@ -186,12 +191,13 @@ CompressController::compressPdf(const QString &inputPath,
   const QFileInfo currentSource(sourceInfo.absoluteFilePath());
   if (currentSource.size() != result.originalBytes ||
       currentSource.lastModified() != sourceModified) {
-    result.error = "The input PDF changed during compression. Please retry.";
+    result.error = tr("The input PDF changed during compression. Please retry.");
     return result;
   }
   const qint64 candidateBytes = QFileInfo(candidatePath).size();
   if (candidateBytes <= 0) {
-    result.error = "The compressed PDF is empty. No destination was replaced.";
+    result.error =
+        tr("The compressed PDF is empty. No destination was replaced.");
     return result;
   }
   if (candidateBytes >= result.originalBytes) {
@@ -201,8 +207,8 @@ CompressController::compressPdf(const QString &inputPath,
   }
 
   if (pdfutil::isSamePdf(currentSource, QFileInfo(destinationInfo.absoluteFilePath()))) {
-    result.error = "The destination now points to the input PDF. "
-                   "No destination was replaced.";
+    result.error = tr("The destination now points to the input PDF. "
+                      "No destination was replaced.");
     return result;
   }
   if (!pdfutil::savePdfAtomically(candidatePath, destinationInfo.absoluteFilePath(),
@@ -224,10 +230,10 @@ void CompressController::runJob(const Params &params) {
   if (!params.isBatch) {
     const QString &sourcePath = params.sourcePath;
     const QString &outputPath = params.outputPath;
-    emit progressChanged(0, 1, QString("Compressing %1 (1 of 1)...")
+    emit progressChanged(0, 1, tr("Compressing %1 (1 of 1)...")
                                    .arg(QFileInfo(sourcePath).fileName()));
     emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Processing),
-                           "Optimizing PDF with Ghostscript");
+                           tr("Optimizing PDF with Ghostscript"));
 
     const SingleResult single = compressPdf(sourcePath, outputPath, params.quality);
     result.status = single.status;
@@ -240,17 +246,17 @@ void CompressController::runJob(const Params &params) {
     switch (single.status) {
     case Result::Status::Compressed:
       statusInt = static_cast<int>(FileStatus::Succeeded);
-      detail = QString("Saved to %1").arg(outputPath);
+      detail = tr("Saved to %1").arg(outputPath);
       result.successCount = 1;
       break;
     case Result::Status::Unchanged:
       statusInt = static_cast<int>(FileStatus::Unchanged);
-      detail = "No smaller PDF produced; no output saved";
+      detail = tr("No smaller PDF produced; no output saved");
       result.unchangedCount = 1;
       break;
     case Result::Status::Cancelled:
       statusInt = static_cast<int>(FileStatus::Cancelled);
-      detail = "Compression cancelled; no output saved";
+      detail = tr("Compression cancelled; no output saved");
       break;
     case Result::Status::Failed:
       result.failCount = 1;
@@ -259,7 +265,7 @@ void CompressController::runJob(const Params &params) {
     }
     emit fileStatusChanged(sourcePath, statusInt, detail);
     if (single.status != Result::Status::Cancelled) {
-      emit progressChanged(1, 1, "Completed");
+      emit progressChanged(1, 1, tr("Completed"));
     }
     emit finished(result);
     return;
@@ -269,7 +275,7 @@ void CompressController::runJob(const Params &params) {
   const QStringList &sourcePaths = params.sourcePaths;
   const int totalFiles = sourcePaths.size();
   emit progressChanged(0, totalFiles,
-                       QString("Compressing 0 of %1 PDFs...").arg(totalFiles));
+                       tr("Compressing 0 of %1 PDFs...").arg(totalFiles));
 
   QSet<QString> usedBaseNames;
 
@@ -280,10 +286,10 @@ void CompressController::runJob(const Params &params) {
 
     const QString &sourcePath = sourcePaths.at(i);
     emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Processing),
-                           "Optimizing PDF with Ghostscript");
+                           tr("Optimizing PDF with Ghostscript"));
     emit progressChanged(
         i, totalFiles,
-        QString("Compressing %1 (%2 of %3; %4 completed)...")
+        tr("Compressing %1 (%2 of %3; %4 completed)...")
             .arg(QFileInfo(sourcePath).fileName())
             .arg(i + 1)
             .arg(totalFiles)
@@ -319,15 +325,15 @@ void CompressController::runJob(const Params &params) {
     switch (single.status) {
     case Result::Status::Compressed:
       statusInt = static_cast<int>(FileStatus::Succeeded);
-      detail = QString("Saved to %1").arg(outputPath);
+      detail = tr("Saved to %1").arg(outputPath);
       break;
     case Result::Status::Unchanged:
       statusInt = static_cast<int>(FileStatus::Unchanged);
-      detail = "No smaller PDF produced; no output saved";
+      detail = tr("No smaller PDF produced; no output saved");
       break;
     case Result::Status::Cancelled:
       statusInt = static_cast<int>(FileStatus::Cancelled);
-      detail = "Compression cancelled; no output saved";
+      detail = tr("Compression cancelled; no output saved");
       break;
     case Result::Status::Failed:
       break;
@@ -336,7 +342,7 @@ void CompressController::runJob(const Params &params) {
 
     if (single.status != Result::Status::Cancelled) {
       emit progressChanged(i + 1, totalFiles,
-                           QString("Processed %1 of %2 PDFs")
+                           tr("Processed %1 of %2 PDFs")
                                .arg(i + 1)
                                .arg(totalFiles));
     }

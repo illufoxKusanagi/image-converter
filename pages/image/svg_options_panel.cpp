@@ -1,6 +1,7 @@
 #include "svg_options_panel.h"
 #include "ui-kit/components/dialog.h"
 #include "ui-kit/components/toast.h"
+#include "ui-kit/theme/i18n.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
 #include <QComboBox>
@@ -8,6 +9,7 @@
 #include <QFileInfo>
 #include <QHBoxLayout>
 #include <QIntValidator>
+#include <QSignalBlocker>
 #include <QSizePolicy>
 #include <QVBoxLayout>
 #include <QtGlobal>
@@ -23,15 +25,17 @@ SvgOptionsPanel::SvgOptionsPanel(QWidget *parent) : QWidget(parent) {
 
   const QStringList svgFormats = {"PNG", "WEBP", "JPG", "PDF"};
   m_formatSelect = new ui::Select(svgFormats, this);
-  m_formatField = new ui::FormField("Output Format", m_formatSelect, this);
+  m_formatField = new ui::FormField(tr("Output Format"), m_formatSelect, this);
   connect(m_formatSelect, QOverload<int>::of(&QComboBox::currentIndexChanged),
           this, &SvgOptionsPanel::onFormatChanged);
 
-  const QStringList svgScales = {"1x (Original Size)", "2x (Retina / HiDPI)",
-                                 "4x (Ultra HD)", "Custom Dimensions (W × H)"};
+  const QStringList svgScales = {
+      tr("1x (Original Size)"), tr("2x (Retina / HiDPI)"),
+      tr("4x (Ultra HD)"), tr("Custom Dimensions (W × H)")};
   m_scaleSelect = new ui::Select(svgScales, this);
   m_scaleSelect->setCurrentIndex(1); // Default 2x crisp export
-  m_scaleField = new ui::FormField("Vector Scale Preset", m_scaleSelect, this);
+  m_scaleField =
+      new ui::FormField(tr("Vector Scale Preset"), m_scaleSelect, this);
   connect(m_scaleSelect, QOverload<int>::of(&QComboBox::currentIndexChanged),
           this, &SvgOptionsPanel::onScaleModeChanged);
 
@@ -43,7 +47,7 @@ SvgOptionsPanel::SvgOptionsPanel(QWidget *parent) : QWidget(parent) {
         new QIntValidator(1, 16384, m_customWidthInput));
   }
   m_customWidthField =
-      new ui::FormField("Custom Width", m_customWidthInput, this);
+      new ui::FormField(tr("Custom Width"), m_customWidthInput, this);
 
   m_customHeightInput = new ui::Input("512", this);
   m_customHeightInput->setText("512");
@@ -53,7 +57,7 @@ SvgOptionsPanel::SvgOptionsPanel(QWidget *parent) : QWidget(parent) {
         new QIntValidator(1, 16384, m_customHeightInput));
   }
   m_customHeightField =
-      new ui::FormField("Custom Height", m_customHeightInput, this);
+      new ui::FormField(tr("Custom Height"), m_customHeightInput, this);
 
   svgTopRow->addWidget(m_formatField, 1, Qt::AlignTop);
   svgTopRow->addWidget(m_scaleField, 2, Qt::AlignTop);
@@ -64,15 +68,15 @@ SvgOptionsPanel::SvgOptionsPanel(QWidget *parent) : QWidget(parent) {
   svgBottomRow->setContentsMargins(0, 0, 0, 0);
   svgBottomRow->setSpacing(16);
 
-  m_qualitySlider = new SliderWidget(this, "Raster Quality");
+  m_qualitySlider = new SliderWidget(this, tr("Raster Quality"));
   m_qualitySlider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
   m_qualitySlider->setValue(90);
 
   m_keepAspectSwitch = new ui::Switch(true, this);
-  m_keepAspectLabel = new QLabel("Preserve Aspect Ratio", this);
+  m_keepAspectLabel = new QLabel(tr("Preserve Aspect Ratio"), this);
 
   m_whiteBgSwitch = new ui::Switch(false, this);
-  m_whiteBgLabel = new QLabel("White Background", this);
+  m_whiteBgLabel = new QLabel(tr("White Background"), this);
 
   auto *aspectToggleRow = new QHBoxLayout();
   aspectToggleRow->setContentsMargins(0, 0, 0, 0);
@@ -101,8 +105,11 @@ SvgOptionsPanel::SvgOptionsPanel(QWidget *parent) : QWidget(parent) {
   onScaleModeChanged(m_scaleSelect->currentIndex());
 
   applyThemeStyles();
+  retranslateUi();
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,
           &SvgOptionsPanel::applyThemeStyles);
+  connect(&ui::I18n::instance(), &ui::I18n::languageChanged, this,
+          &SvgOptionsPanel::retranslateUi);
 }
 
 void SvgOptionsPanel::syncProcessingState(bool isProcessing) {
@@ -136,8 +143,8 @@ bool SvgOptionsPanel::execute(const QStringList &sourcePaths) {
   QWidget *toastParent = window() ? window() : this;
 
   if (sourcePaths.isEmpty()) {
-    ui::Toast::show(toastParent, "No SVG Files Selected",
-                    "Please select at least one .svg file.",
+    ui::Toast::show(toastParent, tr("No SVG Files Selected"),
+                    tr("Please select at least one .svg file."),
                     ui::ToastVariant::Warning);
     return false;
   }
@@ -147,7 +154,7 @@ bool SvgOptionsPanel::execute(const QStringList &sourcePaths) {
 
   const QString defaultDir = QFileInfo(sourcePaths.first()).absolutePath();
   const QString outputDir = QFileDialog::getExistingDirectory(
-      this, "Select Output Directory for Converted SVG Files", defaultDir);
+      this, tr("Select Output Directory for Converted SVG Files"), defaultDir);
   if (outputDir.isEmpty()) {
     return false;
   }
@@ -184,17 +191,48 @@ bool SvgOptionsPanel::execute(const QStringList &sourcePaths) {
   return true;
 }
 
+void SvgOptionsPanel::retranslateUi() {
+  if (m_formatField) {
+    m_formatField->setLabel(tr("Output Format"));
+  }
+  if (m_scaleField) {
+    m_scaleField->setLabel(tr("Vector Scale Preset"));
+  }
+  if (m_scaleSelect) {
+    const QSignalBlocker blocker(m_scaleSelect);
+    const QStringList svgScales = {
+        tr("1x (Original Size)"), tr("2x (Retina / HiDPI)"),
+        tr("4x (Ultra HD)"), tr("Custom Dimensions (W × H)")};
+    for (int i = 0; i < svgScales.size() && i < m_scaleSelect->count(); ++i) {
+      m_scaleSelect->setItemText(i, svgScales.at(i));
+    }
+  }
+  if (m_customWidthField) {
+    m_customWidthField->setLabel(tr("Custom Width"));
+  }
+  if (m_customHeightField) {
+    m_customHeightField->setLabel(tr("Custom Height"));
+  }
+  if (m_keepAspectLabel) {
+    m_keepAspectLabel->setText(tr("Preserve Aspect Ratio"));
+  }
+  if (m_whiteBgLabel) {
+    m_whiteBgLabel->setText(tr("White Background"));
+  }
+  onFormatChanged(m_formatSelect ? m_formatSelect->currentIndex() : 0);
+}
+
 void SvgOptionsPanel::onFormatChanged(int index) {
   const bool isLossy = (index == 1 || index == 2); // WEBP or JPG
   const bool isJpg = (index == 2);
   if (m_qualitySlider) {
     m_qualitySlider->setEnabled(isLossy && !m_isProcessing);
     if (index == 0) {
-      m_qualitySlider->setTitle("PNG (Lossless - Quality N/A)");
+      m_qualitySlider->setTitle(tr("PNG (Lossless - Quality N/A)"));
     } else if (index == 3) {
-      m_qualitySlider->setTitle("Vector PDF (Resolution Independent)");
+      m_qualitySlider->setTitle(tr("Vector PDF (Resolution Independent)"));
     } else {
-      m_qualitySlider->setTitle("Raster Quality");
+      m_qualitySlider->setTitle(tr("Raster Quality"));
     }
   }
   if (m_whiteBgSwitch) {
@@ -226,25 +264,26 @@ void SvgOptionsPanel::onSvgConvertFinished(
 
   QWidget *toastParent = window() ? window() : this;
   if (result.cancelled) {
-    ui::Toast::show(toastParent, "Cancelled", "SVG conversion was cancelled.",
+    ui::Toast::show(toastParent, tr("Cancelled"),
+                    tr("SVG conversion was cancelled."),
                     ui::ToastVariant::Default);
     return;
   }
 
   if (result.filesConverted > 0) {
-    QString msg = QString("Converted %1 SVG file(s) to %2 in:\n%3")
+    QString msg = tr("Converted %1 SVG file(s) to %2 in:\n%3")
                       .arg(result.filesConverted)
                       .arg(result.format.toUpper())
                       .arg(result.outputDir);
     if (result.failedFiles > 0) {
-      msg += QString("\n\n%1 file(s) failed:\n%2")
-                 .arg(result.failedFiles)
-                 .arg(result.error);
+      msg += "\n\n" + tr("%1 file(s) failed:\n%2")
+                          .arg(result.failedFiles)
+                          .arg(result.error);
     }
-    ui::Dialog::info(this, "SVG Conversion Complete", msg);
+    ui::Dialog::info(this, tr("SVG Conversion Complete"), msg);
   } else {
-    ui::Toast::show(toastParent, "SVG Conversion Failed",
-                    result.error.isEmpty() ? "Failed to convert SVG files."
+    ui::Toast::show(toastParent, tr("SVG Conversion Failed"),
+                    result.error.isEmpty() ? tr("Failed to convert SVG files.")
                                            : result.error,
                     ui::ToastVariant::Destructive);
   }

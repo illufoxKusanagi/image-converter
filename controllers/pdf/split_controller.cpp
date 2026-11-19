@@ -14,17 +14,15 @@
 #include <QtConcurrent/QtConcurrent>
 #include <memory>
 
-SplitController::SplitController(QObject *parent)
-    : PdfToolController(parent) {
+SplitController::SplitController(QObject *parent) : PdfToolController(parent) {
   qRegisterMetaType<SplitController::Result>();
 }
 
 void SplitController::start(const Params &params) {
   waitForRunningJob();
   m_isCancelled = false;
-  QFuture<void> future = QtConcurrent::run([this, params]() {
-    runJob(params);
-  });
+  QFuture<void> future =
+      QtConcurrent::run([this, params]() { runJob(params); });
   m_watcher.setFuture(future);
 }
 
@@ -50,9 +48,9 @@ bool SplitController::extractPageRangeWithGhostscript(
 }
 
 bool SplitController::extractPageRangeWithQtPdf(QPdfDocument &sourceDoc,
-                                               int firstPage, int lastPage,
-                                               const QString &tempOutputPath,
-                                               QString &error) {
+                                                int firstPage, int lastPage,
+                                                const QString &tempOutputPath,
+                                                QString &error) {
   QPdfWriter writer(tempOutputPath);
   writer.setResolution(300);
   std::unique_ptr<QPainter> painter;
@@ -69,7 +67,7 @@ bool SplitController::extractPageRangeWithQtPdf(QPdfDocument &sourceDoc,
     if (!painter) {
       painter = std::make_unique<QPainter>(&writer);
       if (!painter->isActive()) {
-        error = "Failed to initialize PDF writer.";
+        error = tr("Failed to initialize PDF writer.");
         return false;
       }
     } else {
@@ -78,9 +76,10 @@ bool SplitController::extractPageRangeWithQtPdf(QPdfDocument &sourceDoc,
 
     const QSize renderSize(qMax(1, qRound(ptSize.width() * 300.0 / 72.0)),
                            qMax(1, qRound(ptSize.height() * 300.0 / 72.0)));
-    const QImage pageImg = pdfutil::renderPdfPageOnWhite(sourceDoc, page, renderSize);
+    const QImage pageImg =
+        pdfutil::renderPdfPageOnWhite(sourceDoc, page, renderSize);
     if (pageImg.isNull()) {
-      error = QString("Failed to render page %1.").arg(page + 1);
+      error = tr("Failed to render page %1.").arg(page + 1);
       return false;
     }
     painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
@@ -104,7 +103,7 @@ void SplitController::runJob(const Params &params) {
     sourcePaths.append(params.sourcePath);
   }
 
-  emit progressChanged(0, sourcePaths.size(), "Splitting PDF files...");
+  emit progressChanged(0, sourcePaths.size(), tr("Splitting PDF files..."));
 
   int totalFilesCreated = 0;
   int failedDocs = 0;
@@ -120,21 +119,21 @@ void SplitController::runJob(const Params &params) {
     const QFileInfo sourceInfo(sourcePath);
 
     emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Processing),
-                           "Splitting PDF pages");
-    emit progressChanged(
-        i, sourcePaths.size(),
-        QString("Splitting %1 (%2 of %3)...")
-            .arg(sourceInfo.fileName())
-            .arg(i + 1)
-            .arg(sourcePaths.size()));
+                           tr("Splitting PDF pages"));
+    emit progressChanged(i, sourcePaths.size(),
+                         tr("Splitting %1 (%2 of %3)...")
+                             .arg(sourceInfo.fileName())
+                             .arg(i + 1)
+                             .arg(sourcePaths.size()));
 
     QPdfDocument sourceDoc;
     const auto loadErr = sourceDoc.load(sourceInfo.absoluteFilePath());
     if (loadErr != QPdfDocument::Error::None || sourceDoc.pageCount() <= 0) {
       failedDocs++;
-      const QString err = "Cannot open PDF (damaged or encrypted).";
+      const QString err = tr("Cannot open PDF (damaged or encrypted).");
       errors.append(QString("%1: %2").arg(sourceInfo.fileName(), err));
-      emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed), err);
+      emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed),
+                             err);
       continue;
     }
 
@@ -142,10 +141,12 @@ void SplitController::runJob(const Params &params) {
     QVector<QPair<int, int>> ranges;
     QString rangeErr;
     if (params.mode == 0) {
-      if (!pdfutil::parsePageRanges(params.rangeSpec, pageCount, ranges, rangeErr)) {
+      if (!pdfutil::parsePageRanges(params.rangeSpec, pageCount, ranges,
+                                    rangeErr)) {
         failedDocs++;
         errors.append(QString("%1: %2").arg(sourceInfo.fileName(), rangeErr));
-        emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed), rangeErr);
+        emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed),
+                               rangeErr);
         continue;
       }
     } else if (params.mode == 1) {
@@ -169,26 +170,27 @@ void SplitController::runJob(const Params &params) {
       const int lastPage = range.second;
       const int expectedPages = lastPage - firstPage + 1;
 
-      const QString baseStem = (firstPage == lastPage)
-                                   ? QString("%1_page_%2")
-                                         .arg(sourceInfo.baseName())
-                                         .arg(firstPage)
-                                   : QString("%1_pages_%2-%3")
-                                         .arg(sourceInfo.baseName())
-                                         .arg(firstPage)
-                                         .arg(lastPage);
+      const QString baseStem =
+          (firstPage == lastPage)
+              ? QString("%1_page_%2").arg(sourceInfo.baseName()).arg(firstPage)
+              : QString("%1_pages_%2-%3")
+                    .arg(sourceInfo.baseName())
+                    .arg(firstPage)
+                    .arg(lastPage);
 
       QString uniqueStem = baseStem;
       int suffix = 1;
-      while (usedFileNames.contains(uniqueStem.toLower()) ||
-             QFile::exists(QDir(params.outputDir).filePath(uniqueStem + ".pdf"))) {
+      while (
+          usedFileNames.contains(uniqueStem.toLower()) ||
+          QFile::exists(QDir(params.outputDir).filePath(uniqueStem + ".pdf"))) {
         uniqueStem = QString("%1_%2").arg(baseStem).arg(suffix++);
       }
       usedFileNames.insert(uniqueStem.toLower());
       const QString outFilePath =
           QDir(params.outputDir).filePath(uniqueStem + ".pdf");
 
-      QTemporaryDir tempDir(QDir(params.outputDir).filePath(".pdf-split-XXXXXX"));
+      QTemporaryDir tempDir(
+          QDir(params.outputDir).filePath(".pdf-split-XXXXXX"));
       if (!tempDir.isValid()) {
         docError = tempDir.errorString();
         break;
@@ -215,7 +217,7 @@ void SplitController::runJob(const Params &params) {
       }
       if (!extracted || m_isCancelled) {
         if (docError.isEmpty()) {
-          docError = "Failed to extract page range.";
+          docError = tr("Failed to extract page range.");
         }
         break;
       }
@@ -223,7 +225,7 @@ void SplitController::runJob(const Params &params) {
       QPdfDocument verifyDoc;
       if (verifyDoc.load(candidatePath) != QPdfDocument::Error::None ||
           verifyDoc.pageCount() != expectedPages) {
-        docError = "Extracted PDF failed validation.";
+        docError = tr("Extracted PDF failed validation.");
         break;
       }
       verifyDoc.close();
@@ -240,22 +242,24 @@ void SplitController::runJob(const Params &params) {
     sourceDoc.close();
 
     if (m_isCancelled) {
-      emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Cancelled),
-                             "Split cancelled");
+      emit fileStatusChanged(sourcePath,
+                             static_cast<int>(FileStatus::Cancelled),
+                             tr("Split cancelled"));
     } else if (docError.isEmpty() && createdForThisPdf > 0) {
-      emit fileStatusChanged(
-          sourcePath, static_cast<int>(FileStatus::Succeeded),
-          QString("Created %1 PDF file(s) in %2")
-              .arg(createdForThisPdf)
-              .arg(params.outputDir));
+      emit fileStatusChanged(sourcePath,
+                             static_cast<int>(FileStatus::Succeeded),
+                             tr("Created %1 PDF file(s) in %2")
+                                 .arg(createdForThisPdf)
+                                 .arg(params.outputDir));
     } else {
       emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed),
                              docError);
     }
 
     if (!m_isCancelled) {
-      emit progressChanged(i + 1, sourcePaths.size(),
-                           QString("Processed %1 of %2").arg(i + 1).arg(sourcePaths.size()));
+      emit progressChanged(
+          i + 1, sourcePaths.size(),
+          tr("Processed %1 of %2").arg(i + 1).arg(sourcePaths.size()));
     }
 
     if (!docError.isEmpty() && !m_isCancelled) {
@@ -275,4 +279,3 @@ void SplitController::runJob(const Params &params) {
 
   emit finished(result);
 }
-

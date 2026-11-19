@@ -90,6 +90,7 @@ signals:
 
 private slots:
   void onPdfToImagesFinished(const PdfToImagesController::Result &result);
+  void retranslateUi();
 
 private:
   ui::Select *m_formatSelect{nullptr};

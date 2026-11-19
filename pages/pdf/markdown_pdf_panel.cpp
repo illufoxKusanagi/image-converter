@@ -1,9 +1,11 @@
 #include "markdown_pdf_panel.h"
 #include "ui-kit/components/dialog.h"
 #include "ui-kit/components/toast.h"
+#include "ui-kit/theme/i18n.h"
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QHBoxLayout>
+#include <QSignalBlocker>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -34,24 +36,54 @@ MarkdownPdfPanel::MarkdownPdfPanel(QWidget *parent) : QWidget(parent) {
   mdLayout->setContentsMargins(0, 0, 0, 0);
   mdLayout->setSpacing(12);
 
-  const QStringList pageSizes = {"A4 (210 × 297 mm)",
-                                 "US Letter (8.5 × 11 in)"};
-  m_pageSizeField = createSelectField(this, mdLayout, "Page Size", pageSizes,
-                                      0, m_pageSizeSelect);
+  const QStringList pageSizes = {tr("A4 (210 × 297 mm)"),
+                                 tr("US Letter (8.5 × 11 in)")};
+  m_pageSizeField = createSelectField(this, mdLayout, tr("Page Size"),
+                                      pageSizes, 0, m_pageSizeSelect);
 
-  const QStringList orientations = {"Portrait", "Landscape"};
-  m_orientationField = createSelectField(this, mdLayout, "Orientation",
+  const QStringList orientations = {tr("Portrait"), tr("Landscape")};
+  m_orientationField = createSelectField(this, mdLayout, tr("Orientation"),
                                          orientations, 0, m_orientationSelect);
 
-  const QStringList margins = {"Compact (18 pt)", "Standard (36 pt)",
-                               "Wide (54 pt)", "Extra Wide (72 pt)"};
-  m_marginField = createSelectField(this, mdLayout, "Page Margins", margins, 1,
-                                    m_marginSelect);
+  const QStringList margins = {tr("Compact (18 pt)"), tr("Standard (36 pt)"),
+                               tr("Wide (54 pt)"), tr("Extra Wide (72 pt)")};
+  m_marginField = createSelectField(this, mdLayout, tr("Page Margins"), margins,
+                                    1, m_marginSelect);
 
-  const QStringList fontSizes = {"9 pt", "10 pt (Default)", "11 pt",
-                                 "12 pt", "14 pt", "16 pt"};
-  m_fontSizeField = createSelectField(this, mdLayout, "Base Font Size",
+  const QStringList fontSizes = {tr("9 pt"), tr("10 pt (Default)"), tr("11 pt"),
+                                 tr("12 pt"), tr("14 pt"), tr("16 pt")};
+  m_fontSizeField = createSelectField(this, mdLayout, tr("Base Font Size"),
                                       fontSizes, 1, m_fontSizeSelect);
+
+  connect(&ui::I18n::instance(), &ui::I18n::languageChanged, this,
+          &MarkdownPdfPanel::retranslateUi);
+}
+
+void MarkdownPdfPanel::retranslateUi() {
+  auto retranslateSelect = [](ui::FormField *field, ui::Select *select,
+                              const QString &label, const QStringList &items) {
+    if (field) {
+      field->setLabel(label);
+    }
+    if (select) {
+      QSignalBlocker blocker(select);
+      for (int i = 0; i < items.size() && i < select->count(); ++i) {
+        select->setItemText(i, items.at(i));
+      }
+    }
+  };
+
+  retranslateSelect(
+      m_pageSizeField, m_pageSizeSelect, tr("Page Size"),
+      {tr("A4 (210 × 297 mm)"), tr("US Letter (8.5 × 11 in)")});
+  retranslateSelect(m_orientationField, m_orientationSelect, tr("Orientation"),
+                    {tr("Portrait"), tr("Landscape")});
+  retranslateSelect(m_marginField, m_marginSelect, tr("Page Margins"),
+                    {tr("Compact (18 pt)"), tr("Standard (36 pt)"),
+                     tr("Wide (54 pt)"), tr("Extra Wide (72 pt)")});
+  retranslateSelect(m_fontSizeField, m_fontSizeSelect, tr("Base Font Size"),
+                    {tr("9 pt"), tr("10 pt (Default)"), tr("11 pt"),
+                     tr("12 pt"), tr("14 pt"), tr("16 pt")});
 }
 
 bool MarkdownPdfPanel::useLetterPageSize() const {
@@ -77,15 +109,15 @@ int MarkdownPdfPanel::baseFontPt() const {
 bool MarkdownPdfPanel::execute(const QStringList &sourcePaths) {
   if (sourcePaths.isEmpty()) {
     ui::Toast::show(
-        window() ? window() : this, "No Document Selected",
-        "Please select at least one Markdown (.md) or HTML (.html) file.",
+        window() ? window() : this, tr("No Document Selected"),
+        tr("Please select at least one Markdown (.md) or HTML (.html) file."),
         ui::ToastVariant::Warning);
     return false;
   }
 
   const QString defaultDir = QFileInfo(sourcePaths.first()).absolutePath();
   const QString outputDir = QFileDialog::getExistingDirectory(
-      this, "Select Output Directory for Generated PDFs", defaultDir);
+      this, tr("Select Output Directory for Generated PDFs"), defaultDir);
   if (outputDir.isEmpty()) {
     return false;
   }
@@ -109,26 +141,26 @@ void MarkdownPdfPanel::onMarkdownPdfFinished(
   QWidget *toastParent = window() ? window() : this;
 
   if (result.cancelled) {
-    ui::Toast::show(toastParent, "Cancelled",
-                    "Document PDF export was cancelled.",
+    ui::Toast::show(toastParent, tr("Cancelled"),
+                    tr("Document PDF export was cancelled."),
                     ui::ToastVariant::Default);
     return;
   }
 
   if (result.pdfsCreated > 0) {
-    QString msg = QString("Exported %1 document(s) to PDF in:\n%2")
+    QString msg = tr("Exported %1 document(s) to PDF in:\n%2")
                       .arg(result.pdfsCreated)
                       .arg(result.outputDir);
     if (result.failedFiles > 0) {
-      msg += QString("\n\n%1 file(s) failed:\n%2")
+      msg += tr("\n\n%1 file(s) failed:\n%2")
                  .arg(result.failedFiles)
                  .arg(result.error);
     }
-    ui::Dialog::info(this, "PDF Export Complete", msg);
+    ui::Dialog::info(this, tr("PDF Export Complete"), msg);
   } else {
-    ui::Toast::show(toastParent, "PDF Export Failed",
+    ui::Toast::show(toastParent, tr("PDF Export Failed"),
                     result.error.isEmpty()
-                        ? "Failed to export Markdown/HTML to PDF."
+                        ? tr("Failed to export Markdown/HTML to PDF.")
                         : result.error,
                     ui::ToastVariant::Destructive);
   }

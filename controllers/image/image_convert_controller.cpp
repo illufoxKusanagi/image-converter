@@ -183,7 +183,7 @@ ImageConvertController::runImagesToPdf(const Params &params) {
 
   if (totalFiles > 0) {
     emit progressChanged(0, progressTotal,
-                         QString("Adding %1 to PDF (1 of %2)...")
+                         tr("Adding %1 to PDF (1 of %2)...")
                              .arg(QFileInfo(sourcePaths.first()).fileName())
                              .arg(totalFiles));
   }
@@ -215,9 +215,9 @@ ImageConvertController::runImagesToPdf(const Params &params) {
     const QString &path = sourcePaths.at(i);
     startedFiles++;
     emit fileStatusChanged(path, static_cast<int>(FileStatus::Processing),
-                           "Adding image to PDF");
+                           tr("Adding image to PDF"));
     emit progressChanged(i, progressTotal,
-                         QString("Adding %1 to PDF (%2 of %3)...")
+                         tr("Adding %1 to PDF (%2 of %3)...")
                              .arg(QFileInfo(path).fileName())
                              .arg(i + 1)
                              .arg(totalFiles));
@@ -226,7 +226,7 @@ ImageConvertController::runImagesToPdf(const Params &params) {
     if (origImage.isNull()) {
       skippedCount++;
       emit fileStatusChanged(path, static_cast<int>(FileStatus::Failed),
-                             "Could not load image");
+                             tr("Could not load image"));
       emit progressChanged(i + 1, progressTotal, QString());
       continue;
     }
@@ -276,13 +276,13 @@ ImageConvertController::runImagesToPdf(const Params &params) {
     successCount++;
     includedPaths.append(path);
     emit fileStatusChanged(path, static_cast<int>(FileStatus::Waiting),
-                           "Added; awaiting PDF save");
+                           tr("Added; awaiting PDF save"));
     emit progressChanged(i + 1, progressTotal, QString());
   }
 
   if (ok && !m_isCancelled.load() && successCount > 0) {
     emit progressChanged(startedFiles, progressTotal,
-                         QString("Saving %1 (%2 image(s))...")
+                         tr("Saving %1 (%2 image(s))...")
                              .arg(QFileInfo(outputPath).fileName())
                              .arg(successCount));
   }
@@ -323,20 +323,20 @@ ImageConvertController::runImagesToPdf(const Params &params) {
         static_cast<int>(
             saved ? FileStatus::Succeeded
                   : (cancelled ? FileStatus::Cancelled : FileStatus::Failed)),
-        saved ? QString("Saved in %1").arg(QFileInfo(outputPath).fileName())
-              : (cancelled ? "PDF creation cancelled; no output saved"
-                           : "Failed to save PDF"));
+        saved ? tr("Saved in %1").arg(QFileInfo(outputPath).fileName())
+              : (cancelled ? tr("PDF creation cancelled; no output saved")
+                           : tr("Failed to save PDF")));
   }
   if (!failedPath.isEmpty()) {
     emit fileStatusChanged(failedPath, static_cast<int>(FileStatus::Failed),
-                           "Failed to add image to PDF");
+                           tr("Failed to add image to PDF"));
   }
   for (int i = startedFiles; i < sourcePaths.size(); ++i) {
     emit fileStatusChanged(sourcePaths.at(i),
                            static_cast<int>(cancelled ? FileStatus::Cancelled
                                                       : FileStatus::Failed),
-                           cancelled ? "Not processed (cancelled)"
-                                     : "Not processed: PDF creation failed");
+                           cancelled ? tr("Not processed (cancelled)")
+                                     : tr("Not processed: PDF creation failed"));
   }
 
   result.success = saved;
@@ -364,26 +364,25 @@ ImageConvertController::runSingleImage(const Params &params) {
       outFi.dir().filePath(outFi.completeBaseName());
 
   emit progressChanged(0, 0,
-                       QString("Converting %1 (1 of 1)...")
+                       tr("Converting %1 (1 of 1)...")
                            .arg(QFileInfo(sourcePath).fileName()));
   emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Processing),
-                         "Converting image");
+                         tr("Converting image"));
 
   const QImage image = loadRasterOrSvgImage(sourcePath, params.forceOpaque);
   FileStatus status = FileStatus::Failed;
   QString detail;
   if (image.isNull()) {
-    detail = "Could not load image";
+    detail = tr("Could not load image");
   } else if (m_isCancelled.load()) {
     status = FileStatus::Cancelled;
-    detail = "Cancelled before save";
+    detail = tr("Cancelled before save");
   } else if (saveImageToFormat(image, outputPathWithoutExt, params.quality,
                                params.targetExtension)) {
     status = FileStatus::Succeeded;
-    detail =
-        QString("Saved as %1").arg(QFileInfo(outputPathWithExt).fileName());
+    detail = tr("Saved as %1").arg(QFileInfo(outputPathWithExt).fileName());
   } else {
-    detail = QString("Failed to save image as %1").arg(params.targetFormat);
+    detail = tr("Failed to save image as %1").arg(params.targetFormat);
   }
 
   emit fileStatusChanged(sourcePath, static_cast<int>(status), detail);
@@ -415,7 +414,7 @@ ImageConvertController::runBatchImage(const Params &params) {
 
   if (totalFiles > 0) {
     emit progressChanged(0, totalFiles,
-                         QString("Converting %1 (1 of %2)...")
+                         tr("Converting %1 (1 of %2)...")
                              .arg(QFileInfo(sourcePaths.first()).fileName())
                              .arg(totalFiles));
   }
@@ -434,16 +433,16 @@ ImageConvertController::runBatchImage(const Params &params) {
 
     const QString &sourcePath = sourcePaths.at(i);
     emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Processing),
-                           "Converting image");
+                           tr("Converting image"));
     emit progressChanged(completedFiles, totalFiles,
-                         QString("Converting %1 (%2 of %3)...")
+                         tr("Converting %1 (%2 of %3)...")
                              .arg(QFileInfo(sourcePath).fileName())
                              .arg(i + 1)
                              .arg(totalFiles));
 
     const QImage image = loadRasterOrSvgImage(sourcePath, params.forceOpaque);
     FileStatus status = FileStatus::Failed;
-    QString detail = "Could not load image";
+    QString detail = tr("Could not load image");
     if (image.isNull()) {
       failureCount++;
     } else {
@@ -462,10 +461,10 @@ ImageConvertController::runBatchImage(const Params &params) {
         const QString outputFilePath = baseOutputName + "." + ext;
         totalOutputBytes += QFileInfo(outputFilePath).size();
         status = FileStatus::Succeeded;
-        detail = QString("Saved as %1.%2").arg(uniqueBaseName).arg(ext);
+        detail = tr("Saved as %1.%2").arg(uniqueBaseName).arg(ext);
       } else {
         failureCount++;
-        detail = QString("Failed to save as %1").arg(ext.toUpper());
+        detail = tr("Failed to save as %1").arg(ext.toUpper());
       }
     }
 
@@ -477,7 +476,7 @@ ImageConvertController::runBatchImage(const Params &params) {
   for (int i = completedFiles; i < sourcePaths.size(); ++i) {
     emit fileStatusChanged(sourcePaths.at(i),
                            static_cast<int>(FileStatus::Cancelled),
-                           "Not processed (cancelled)");
+                           tr("Not processed (cancelled)"));
   }
 
   result.cancelled = m_isCancelled.load() && completedFiles < totalFiles;

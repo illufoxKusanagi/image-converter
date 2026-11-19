@@ -38,6 +38,7 @@ signals:
 private slots:
   void onExtensionChanged(int index);
   void onConvertFinished(const ImageConvertController::Result &result);
+  void retranslateUi();
 
 private:
   SliderWidget *m_qualitySlider{nullptr};
@@ -46,6 +47,7 @@ private:
   DropFileWidget::ImageExtension m_targetExtension{
       DropFileWidget::ImageExtension::JPG};
   ImageConvertController *m_controller{nullptr};
+  bool m_isProcessing{false};
 };
 
 #endif // CONVERT_IMAGE_PANEL_H

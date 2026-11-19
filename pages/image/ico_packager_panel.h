@@ -60,6 +60,7 @@ signals:
 
 private slots:
   void onIcoExportFinished(const IcoExportController::Result &result);
+  void retranslateUi();
 
 private:
   struct IcoSizeToggle {

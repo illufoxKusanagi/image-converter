@@ -11,6 +11,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Pdf Concurrent Svg)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets Pdf Concurrent Svg)
+find_package(Qt${QT_VERSION_MAJOR} QUIET OPTIONAL_COMPONENTS LinguistTools)
+if(TARGET Qt${QT_VERSION_MAJOR}::lrelease AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/translations/imageconverter_id.ts")
+    add_custom_command(
+        OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/resources/translations/imageconverter_id.qm"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/resources/translations"
+        COMMAND Qt${QT_VERSION_MAJOR}::lrelease
+            "${CMAKE_CURRENT_SOURCE_DIR}/translations/imageconverter_id.ts"
+            -qm "${CMAKE_CURRENT_SOURCE_DIR}/resources/translations/imageconverter_id.qm"
+        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/translations/imageconverter_id.ts"
+        COMMENT "Compiling translation imageconverter_id.qm"
+        VERBATIM
+    )
+    add_custom_target(imageconverter_translations ALL
+        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/translations/imageconverter_id.qm"
+    )
+endif()
 
 add_subdirectory(ui-kit)
 
@@ -120,6 +136,9 @@ endif()
 
 target_link_libraries(ImageConverter PRIVATE ui_kit Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Pdf Qt${QT_VERSION_MAJOR}::Concurrent Qt${QT_VERSION_MAJOR}::Svg)
 target_include_directories(ImageConverter PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+if(TARGET imageconverter_translations)
+    add_dependencies(ImageConverter imageconverter_translations)
+endif()
 
 if(${QT_VERSION} VERSION_LESS 6.1.0)
   set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.ImageConverter)
@@ -167,9 +186,11 @@ set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "ghostscript")
 
 # RPM (.rpm)
-set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+set(CPACK_RPM_PACKAGE_LICENSE "AGPL-3.0-or-later")
 set(CPACK_RPM_PACKAGE_GROUP "Applications/Graphics")
 set(CPACK_RPM_PACKAGE_AUTOREQPROV ON)
 set(CPACK_RPM_PACKAGE_REQUIRES "ghostscript")
+
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 
 include(CPack)

@@ -44,7 +44,7 @@ void SvgConvertController::runJob(const Params &params) {
       (format == "png") ? -1 : qBound(1, params.quality, 100);
   const bool useWhiteBg = (format == "jpg" || format == "jpeg" || params.whiteBackground);
 
-  emit progressChanged(0, totalFiles, "Converting SVG vector files...");
+  emit progressChanged(0, totalFiles, tr("Converting SVG vector files..."));
 
   int filesConverted = 0;
   int failedFiles = 0;
@@ -56,7 +56,7 @@ void SvgConvertController::runJob(const Params &params) {
       for (int rem = i; rem < totalFiles; ++rem) {
         emit fileStatusChanged(sourcePaths.at(rem),
                                static_cast<int>(FileStatus::Cancelled),
-                               "Conversion cancelled");
+                               tr("Conversion cancelled"));
       }
       break;
     }
@@ -66,10 +66,10 @@ void SvgConvertController::runJob(const Params &params) {
 
     emit fileStatusChanged(
         sourcePath, static_cast<int>(FileStatus::Processing),
-        QString("Rendering SVG to %1").arg(format.toUpper()));
+        tr("Rendering SVG to %1").arg(format.toUpper()));
     emit progressChanged(
         i, totalFiles,
-        QString("Converting %1 (%2 of %3)...")
+        tr("Converting %1 (%2 of %3)...")
             .arg(sourceInfo.fileName())
             .arg(i + 1)
             .arg(totalFiles));
@@ -77,7 +77,7 @@ void SvgConvertController::runJob(const Params &params) {
     QSvgRenderer renderer(sourceInfo.absoluteFilePath());
     if (!renderer.isValid()) {
       failedFiles++;
-      const QString err = "Invalid or unreadable SVG file.";
+      const QString err = tr("Invalid or unreadable SVG file.");
       errors.append(QString("%1: %2").arg(sourceInfo.fileName(), err));
       emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed),
                              err);
@@ -157,7 +157,7 @@ void SvgConvertController::runJob(const Params &params) {
 
         QPainter painter;
         if (!painter.begin(&writer)) {
-          fileError = "Failed to initialize PDF writer.";
+          fileError = tr("Failed to initialize PDF writer.");
         } else {
           painter.setRenderHint(QPainter::Antialiasing, true);
           painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
@@ -168,7 +168,7 @@ void SvgConvertController::runJob(const Params &params) {
           }
           renderer.render(&painter, renderRect);
           if (!painter.end()) {
-            fileError = "Failed to finalize PDF rendering.";
+            fileError = tr("Failed to finalize PDF rendering.");
           }
         }
       }
@@ -177,13 +177,13 @@ void SvgConvertController::runJob(const Params &params) {
         QPdfDocument verifyDoc;
         if (verifyDoc.load(tempPath) != QPdfDocument::Error::None ||
             verifyDoc.pageCount() <= 0) {
-          fileError = "Generated PDF failed validation.";
+          fileError = tr("Generated PDF failed validation.");
         } else {
           verifyDoc.close();
           if (!pdfutil::savePdfAtomically(tempPath, outPath, m_isCancelled,
                                           fileError)) {
             if (fileError.isEmpty() && !m_isCancelled) {
-              fileError = "Failed to commit PDF file.";
+              fileError = tr("Failed to commit PDF file.");
             }
           }
         }
@@ -195,7 +195,7 @@ void SvgConvertController::runJob(const Params &params) {
                      : QImage::Format_ARGB32_Premultiplied;
       QImage img(targetSize, imgFormat);
       if (img.isNull()) {
-        fileError = "Failed to allocate raster image buffer.";
+        fileError = tr("Failed to allocate raster image buffer.");
       } else {
         img.fill(useWhiteBg ? Qt::white : Qt::transparent);
         {
@@ -213,8 +213,7 @@ void SvgConvertController::runJob(const Params &params) {
           if (!saveFile.open(QIODevice::WriteOnly) ||
               !img.save(&saveFile, fmtBytes.constData(), effectiveQuality) ||
               !saveFile.commit()) {
-            fileError =
-                QString("Failed to save '%1'.").arg(outFileName);
+            fileError = tr("Failed to save '%1'.").arg(outFileName);
           }
         }
       }
@@ -222,11 +221,11 @@ void SvgConvertController::runJob(const Params &params) {
 
     if (m_isCancelled) {
       emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Cancelled),
-                             "Conversion cancelled");
+                             tr("Conversion cancelled"));
       for (int rem = i + 1; rem < totalFiles; ++rem) {
         emit fileStatusChanged(sourcePaths.at(rem),
                                static_cast<int>(FileStatus::Cancelled),
-                               "Conversion cancelled");
+                               tr("Conversion cancelled"));
       }
       break;
     }
@@ -235,7 +234,7 @@ void SvgConvertController::runJob(const Params &params) {
       filesConverted++;
       emit fileStatusChanged(
           sourcePath, static_cast<int>(FileStatus::Succeeded),
-          QString("Saved %1 (%2×%3)")
+          tr("Saved %1 (%2×%3)")
               .arg(outFileName)
               .arg(targetSize.width())
               .arg(targetSize.height()));
@@ -248,7 +247,7 @@ void SvgConvertController::runJob(const Params &params) {
 
     emit progressChanged(
         i + 1, totalFiles,
-        QString("Converted %1 of %2").arg(i + 1).arg(totalFiles));
+        tr("Converted %1 of %2").arg(i + 1).arg(totalFiles));
   }
 
   result.success = (filesConverted > 0 && failedFiles == 0 && !m_isCancelled);

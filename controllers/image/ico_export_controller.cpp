@@ -138,7 +138,7 @@ void IcoExportController::runJob(const Params &params) {
   const QStringList &sourcePaths = params.sourcePaths;
   const int totalFiles = sourcePaths.size();
 
-  emit progressChanged(0, totalFiles, "Building multi-size .ico icons...");
+  emit progressChanged(0, totalFiles, tr("Building multi-size .ico icons..."));
 
   int iconsCreated = 0;
   int failedFiles = 0;
@@ -150,7 +150,7 @@ void IcoExportController::runJob(const Params &params) {
       for (int rem = i; rem < totalFiles; ++rem) {
         emit fileStatusChanged(sourcePaths.at(rem),
                                static_cast<int>(FileStatus::Cancelled),
-                               "Icon export cancelled");
+                               tr("Icon export cancelled"));
       }
       break;
     }
@@ -160,10 +160,10 @@ void IcoExportController::runJob(const Params &params) {
 
     emit fileStatusChanged(
         sourcePath, static_cast<int>(FileStatus::Processing),
-        QString("Packing %1 icon size(s) into .ico").arg(validSizes.size()));
+        tr("Packing %1 icon size(s) into .ico").arg(validSizes.size()));
     emit progressChanged(
         i, totalFiles,
-        QString("Creating icon for %1 (%2 of %3)...")
+        tr("Creating icon for %1 (%2 of %3)...")
             .arg(sourceInfo.fileName())
             .arg(i + 1)
             .arg(totalFiles));
@@ -178,7 +178,7 @@ void IcoExportController::runJob(const Params &params) {
       if (!svgRenderer.load(sourceInfo.absoluteFilePath()) ||
           !svgRenderer.isValid()) {
         failedFiles++;
-        const QString err = "Invalid or unreadable SVG file.";
+        const QString err = tr("Invalid or unreadable SVG file.");
         errors.append(QString("%1: %2").arg(sourceInfo.fileName(), err));
         emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed),
                                err);
@@ -199,7 +199,7 @@ void IcoExportController::runJob(const Params &params) {
       srcImage = reader.read();
       if (srcImage.isNull()) {
         failedFiles++;
-        const QString err = "Cannot load source image.";
+        const QString err = tr("Cannot load source image.");
         errors.append(QString("%1: %2").arg(sourceInfo.fileName(), err));
         emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed),
                                err);
@@ -218,7 +218,7 @@ void IcoExportController::runJob(const Params &params) {
 
       QImage frame(sz, sz, QImage::Format_ARGB32);
       if (frame.isNull()) {
-        frameError = QString("Failed to allocate %1×%1 icon frame.").arg(sz);
+        frameError = tr("Failed to allocate %1×%1 icon frame.").arg(sz);
         break;
       }
       frame.fill(Qt::transparent);
@@ -238,7 +238,7 @@ void IcoExportController::runJob(const Params &params) {
         const QImage scaled =
             srcImage.scaled(sz, sz, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         if (scaled.isNull()) {
-          frameError = QString("Failed to scale image to %1×%1.").arg(sz);
+          frameError = tr("Failed to scale image to %1×%1.").arg(sz);
           break;
         }
         QPainter painter(&frame);
@@ -251,7 +251,7 @@ void IcoExportController::runJob(const Params &params) {
       QByteArray pngData;
       QBuffer buf(&pngData);
       if (!buf.open(QIODevice::WriteOnly) || !frame.save(&buf, "PNG", -1)) {
-        frameError = QString("Failed to encode %1×%1 PNG payload.").arg(sz);
+        frameError = tr("Failed to encode %1×%1 PNG payload.").arg(sz);
         break;
       }
       buf.close();
@@ -260,11 +260,11 @@ void IcoExportController::runJob(const Params &params) {
 
     if (m_isCancelled) {
       emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Cancelled),
-                             "Icon export cancelled");
+                             tr("Icon export cancelled"));
       for (int rem = i + 1; rem < totalFiles; ++rem) {
         emit fileStatusChanged(sourcePaths.at(rem),
                                static_cast<int>(FileStatus::Cancelled),
-                               "Icon export cancelled");
+                               tr("Icon export cancelled"));
       }
       break;
     }
@@ -293,7 +293,7 @@ void IcoExportController::runJob(const Params &params) {
           QDir(params.outputDir).filePath(singleFileName);
 
       if (!writeIcoFile(singleIcoPath, {ef})) {
-        writeError = QString("Failed to write '%1'.").arg(singleFileName);
+        writeError = tr("Failed to write '%1'.").arg(singleFileName);
         break;
       }
       iconsCreated++;
@@ -307,7 +307,7 @@ void IcoExportController::runJob(const Params &params) {
           QDir(params.outputDir).filePath(multiFileName);
 
       if (!writeIcoFile(multiIcoPath, frames)) {
-        writeError = QString("Failed to write '%1'.").arg(multiFileName);
+        writeError = tr("Failed to write '%1'.").arg(multiFileName);
       } else {
         iconsCreated++;
         filesWrittenForSource++;
@@ -324,10 +324,10 @@ void IcoExportController::runJob(const Params &params) {
 
     emit fileStatusChanged(
         sourcePath, static_cast<int>(FileStatus::Succeeded),
-        QString("Saved %1 .ico file(s)").arg(filesWrittenForSource));
+        tr("Saved %1 .ico file(s)").arg(filesWrittenForSource));
     emit progressChanged(
         i + 1, totalFiles,
-        QString("Processed %1 of %2 source image(s)")
+        tr("Processed %1 of %2 source image(s)")
             .arg(i + 1)
             .arg(totalFiles));
   }

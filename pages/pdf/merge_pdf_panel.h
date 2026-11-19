@@ -87,6 +87,7 @@ signals:
 
 private slots:
   void onMergeFinished(const MergeController::Result &result);
+  void retranslateUi();
 
 private:
   void moveCurrentItem(int delta);

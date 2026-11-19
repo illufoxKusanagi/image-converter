@@ -5,6 +5,7 @@
 #include "ui-kit/components/button.h"
 #include "ui-kit/components/separator.h"
 #include "ui-kit/components/spinner.h"
+#include "ui-kit/theme/i18n.h"
 #include "ui-kit/theme/theme.h"
 #include <QDir>
 #include <QDragEnterEvent>
@@ -66,6 +67,7 @@ private slots:
   void onBrowseButtonPressed();
   void onClearAllPressed();
   void applyThemeStyles();
+  void retranslateUi();
 
 private:
   struct FileState {
@@ -113,6 +115,8 @@ private:
   void rebuildFileList();
   void updateFileRowStatus(const QString &path);
   void updateProcessingControls();
+  QString localizedTypeLabel() const;
+  QString supportedFormatsText() const;
 };
 
 #endif // DROPFILEWIDGET_H

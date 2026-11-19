@@ -68,7 +68,7 @@ bool MergeController::mergePdfsWithQtPdf(const QStringList &inputPaths,
     QPdfDocument doc;
     const auto loadErr = doc.load(inputPath);
     if (loadErr != QPdfDocument::Error::None || doc.pageCount() <= 0) {
-      error = QString("Cannot open '%1' for merging.")
+      error = tr("Cannot open '%1' for merging.")
                   .arg(QFileInfo(inputPath).fileName());
       return false;
     }
@@ -85,7 +85,7 @@ bool MergeController::mergePdfsWithQtPdf(const QStringList &inputPaths,
       if (!painter) {
         painter = std::make_unique<QPainter>(&writer);
         if (!painter->isActive()) {
-          error = "Failed to initialize PDF writer.";
+          error = tr("Failed to initialize PDF writer.");
           return false;
         }
       } else {
@@ -96,7 +96,7 @@ bool MergeController::mergePdfsWithQtPdf(const QStringList &inputPaths,
                              qMax(1, qRound(ptSize.height() * 300.0 / 72.0)));
       const QImage pageImg = pdfutil::renderPdfPageOnWhite(doc, page, renderSize);
       if (pageImg.isNull()) {
-        error = QString("Failed to render page %1 of '%2'.")
+        error = tr("Failed to render page %1 of '%2'.")
                     .arg(page + 1)
                     .arg(QFileInfo(inputPath).fileName());
         return false;
@@ -120,11 +120,11 @@ void MergeController::runJob(const Params &params) {
 
   const QStringList &orderedPaths = params.inputPaths;
   emit progressChanged(0, orderedPaths.size(),
-                       QString("Merging %1 PDF files...").arg(orderedPaths.size()));
+                       tr("Merging %1 PDF files...").arg(orderedPaths.size()));
 
   for (const QString &srcPath : orderedPaths) {
     emit fileStatusChanged(srcPath, static_cast<int>(FileStatus::Processing),
-                           "Merging into combined PDF");
+                           tr("Merging into combined PDF"));
   }
 
   QString error;
@@ -135,14 +135,14 @@ void MergeController::runJob(const Params &params) {
     }
     const QFileInfo srcInfo(srcPath);
     if (!srcInfo.isFile() || srcInfo.size() <= 0) {
-      error = QString("Input file '%1' is missing or empty.")
+      error = tr("Input file '%1' is missing or empty.")
                   .arg(srcInfo.fileName());
       break;
     }
     QPdfDocument doc;
     const auto err = doc.load(srcInfo.absoluteFilePath());
     if (err != QPdfDocument::Error::None || doc.pageCount() <= 0) {
-      error = QString("Cannot open '%1' (damaged or password-protected).")
+      error = tr("Cannot open '%1' (damaged or password-protected).")
                   .arg(srcInfo.fileName());
       break;
     }
@@ -157,7 +157,7 @@ void MergeController::runJob(const Params &params) {
     QTemporaryDir tempDir(
         destinationInfo.absoluteDir().filePath(".pdf-merge-XXXXXX"));
     if (!tempDir.isValid()) {
-      error = QString("Cannot create temporary directory: %1")
+      error = tr("Cannot create temporary directory: %1")
                   .arg(tempDir.errorString());
     } else {
       const QString candidatePath = tempDir.filePath("candidate.pdf");
@@ -184,7 +184,7 @@ void MergeController::runJob(const Params &params) {
         QPdfDocument candidateDoc;
         if (candidateDoc.load(candidatePath) != QPdfDocument::Error::None ||
             candidateDoc.pageCount() != expectedTotalPages) {
-          error = "Merged PDF validation failed (unexpected page count).";
+          error = tr("Merged PDF validation failed (unexpected page count).");
         } else {
           candidateDoc.close();
           if (pdfutil::savePdfAtomically(candidatePath,
@@ -201,10 +201,10 @@ void MergeController::runJob(const Params &params) {
   for (const QString &srcPath : orderedPaths) {
     if (m_isCancelled) {
       emit fileStatusChanged(srcPath, static_cast<int>(FileStatus::Cancelled),
-                             "Merge cancelled");
+                             tr("Merge cancelled"));
     } else if (succeeded) {
       emit fileStatusChanged(srcPath, static_cast<int>(FileStatus::Succeeded),
-                             QString("Merged into %1").arg(params.outputPath));
+                             tr("Merged into %1").arg(params.outputPath));
     } else {
       emit fileStatusChanged(srcPath, static_cast<int>(FileStatus::Failed),
                              error);
@@ -212,7 +212,8 @@ void MergeController::runJob(const Params &params) {
   }
 
   if (!m_isCancelled && succeeded) {
-    emit progressChanged(orderedPaths.size(), orderedPaths.size(), "Completed");
+    emit progressChanged(orderedPaths.size(), orderedPaths.size(),
+                         tr("Completed"));
   }
 
   result.success = succeeded;

@@ -74,6 +74,11 @@ private slots:
    */
   void onMarkdownPdfFinished(const MarkdownPdfController::Result &result);
 
+  /**
+   * @brief Updates user-facing strings when the active application language changes.
+   */
+  void retranslateUi();
+
 private:
   MarkdownPdfController *m_controller{nullptr};
   ui::Select *m_pageSizeSelect{nullptr};

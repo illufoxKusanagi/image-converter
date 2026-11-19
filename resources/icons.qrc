@@ -33,4 +33,7 @@
         <file>icons/lucide-minus.svg</file>
         <file>icons/lucide-monitor.svg</file>
     </qresource>
+    <qresource prefix="/i18n">
+        <file alias="imageconverter_id.qm">translations/imageconverter_id.qm</file>
+    </qresource>
 </RCC>
