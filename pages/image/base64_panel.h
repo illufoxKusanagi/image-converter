@@ -8,6 +8,7 @@
 #include <QLabel>
 #include <QPlainTextEdit>
 #include <QPointer>
+#include <QSize>
 #include <QString>
 #include <QWidget>
 
@@ -47,6 +48,9 @@ signals:
    * @brief Emitted when either the snippet format or encode format changes.
    */
   void optionChanged();
+
+private slots:
+  void retranslateUi();
 
 private:
   ui::Select *m_snippetSelect{nullptr};
@@ -96,9 +100,11 @@ public slots:
 private slots:
   void onLoadFileClicked();
   void onOptionChanged();
+  void retranslateUi();
 
 private:
   void loadFileIntoBase64(const QString &filePath);
+  void updateStatsLabel();
   QWidget *toastHost();
 
   QPointer<Base64OptionsPanel> m_optionsPanel;
@@ -108,6 +114,10 @@ private:
   QLabel *m_statsLabel{nullptr};
   QPlainTextEdit *m_textEdit{nullptr};
   QString m_loadedFilePath;
+  QString m_lastStatsFileName;
+  QSize m_lastStatsDim;
+  qint64 m_lastStatsByteSize{0};
+  int m_lastStatsCharCount{0};
 };
 
 #endif // BASE64_PANEL_H

@@ -38,6 +38,7 @@ private slots:
   void onControllerFileStatus(const QString &filePath, int status,
                               const QString &detail);
   void applyThemeStyles();
+  void retranslateUi();
 
 private:
   QVBoxLayout *mainLayout{nullptr};

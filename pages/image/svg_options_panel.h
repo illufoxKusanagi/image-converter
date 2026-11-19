@@ -64,6 +64,7 @@ private slots:
   void onFormatChanged(int index);
   void onScaleModeChanged(int index);
   void onSvgConvertFinished(const SvgConvertController::Result &result);
+  void retranslateUi();
 
 private:
   ui::Select *m_formatSelect{nullptr};

@@ -2,6 +2,7 @@
 #include "pages/image/convert_image_panel.h"
 #include "ui-kit/components/scroll_area.h"
 #include "ui-kit/components/toast.h"
+#include "ui-kit/theme/i18n.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
 #include "widgets/drop_file_widget.h"
@@ -26,6 +27,7 @@
 #include <QPushButton>
 #include <QRectF>
 #include <QSaveFile>
+#include <QSignalBlocker>
 #include <QSize>
 #include <QStringList>
 #include <QSvgRenderer>
@@ -210,15 +212,18 @@ QString defaultExtensionFor(bool isSvgPayload, const QString &mimeHint) {
 
 QString saveFilterFor(bool isSvgPayload, const QString &defaultExt) {
   if (isSvgPayload) {
-    return "SVG Vector (*.svg);;PNG Image (*.png);;WEBP Image "
-           "(*.webp);;JPG Image (*.jpg)";
+    return Base64WorkspaceCard::tr(
+        "SVG Vector (*.svg);;PNG Image (*.png);;WEBP Image "
+        "(*.webp);;JPG Image (*.jpg)");
   }
   if (defaultExt == "ico") {
-    return "ICO Icon (*.ico);;PNG Image (*.png);;WEBP Image "
-           "(*.webp);;JPG Image (*.jpg);;BMP Image (*.bmp)";
+    return Base64WorkspaceCard::tr(
+        "ICO Icon (*.ico);;PNG Image (*.png);;WEBP Image "
+        "(*.webp);;JPG Image (*.jpg);;BMP Image (*.bmp)");
   }
-  return "PNG Image (*.png);;JPG Image (*.jpg);;WEBP Image "
-         "(*.webp);;BMP Image (*.bmp);;TIFF Image (*.tiff)";
+  return Base64WorkspaceCard::tr(
+      "PNG Image (*.png);;JPG Image (*.jpg);;WEBP Image "
+      "(*.webp);;BMP Image (*.bmp);;TIFF Image (*.tiff)");
 }
 
 bool writeDecodedImageFile(const QString &outPath, const QString &outExt,
@@ -270,28 +275,64 @@ Base64OptionsPanel::Base64OptionsPanel(QWidget *parent) : QWidget(parent) {
   layout->setSpacing(12);
 
   const QStringList snippetFormats = {
-      "Raw Data URI (data:image/...;base64,...)",
-      "Raw Base64 Payload (no prefix)",
-      "HTML <img> Tag",
-      "CSS background-image",
-      "JSON Object Payload"};
+      tr("Raw Data URI (data:image/...;base64,...)"),
+      tr("Raw Base64 Payload (no prefix)"),
+      tr("HTML <img> Tag"),
+      tr("CSS background-image"),
+      tr("JSON Object Payload")};
   m_snippetSelect = new ui::Select(snippetFormats, this);
   m_snippetField =
-      new ui::FormField("Output Snippet Format", m_snippetSelect, this);
+      new ui::FormField(tr("Output Snippet Format"), m_snippetSelect, this);
 
-  const QStringList encodeFormats = {"Keep Original File Bytes",
-                                     "Re-encode as PNG", "Re-encode as WEBP",
-                                     "Re-encode as JPG"};
+  const QStringList encodeFormats = {
+      tr("Keep Original File Bytes"), tr("Re-encode as PNG"),
+      tr("Re-encode as WEBP"), tr("Re-encode as JPG")};
   m_encodeSelect = new ui::Select(encodeFormats, this);
-  m_encodeField = new ui::FormField("Encode Format", m_encodeSelect, this);
+  m_encodeField = new ui::FormField(tr("Encode Format"), m_encodeSelect, this);
 
   connect(m_snippetSelect, QOverload<int>::of(&QComboBox::currentIndexChanged),
           this, &Base64OptionsPanel::optionChanged);
   connect(m_encodeSelect, QOverload<int>::of(&QComboBox::currentIndexChanged),
           this, &Base64OptionsPanel::optionChanged);
+  connect(&ui::I18n::instance(), &ui::I18n::languageChanged, this,
+          &Base64OptionsPanel::retranslateUi);
 
   layout->addWidget(m_snippetField, 1, Qt::AlignTop);
   layout->addWidget(m_encodeField, 1, Qt::AlignTop);
+
+  retranslateUi();
+}
+
+void Base64OptionsPanel::retranslateUi() {
+  if (m_snippetField) {
+    m_snippetField->setLabel(tr("Output Snippet Format"));
+  }
+  if (m_snippetSelect) {
+    const QSignalBlocker blocker(m_snippetSelect);
+    const QStringList snippetFormats = {
+        tr("Raw Data URI (data:image/...;base64,...)"),
+        tr("Raw Base64 Payload (no prefix)"),
+        tr("HTML <img> Tag"),
+        tr("CSS background-image"),
+        tr("JSON Object Payload")};
+    for (int i = 0; i < snippetFormats.size() && i < m_snippetSelect->count();
+         ++i) {
+      m_snippetSelect->setItemText(i, snippetFormats.at(i));
+    }
+  }
+  if (m_encodeField) {
+    m_encodeField->setLabel(tr("Encode Format"));
+  }
+  if (m_encodeSelect) {
+    const QSignalBlocker blocker(m_encodeSelect);
+    const QStringList encodeFormats = {
+        tr("Keep Original File Bytes"), tr("Re-encode as PNG"),
+        tr("Re-encode as WEBP"), tr("Re-encode as JPG")};
+    for (int i = 0; i < encodeFormats.size() && i < m_encodeSelect->count();
+         ++i) {
+      m_encodeSelect->setItemText(i, encodeFormats.at(i));
+    }
+  }
 }
 
 int Base64OptionsPanel::snippetIndex() const {
@@ -303,11 +344,7 @@ int Base64OptionsPanel::encodeIndex() const {
 }
 
 Base64WorkspaceCard::Base64WorkspaceCard(QWidget *parent)
-    : ui::Card("Image ↔ Base64 Data URI Workspace",
-               "Load an image or SVG to generate inline Data URIs, HTML, CSS, "
-               "or JSON snippets — or paste Base64 below to decode back to an "
-               "image file.",
-               parent) {
+    : ui::Card(QString(), QString(), parent) {
   auto *content = new QWidget(this);
   auto *layout = new QVBoxLayout(content);
   layout->setContentsMargins(0, 0, 0, 0);
@@ -317,15 +354,13 @@ Base64WorkspaceCard::Base64WorkspaceCard(QWidget *parent)
   toolbar->setContentsMargins(0, 0, 0, 0);
   toolbar->setSpacing(8);
 
-  m_loadBtn = new ui::Button("Load Image / SVG...", ui::ButtonVariant::Secondary,
+  m_loadBtn = new ui::Button(QString(), ui::ButtonVariant::Secondary,
                              ui::ButtonSize::Small, content);
-  m_copyBtn = new ui::Button("Copy to Clipboard", ui::ButtonVariant::Outline,
+  m_copyBtn = new ui::Button(QString(), ui::ButtonVariant::Outline,
                              ui::ButtonSize::Small, content);
-  m_decodeSaveBtn = new ui::Button("Decode Base64 & Save Image...",
-                                   ui::ButtonVariant::Outline,
+  m_decodeSaveBtn = new ui::Button(QString(), ui::ButtonVariant::Outline,
                                    ui::ButtonSize::Small, content);
-  m_statsLabel = new QLabel(
-      "No image loaded — select a file or paste Base64 below", content);
+  m_statsLabel = new QLabel(content);
 
   connect(m_loadBtn, &QPushButton::clicked, this,
           &Base64WorkspaceCard::onLoadFileClicked);
@@ -340,10 +375,6 @@ Base64WorkspaceCard::Base64WorkspaceCard(QWidget *parent)
   toolbar->addWidget(m_statsLabel, 1, Qt::AlignRight | Qt::AlignVCenter);
 
   m_textEdit = new QPlainTextEdit(content);
-  m_textEdit->setPlaceholderText(
-      "Click 'Load Image / SVG...' to encode a file into Base64 / Data URI, or "
-      "paste a data:image/...;base64,... URI or raw Base64 payload here and "
-      "click 'Decode Base64 & Save Image...'.");
   m_textEdit->setFixedHeight(130);
 
   layout->addLayout(toolbar);
@@ -352,7 +383,57 @@ Base64WorkspaceCard::Base64WorkspaceCard(QWidget *parent)
 
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,
           &Base64WorkspaceCard::applyThemeStyles);
+  connect(&ui::I18n::instance(), &ui::I18n::languageChanged, this,
+          &Base64WorkspaceCard::retranslateUi);
   applyThemeStyles();
+  retranslateUi();
+}
+
+void Base64WorkspaceCard::retranslateUi() {
+  setTitle(tr("Image ↔ Base64 Data URI Workspace"));
+  setDescription(
+      tr("Load an image or SVG to generate inline Data URIs, HTML, CSS, "
+         "or JSON snippets — or paste Base64 below to decode back to an "
+         "image file."));
+  if (m_loadBtn) {
+    m_loadBtn->setText(tr("Load Image / SVG..."));
+  }
+  if (m_copyBtn) {
+    m_copyBtn->setText(tr("Copy to Clipboard"));
+  }
+  if (m_decodeSaveBtn) {
+    m_decodeSaveBtn->setText(tr("Decode Base64 & Save Image..."));
+  }
+  if (m_textEdit) {
+    m_textEdit->setPlaceholderText(
+        tr("Click 'Load Image / SVG...' to encode a file into Base64 / Data "
+           "URI, or paste a data:image/...;base64,... URI or raw Base64 "
+           "payload here and click 'Decode Base64 & Save Image...'."));
+  }
+  updateStatsLabel();
+}
+
+void Base64WorkspaceCard::updateStatsLabel() {
+  if (!m_statsLabel) {
+    return;
+  }
+  if (m_loadedFilePath.isEmpty()) {
+    m_statsLabel->setText(
+        tr("No image loaded — select a file or paste Base64 below"));
+    return;
+  }
+  const QString dimStr =
+      (m_lastStatsDim.isValid() && m_lastStatsDim.width() > 0 &&
+       m_lastStatsDim.height() > 0)
+          ? tr("%1×%2 px • ")
+                .arg(m_lastStatsDim.width())
+                .arg(m_lastStatsDim.height())
+          : QString();
+  m_statsLabel->setText(
+      tr("%1 (%2%3 → %4 chars)")
+          .arg(m_lastStatsFileName, dimStr,
+               DropFileWidget::formatFileSize(m_lastStatsByteSize),
+               QString::number(m_lastStatsCharCount)));
 }
 
 void Base64WorkspaceCard::setOptionsPanel(Base64OptionsPanel *optionsPanel) {
@@ -408,9 +489,9 @@ QWidget *Base64WorkspaceCard::toastHost() {
 
 void Base64WorkspaceCard::onLoadFileClicked() {
   const QString filePath = QFileDialog::getOpenFileName(
-      this, "Select Image or SVG to Encode", QDir::homePath(),
-      "Images & Vector Files (*.png *.jpg *.jpeg *.webp *.svg *.gif *.bmp "
-      "*.ico);;All Files (*)");
+      this, tr("Select Image or SVG to Encode"), QDir::homePath(),
+      tr("Images & Vector Files (*.png *.jpg *.jpeg *.webp *.svg *.gif *.bmp "
+         "*.ico);;All Files (*)"));
   if (filePath.isEmpty()) {
     return;
   }
@@ -427,8 +508,8 @@ void Base64WorkspaceCard::loadFileIntoBase64(const QString &filePath) {
   const QFileInfo fi(filePath);
   QFile rawFile(fi.absoluteFilePath());
   if (!rawFile.open(QIODevice::ReadOnly)) {
-    ui::Toast::show(toastHost(), "Read Error",
-                    QString("Cannot open '%1'.").arg(fi.fileName()),
+    ui::Toast::show(toastHost(), tr("Read Error"),
+                    tr("Cannot open '%1'.").arg(fi.fileName()),
                     ui::ToastVariant::Destructive);
     return;
   }
@@ -451,8 +532,8 @@ void Base64WorkspaceCard::loadFileIntoBase64(const QString &filePath) {
     const QImage img = ConvertImagePanel::loadRasterOrSvgImage(
         fi.absoluteFilePath(), forceWhite);
     if (img.isNull()) {
-      ui::Toast::show(toastHost(), "Encode Error",
-                      "Could not decode image for re-encoding.",
+      ui::Toast::show(toastHost(), tr("Encode Error"),
+                      tr("Could not decode image for re-encoding."),
                       ui::ToastVariant::Destructive);
       return;
     }
@@ -473,8 +554,8 @@ void Base64WorkspaceCard::loadFileIntoBase64(const QString &filePath) {
       buf.close();
     }
     if (!encodedOk || payloadBytes.isEmpty()) {
-      ui::Toast::show(toastHost(), "Encode Error",
-                      "Failed to re-encode image into target format.",
+      ui::Toast::show(toastHost(), tr("Encode Error"),
+                      tr("Failed to re-encode image into target format."),
                       ui::ToastVariant::Destructive);
       return;
     }
@@ -493,33 +574,27 @@ void Base64WorkspaceCard::loadFileIntoBase64(const QString &filePath) {
   if (m_textEdit) {
     m_textEdit->setPlainText(formattedOutput);
   }
-  if (m_statsLabel) {
-    const QString dimStr =
-        (imgDim.isValid() && imgDim.width() > 0 && imgDim.height() > 0)
-            ? QString("%1×%2 px • ").arg(imgDim.width()).arg(imgDim.height())
-            : QString();
-    m_statsLabel->setText(
-        QString("%1 (%2%3 → %4 chars)")
-            .arg(fi.fileName(), dimStr,
-                 DropFileWidget::formatFileSize(payloadBytes.size()),
-                 QString::number(formattedOutput.size())));
-  }
+  m_lastStatsFileName = fi.fileName();
+  m_lastStatsDim = imgDim;
+  m_lastStatsByteSize = static_cast<qint64>(payloadBytes.size());
+  m_lastStatsCharCount = formattedOutput.size();
+  updateStatsLabel();
 }
 
 void Base64WorkspaceCard::copyToClipboard() {
   const QString text =
       m_textEdit ? m_textEdit->toPlainText().trimmed() : QString();
   if (text.isEmpty()) {
-    ui::Toast::show(toastHost(), "Nothing to Copy",
-                    "Load an image or enter a Base64 snippet first.",
+    ui::Toast::show(toastHost(), tr("Nothing to Copy"),
+                    tr("Load an image or enter a Base64 snippet first."),
                     ui::ToastVariant::Warning);
     return;
   }
   if (QClipboard *cb = QGuiApplication::clipboard()) {
     cb->setText(text);
     ui::Toast::show(
-        toastHost(), "Copied to Clipboard",
-        QString("Copied %1 characters to clipboard.").arg(text.size()),
+        toastHost(), tr("Copied to Clipboard"),
+        tr("Copied %1 characters to clipboard.").arg(text.size()),
         ui::ToastVariant::Success);
   }
 }
@@ -528,8 +603,8 @@ void Base64WorkspaceCard::decodeAndSave() {
   const QString rawText =
       m_textEdit ? m_textEdit->toPlainText().trimmed() : QString();
   if (rawText.isEmpty()) {
-    ui::Toast::show(toastHost(), "Empty Base64 Input",
-                    "Paste a Data URI or Base64 string into the editor first.",
+    ui::Toast::show(toastHost(), tr("Empty Base64 Input"),
+                    tr("Paste a Data URI or Base64 string into the editor first."),
                     ui::ToastVariant::Warning);
     return;
   }
@@ -539,8 +614,8 @@ void Base64WorkspaceCard::decodeAndSave() {
   const QByteArray decodedBytes =
       QByteArray::fromBase64(base64Payload.toLatin1());
   if (decodedBytes.isEmpty()) {
-    ui::Toast::show(toastHost(), "Invalid Base64",
-                    "The input could not be decoded from Base64.",
+    ui::Toast::show(toastHost(), tr("Invalid Base64"),
+                    tr("The input could not be decoded from Base64."),
                     ui::ToastVariant::Destructive);
     return;
   }
@@ -549,8 +624,8 @@ void Base64WorkspaceCard::decodeAndSave() {
   QImage decodedImg;
   if (!detectSvgOrRaster(decodedBytes, mimeHint, isSvgPayload, decodedImg)) {
     ui::Toast::show(
-        toastHost(), "Unsupported Image Data",
-        "Decoded bytes do not form a valid raster image or SVG document.",
+        toastHost(), tr("Unsupported Image Data"),
+        tr("Decoded bytes do not form a valid raster image or SVG document."),
         ui::ToastVariant::Destructive);
     return;
   }
@@ -560,7 +635,7 @@ void Base64WorkspaceCard::decodeAndSave() {
       QDir(QDir::homePath()).filePath("decoded_image." + defaultExt);
   const QString saveFilter = saveFilterFor(isSvgPayload, defaultExt);
 
-  QString outPath = QFileDialog::getSaveFileName(this, "Save Decoded Image",
+  QString outPath = QFileDialog::getSaveFileName(this, tr("Save Decoded Image"),
                                                  defaultPath, saveFilter);
   if (outPath.isEmpty()) {
     return;
@@ -572,12 +647,12 @@ void Base64WorkspaceCard::decodeAndSave() {
   const QString outExt = QFileInfo(outPath).suffix().toLower();
   if (writeDecodedImageFile(outPath, outExt, defaultExt, isSvgPayload,
                             decodedBytes, decodedImg)) {
-    ui::Toast::show(toastHost(), "Saved Decoded Image",
-                    QString("Saved to %1").arg(QFileInfo(outPath).fileName()),
+    ui::Toast::show(toastHost(), tr("Saved Decoded Image"),
+                    tr("Saved to %1").arg(QFileInfo(outPath).fileName()),
                     ui::ToastVariant::Success);
   } else {
-    ui::Toast::show(toastHost(), "Save Failed",
-                    QString("Could not save '%1'.").arg(outPath),
+    ui::Toast::show(toastHost(), tr("Save Failed"),
+                    tr("Could not save '%1'.").arg(outPath),
                     ui::ToastVariant::Destructive);
   }
 }

@@ -1,6 +1,7 @@
 #include "ico_packager_panel.h"
 #include "ui-kit/components/dialog.h"
 #include "ui-kit/components/toast.h"
+#include "ui-kit/theme/i18n.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
 #include <QDir>
@@ -16,11 +17,7 @@ IcoPackagerPanel::IcoPackagerPanel(QWidget *parent) : QWidget(parent) {
   icoLayout->setContentsMargins(0, 0, 0, 0);
   icoLayout->setSpacing(8);
 
-  m_hintLabel = new QLabel(
-      "Checked icon resolutions are rendered with smooth aspect-preserving "
-      "scaling and exported as separate .ico files (<name>_16x16.ico, ...) "
-      "plus a combined multi-size .ico:",
-      this);
+  m_hintLabel = new QLabel(this);
   m_hintLabel->setWordWrap(true);
 
   auto *icoSizesRow = new QHBoxLayout();
@@ -50,8 +47,20 @@ IcoPackagerPanel::IcoPackagerPanel(QWidget *parent) : QWidget(parent) {
           &IcoPackagerPanel::onIcoExportFinished, Qt::QueuedConnection);
 
   applyThemeStyles();
+  retranslateUi();
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,
           &IcoPackagerPanel::applyThemeStyles);
+  connect(&ui::I18n::instance(), &ui::I18n::languageChanged, this,
+          &IcoPackagerPanel::retranslateUi);
+}
+
+void IcoPackagerPanel::retranslateUi() {
+  if (m_hintLabel) {
+    m_hintLabel->setText(
+        tr("Checked icon resolutions are rendered with smooth "
+           "aspect-preserving scaling and exported as separate .ico files "
+           "(<name>_16x16.ico, ...) plus a combined multi-size .ico:"));
+  }
 }
 
 void IcoPackagerPanel::applyThemeStyles() {
@@ -91,8 +100,8 @@ bool IcoPackagerPanel::execute(const QStringList &sourcePaths) {
   QWidget *const toastParent = window() ? window() : this;
 
   if (sourcePaths.isEmpty()) {
-    ui::Toast::show(toastParent, "No Image Selected",
-                    "Please select at least one image or SVG file.",
+    ui::Toast::show(toastParent, tr("No Image Selected"),
+                    tr("Please select at least one image or SVG file."),
                     ui::ToastVariant::Warning);
     return false;
   }
@@ -100,8 +109,8 @@ bool IcoPackagerPanel::execute(const QStringList &sourcePaths) {
   const QVector<int> sizes = selectedSizes();
   if (sizes.isEmpty()) {
     ui::Toast::show(
-        toastParent, "No Icon Sizes Selected",
-        "Please enable at least one icon resolution (e.g. 32×32 or 256×256).",
+        toastParent, tr("No Icon Sizes Selected"),
+        tr("Please enable at least one icon resolution (e.g. 32×32 or 256×256)."),
         ui::ToastVariant::Warning);
     return false;
   }
@@ -109,7 +118,7 @@ bool IcoPackagerPanel::execute(const QStringList &sourcePaths) {
   const QString sourceDir = QFileInfo(sourcePaths.first()).absolutePath();
   const QString defaultDir = sourceDir.isEmpty() ? QDir::homePath() : sourceDir;
   const QString outputDir = QFileDialog::getExistingDirectory(
-      this, "Select Output Directory for .ico Files", defaultDir);
+      this, tr("Select Output Directory for .ico Files"), defaultDir);
   if (outputDir.isEmpty()) {
     return false;
   }
@@ -134,7 +143,8 @@ void IcoPackagerPanel::onIcoExportFinished(
   QWidget *const toastParent = window() ? window() : this;
 
   if (result.cancelled) {
-    ui::Toast::show(toastParent, "Cancelled", "Icon export was cancelled.",
+    ui::Toast::show(toastParent, tr("Cancelled"),
+                    tr("Icon export was cancelled."),
                     ui::ToastVariant::Default);
     return;
   }
@@ -145,21 +155,21 @@ void IcoPackagerPanel::onIcoExportFinished(
     for (int sz : result.sizes) {
       sizeLabels.append(QString("%1×%1").arg(sz));
     }
-    QString msg =
-        QString("Exported %1 .ico file(s) (%2 px) in:\n%3")
-            .arg(result.iconsCreated)
-            .arg(sizeLabels.join(", "))
-            .arg(result.outputDir);
+    QString msg = tr("Exported %1 .ico file(s) (%2 px) in:\n%3")
+                      .arg(result.iconsCreated)
+                      .arg(sizeLabels.join(", "))
+                      .arg(result.outputDir);
     if (result.failedFiles > 0) {
-      msg += QString("\n\n%1 file(s) failed:\n%2")
-                 .arg(result.failedFiles)
-                 .arg(result.error);
+      msg += "\n\n" + tr("%1 file(s) failed:\n%2")
+                          .arg(result.failedFiles)
+                          .arg(result.error);
     }
-    ui::Dialog::info(this, "Icon Export Complete", msg);
+    ui::Dialog::info(this, tr("Icon Export Complete"), msg);
   } else {
-    ui::Toast::show(toastParent, "Icon Export Failed",
-                    result.error.isEmpty() ? "Failed to generate .ico files."
-                                           : result.error,
+    ui::Toast::show(toastParent, tr("Icon Export Failed"),
+                    result.error.isEmpty()
+                        ? tr("Failed to generate .ico files.")
+                        : result.error,
                     ui::ToastVariant::Destructive);
   }
 }

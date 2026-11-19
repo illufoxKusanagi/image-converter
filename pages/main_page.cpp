@@ -1,4 +1,5 @@
 #include "pages/main_page.h"
+#include "ui-kit/theme/i18n.h"
 #include "ui-kit/theme/icon_helper.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
@@ -18,7 +19,10 @@ MainPage::MainPage(QWidget *parent)
 
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,
           &MainPage::applyThemeStyles);
+  connect(&ui::I18n::instance(), &ui::I18n::languageChanged, this,
+          &MainPage::retranslateUi);
   applyThemeStyles();
+  retranslateUi();
 }
 
 MainPage::~MainPage() {
@@ -85,10 +89,10 @@ DropFileWidget *MainPage::activeDropWidget() const {
 
 void MainPage::setupImageLayout() {
   m_toolTabs = new ui::Tabs(ui::TabVariant::Segmented, this);
-  m_toolTabs->addTab("Convert Image");
-  m_toolTabs->addTab("SVG Vector");
-  m_toolTabs->addTab("App Icon (.ico)");
-  m_toolTabs->addTab("Base64 Data URI");
+  m_toolTabs->addTab(tr("Convert Image"));
+  m_toolTabs->addTab(tr("SVG Vector"));
+  m_toolTabs->addTab(tr("App Icon (.ico)"));
+  m_toolTabs->addTab(tr("Base64 Data URI"));
   connect(m_toolTabs, &ui::Tabs::currentChanged, this,
           &MainPage::onToolTabChanged);
 
@@ -112,14 +116,14 @@ void MainPage::setupImageLayout() {
   m_progressBar = new ui::Progress(0, this);
   m_progressBar->setVisible(false);
 
-  m_processButton = new ui::Button("Convert Files", ui::ButtonVariant::Primary,
+  m_processButton = new ui::Button(tr("Convert Files"), ui::ButtonVariant::Primary,
                                    ui::ButtonSize::Large, this);
   m_processButton->setMinimumWidth(320);
   connect(m_processButton, &QPushButton::clicked, this,
           &MainPage::onProcessButtonClicked);
 
   m_cancelButton =
-      new ui::Button("Cancel Conversion", ui::ButtonVariant::Destructive,
+      new ui::Button(tr("Cancel Conversion"), ui::ButtonVariant::Destructive,
                      ui::ButtonSize::Large, this);
   m_cancelButton->setMinimumWidth(320);
   m_cancelButton->setVisible(false);
@@ -156,29 +160,29 @@ void MainPage::setupToolPanels() {
 QString MainPage::processButtonTextForMode(ImageToolMode mode) const {
   switch (mode) {
   case ImageToolMode::ConvertImage:
-    return "Convert Files";
+    return tr("Convert Files");
   case ImageToolMode::SvgToRaster:
-    return "Convert SVG Files";
+    return tr("Convert SVG Files");
   case ImageToolMode::IcoPackager:
-    return "Export .ico Icons";
+    return tr("Export .ico Icons");
   case ImageToolMode::Base64DataUri:
-    return "Copy Base64 to Clipboard";
+    return tr("Copy Base64 to Clipboard");
   }
-  return "Convert Files";
+  return tr("Convert Files");
 }
 
 QString MainPage::cancelButtonTextForMode(ImageToolMode mode) const {
   switch (mode) {
   case ImageToolMode::ConvertImage:
-    return "Cancel Conversion";
+    return tr("Cancel Conversion");
   case ImageToolMode::SvgToRaster:
-    return "Cancel SVG Conversion";
+    return tr("Cancel SVG Conversion");
   case ImageToolMode::IcoPackager:
-    return "Cancel Icon Export";
+    return tr("Cancel Icon Export");
   case ImageToolMode::Base64DataUri:
-    return "Cancel";
+    return tr("Cancel");
   }
-  return "Cancel Conversion";
+  return tr("Cancel Conversion");
 }
 
 void MainPage::onToolTabChanged(int index) {
@@ -232,6 +236,25 @@ void MainPage::applyThemeStyles() {
   if (m_cancelButton) {
     m_cancelButton->setIcon(ui::Icon::get(
         ":/icons/icons/lucide-x.svg", c.destructiveForeground, QSize(16, 16)));
+  }
+}
+
+void MainPage::retranslateUi() {
+  if (m_toolTabs) {
+    m_toolTabs->setTabText(0, tr("Convert Image"));
+    m_toolTabs->setTabText(1, tr("SVG Vector"));
+    m_toolTabs->setTabText(2, tr("App Icon (.ico)"));
+    m_toolTabs->setTabText(3, tr("Base64 Data URI"));
+  }
+  if (m_processButton) {
+    m_processButton->setText(processButtonTextForMode(m_currentTool));
+  }
+  if (m_cancelButton) {
+    if (m_isProcessing && !m_cancelButton->isEnabled()) {
+      m_cancelButton->setText(tr("Cancelling..."));
+    } else {
+      m_cancelButton->setText(cancelButtonTextForMode(m_currentTool));
+    }
   }
 }
 
@@ -298,7 +321,7 @@ void MainPage::onCancelButtonClicked() {
     m_currentController->cancel();
   }
   if (m_cancelButton) {
-    m_cancelButton->setText("Cancelling...");
+    m_cancelButton->setText(tr("Cancelling..."));
     m_cancelButton->setEnabled(false);
   }
 }
