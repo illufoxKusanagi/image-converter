@@ -1,6 +1,6 @@
 # ImageConverter
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-red.svg)](https://opensource.org/licenses/MIT)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Release](https://img.shields.io/github/v/release/illufoxKusanagi/Image-Converter?display_name=tag&sort=semver)](https://github.com/illufoxKusanagi/image-converter/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-blue)](#)
 [![C++](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=c%2B%2B&logoColor=white)](https://isocpp.org/)
@@ -31,6 +31,7 @@
 - [Packaging](#packaging)
 - [Changelog](#changelog)
 - [Contributing](#contributing)
+- [Credits & Acknowledgments](#credits--acknowledgments)
 - [License](#license)
 - [Contact](#contact)
 
@@ -334,9 +335,28 @@ See [`CHANGELOG.md`](CHANGELOG.md) for versioned release notes and [`improvement
 
 ---
 
+## Credits & Acknowledgments
+
+### Author & Maintainer
+
+- **Arief Satria** ([@illufoxKusanagi](https://github.com/illufoxKusanagi)) — creator of **ImageConverter** and its bundled [`ui-kit`](ui-kit/README.md) Qt Widgets component library.
+
+### Third-Party Libraries, Tools & Design Inspiration
+
+- **[Qt 6](https://www.qt.io/)** (LGPLv3) — cross-platform C++ GUI, SVG, concurrency, and PDF (`QtPdf` / PDFium) framework.
+- **[Ghostscript](https://www.ghostscript.com/)** (Artifex Software, GNU AGPLv3) — vector-preserving PDF compression and grayscale engine.
+- **[Lucide Icons](https://lucide.dev/)** (ISC License; portions derived from Feather by Cole Bemis) — bundled SVG icons.
+- **[shadcn/ui](https://ui.shadcn.com/)** — design token and component aesthetic inspiration for `ui-kit`.
+
+See [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) for complete legal notices.
+
+---
+
 ## License
 
-This project is licensed under the **MIT License** — see the [`LICENSE`](LICENSE) file for details.
+Copyright (C) 2025-2026 Arief Satria
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0-or-later)** — see the [`LICENSE`](LICENSE) file for the full license text and [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) for third-party library and asset notices.
 
 ---
 

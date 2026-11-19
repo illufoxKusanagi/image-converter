@@ -2,7 +2,7 @@
 
 ![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
 ![Qt 6 / Qt 5](https://img.shields.io/badge/Qt-6%20%7C%205-41CD52.svg)
-![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-purple.svg)](../LICENSE)
 ![Shadcn-Inspired](https://img.shields.io/badge/Design-Shadcn%20UI-9b44f9.svg)
 
 A modern, zero-dependency **Shadcn-inspired component library for Qt 6 and Qt 5 Widgets** written in clean C++17.
@@ -347,3 +347,25 @@ tabs->addTab("Component Showcase", QIcon(), new ui::DemoPage(this));
 ## AI Agent Integration
 
 See [**`AI_AGENT_GUIDE.md`**](AI_AGENT_GUIDE.md) for comprehensive architectural rules, required `.qrc` icon paths, QSS pitfalls to avoid (such as `QLabel` inheriting from `QFrame`), and complete method signatures.
+
+---
+
+## Credits & Acknowledgments
+
+### Author & Origin
+
+- Created by **Arief Satria** ([@illufoxKusanagi](https://github.com/illufoxKusanagi)) originally for [**ImageConverter**](https://github.com/illufoxKusanagi/image-converter).
+
+### Built With & Inspired By
+
+- **[Qt 6 / Qt 5](https://www.qt.io/)** (LGPLv3) — `Qt::Core`, `Qt::Widgets`, and `Qt::Svg`.
+- **[shadcn/ui](https://ui.shadcn.com/)** — semantic design token architecture and visual inspiration.
+- **[Lucide Icons](https://lucide.dev/)** (ISC License) — default SVG iconography for interactive controls.
+
+---
+
+## License
+
+Copyright (C) 2025-2026 Arief Satria
+
+`ui-kit` is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0-or-later)** — see [`../LICENSE`](../LICENSE) for the full license text and [`../THIRD_PARTY_LICENSES.md`](../THIRD_PARTY_LICENSES.md) for third-party library and asset notices.
