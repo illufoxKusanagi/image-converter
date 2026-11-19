@@ -103,6 +103,11 @@ private slots:
    */
   void onGrayscaleFinished(const GrayscaleController::Result &result);
 
+  /**
+   * @brief Updates user-facing strings when the active application language changes.
+   */
+  void retranslateUi();
+
 private:
   SliderWidget *m_qualitySlider{nullptr};
   ui::Select *m_presetSelect{nullptr};

@@ -39,11 +39,11 @@ void ImagesToPdfController::runJob(const Params &params) {
 
   emit progressChanged(
       0, orderedImages.size(),
-      QString("Combining %1 image(s) into PDF...").arg(orderedImages.size()));
+      tr("Combining %1 image(s) into PDF...").arg(orderedImages.size()));
 
   for (const QString &imgPath : orderedImages) {
     emit fileStatusChanged(imgPath, static_cast<int>(FileStatus::Processing),
-                           "Adding image to PDF");
+                           tr("Adding image to PDF"));
   }
 
   QString error;
@@ -68,7 +68,7 @@ void ImagesToPdfController::runJob(const Params &params) {
       const QString &imgPath = orderedImages.at(i);
       QImage rawImg(imgPath);
       if (rawImg.isNull()) {
-        error = QString("Cannot load image '%1'.")
+        error = tr("Cannot load image '%1'.")
                     .arg(QFileInfo(imgPath).fileName());
         break;
       }
@@ -119,7 +119,7 @@ void ImagesToPdfController::runJob(const Params &params) {
       if (!painter) {
         painter = std::make_unique<QPainter>(&writer);
         if (!painter->isActive()) {
-          error = "Failed to initialize PDF writer.";
+          error = tr("Failed to initialize PDF writer.");
           break;
         }
       } else {
@@ -148,7 +148,9 @@ void ImagesToPdfController::runJob(const Params &params) {
       if (!m_isCancelled) {
         emit progressChanged(
             i + 1, orderedImages.size(),
-            QString("Added %1 of %2 image(s)...").arg(i + 1).arg(orderedImages.size()));
+            tr("Added %1 of %2 image(s)...")
+                .arg(i + 1)
+                .arg(orderedImages.size()));
       }
     }
 
@@ -160,7 +162,7 @@ void ImagesToPdfController::runJob(const Params &params) {
       QPdfDocument verifyDoc;
       if (verifyDoc.load(candidatePath) != QPdfDocument::Error::None ||
           verifyDoc.pageCount() != orderedImages.size()) {
-        error = "Generated PDF failed validation.";
+        error = tr("Generated PDF failed validation.");
       } else {
         verifyDoc.close();
         if (pdfutil::savePdfAtomically(candidatePath,
@@ -176,10 +178,10 @@ void ImagesToPdfController::runJob(const Params &params) {
   for (const QString &imgPath : orderedImages) {
     if (m_isCancelled) {
       emit fileStatusChanged(imgPath, static_cast<int>(FileStatus::Cancelled),
-                             "Creation cancelled");
+                             tr("Creation cancelled"));
     } else if (succeeded) {
       emit fileStatusChanged(imgPath, static_cast<int>(FileStatus::Succeeded),
-                             QString("Added to %1").arg(params.outputPath));
+                             tr("Added to %1").arg(params.outputPath));
     } else {
       emit fileStatusChanged(imgPath, static_cast<int>(FileStatus::Failed),
                              error);

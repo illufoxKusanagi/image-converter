@@ -117,6 +117,11 @@ private slots:
    */
   void onOrganizeFinished(const OrganizeController::Result &result);
 
+  /**
+   * @brief Updates user-facing strings when the active application language changes.
+   */
+  void retranslateUi();
+
 private:
   void updateItemDisplay(QListWidgetItem *item) const;
 

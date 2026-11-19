@@ -3,6 +3,7 @@
 #include "ui-kit/components/dialog.h"
 #include "ui-kit/components/scroll_area.h"
 #include "ui-kit/components/toast.h"
+#include "ui-kit/theme/i18n.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
 #include "widgets/drop_file_widget.h"
@@ -35,23 +36,25 @@ OrganizePdfPanel::OrganizePdfPanel(QWidget *parent) : QWidget(parent) {
   toolbarLayout->setSpacing(6);
 
   m_hintLabel = new QLabel(
-      "Pages (drag or use buttons to reorder, rotate, or delete):", this);
-  m_loadBtn = new ui::Button("Load Pages from PDF", ui::ButtonVariant::Secondary,
+      tr("Pages (drag or use buttons to reorder, rotate, or delete):"), this);
+  m_loadBtn = new ui::Button(tr("Load Pages from PDF"),
+                             ui::ButtonVariant::Secondary,
                              ui::ButtonSize::Small, this);
-  m_rotLeftBtn = new ui::Button("Rotate Left (-90°)", ui::ButtonVariant::Outline,
+  m_rotLeftBtn = new ui::Button(tr("Rotate Left (-90°)"),
+                                ui::ButtonVariant::Outline,
                                 ui::ButtonSize::Small, this);
   m_rotRightBtn =
-      new ui::Button("Rotate Right (+90°)", ui::ButtonVariant::Outline,
+      new ui::Button(tr("Rotate Right (+90°)"), ui::ButtonVariant::Outline,
                      ui::ButtonSize::Small, this);
-  m_rot180Btn = new ui::Button("Rotate 180°", ui::ButtonVariant::Outline,
+  m_rot180Btn = new ui::Button(tr("Rotate 180°"), ui::ButtonVariant::Outline,
                                ui::ButtonSize::Small, this);
-  m_moveUpBtn = new ui::Button("Move Up", ui::ButtonVariant::Outline,
+  m_moveUpBtn = new ui::Button(tr("Move Up"), ui::ButtonVariant::Outline,
                                ui::ButtonSize::Small, this);
-  m_moveDownBtn = new ui::Button("Move Down", ui::ButtonVariant::Outline,
+  m_moveDownBtn = new ui::Button(tr("Move Down"), ui::ButtonVariant::Outline,
                                  ui::ButtonSize::Small, this);
-  m_deleteBtn = new ui::Button("Delete Page", ui::ButtonVariant::Destructive,
+  m_deleteBtn = new ui::Button(tr("Delete Page"), ui::ButtonVariant::Destructive,
                                ui::ButtonSize::Small, this);
-  m_resetBtn = new ui::Button("Reset", ui::ButtonVariant::Ghost,
+  m_resetBtn = new ui::Button(tr("Reset"), ui::ButtonVariant::Ghost,
                               ui::ButtonSize::Small, this);
 
   for (ui::Button *btn : {m_loadBtn, m_resetBtn}) {
@@ -112,6 +115,44 @@ OrganizePdfPanel::OrganizePdfPanel(QWidget *parent) : QWidget(parent) {
   applyThemeStyles();
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,
           &OrganizePdfPanel::applyThemeStyles);
+  connect(&ui::I18n::instance(), &ui::I18n::languageChanged, this,
+          &OrganizePdfPanel::retranslateUi);
+}
+
+void OrganizePdfPanel::retranslateUi() {
+  if (m_hintLabel) {
+    m_hintLabel->setText(
+        tr("Pages (drag or use buttons to reorder, rotate, or delete):"));
+  }
+  if (m_loadBtn) {
+    m_loadBtn->setText(tr("Load Pages from PDF"));
+  }
+  if (m_rotLeftBtn) {
+    m_rotLeftBtn->setText(tr("Rotate Left (-90°)"));
+  }
+  if (m_rotRightBtn) {
+    m_rotRightBtn->setText(tr("Rotate Right (+90°)"));
+  }
+  if (m_rot180Btn) {
+    m_rot180Btn->setText(tr("Rotate 180°"));
+  }
+  if (m_moveUpBtn) {
+    m_moveUpBtn->setText(tr("Move Up"));
+  }
+  if (m_moveDownBtn) {
+    m_moveDownBtn->setText(tr("Move Down"));
+  }
+  if (m_deleteBtn) {
+    m_deleteBtn->setText(tr("Delete Page"));
+  }
+  if (m_resetBtn) {
+    m_resetBtn->setText(tr("Reset"));
+  }
+  if (m_pageList) {
+    for (int i = 0; i < m_pageList->count(); ++i) {
+      updateItemDisplay(m_pageList->item(i));
+    }
+  }
 }
 
 void OrganizePdfPanel::loadFromPaths(const QStringList &paths,
@@ -125,8 +166,8 @@ void OrganizePdfPanel::loadFromPaths(const QStringList &paths,
     m_pageList->clear();
     m_sourcePath.clear();
     if (!silentIfEmpty) {
-      ui::Toast::show(toastParent, "No PDF Selected",
-                      "Please add a PDF file in the drop zone first.",
+      ui::Toast::show(toastParent, tr("No PDF Selected"),
+                      tr("Please add a PDF file in the drop zone first."),
                       ui::ToastVariant::Warning);
     }
     return;
@@ -139,8 +180,8 @@ void OrganizePdfPanel::loadFromPaths(const QStringList &paths,
     m_pageList->clear();
     m_sourcePath.clear();
     ui::Toast::show(
-        toastParent, "Cannot Load PDF Pages",
-        QString("Could not open '%1' (damaged or password-protected).")
+        toastParent, tr("Cannot Load PDF Pages"),
+        tr("Could not open '%1' (damaged or password-protected).")
             .arg(QFileInfo(sourcePath).fileName()),
         ui::ToastVariant::Destructive);
     return;
@@ -170,8 +211,8 @@ void OrganizePdfPanel::loadFromPaths(const QStringList &paths,
 bool OrganizePdfPanel::execute(const QStringList &dropPaths) {
   QWidget *toastParent = window() ? window() : this;
   if (dropPaths.isEmpty()) {
-    ui::Toast::show(toastParent, "No PDF Selected",
-                    "Please select a PDF file to organize.",
+    ui::Toast::show(toastParent, tr("No PDF Selected"),
+                    tr("Please select a PDF file to organize."),
                     ui::ToastVariant::Warning);
     return false;
   }
@@ -189,16 +230,17 @@ bool OrganizePdfPanel::execute(const QStringList &dropPaths) {
   const QString defaultOutput =
       sourceInfo.dir().filePath(sourceInfo.baseName() + "_organized.pdf");
   const QString outputPath = QFileDialog::getSaveFileName(
-      this, "Save Organized PDF", defaultOutput, "PDF Files (*.pdf)");
+      this, tr("Save Organized PDF"), defaultOutput, tr("PDF Files (*.pdf)"));
   if (outputPath.isEmpty()) {
     return false;
   }
 
   if (pdfutil::isSamePdf(sourceInfo, QFileInfo(outputPath))) {
-    ui::Toast::show(toastParent, "Invalid Output File",
-                    "Choose a different output file. The original PDF must not "
-                    "be overwritten.",
-                    ui::ToastVariant::Destructive);
+    ui::Toast::show(
+        toastParent, tr("Invalid Output File"),
+        tr("Choose a different output file. The original PDF must not "
+           "be overwritten."),
+        ui::ToastVariant::Destructive);
     return false;
   }
 
@@ -293,8 +335,8 @@ void OrganizePdfPanel::rotateSelectedPages(int deltaDegrees) {
   }
   const QList<QListWidgetItem *> selected = m_pageList->selectedItems();
   if (selected.isEmpty()) {
-    ui::Toast::show(window() ? window() : this, "No Page Selected",
-                    "Select one or more pages in the list to rotate.",
+    ui::Toast::show(window() ? window() : this, tr("No Page Selected"),
+                    tr("Select one or more pages in the list to rotate."),
                     ui::ToastVariant::Warning);
     return;
   }
@@ -332,14 +374,14 @@ void OrganizePdfPanel::deleteSelectedPages() {
   QWidget *toastParent = window() ? window() : this;
   const QList<QListWidgetItem *> selected = m_pageList->selectedItems();
   if (selected.isEmpty()) {
-    ui::Toast::show(toastParent, "No Page Selected",
-                    "Select one or more pages in the list to delete.",
+    ui::Toast::show(toastParent, tr("No Page Selected"),
+                    tr("Select one or more pages in the list to delete."),
                     ui::ToastVariant::Warning);
     return;
   }
   if (m_pageList->count() - selected.size() < 1) {
-    ui::Toast::show(toastParent, "Cannot Delete All Pages",
-                    "At least one page must remain in the document.",
+    ui::Toast::show(toastParent, tr("Cannot Delete All Pages"),
+                    tr("At least one page must remain in the document."),
                     ui::ToastVariant::Warning);
     return;
   }
@@ -354,19 +396,19 @@ void OrganizePdfPanel::onOrganizeFinished(
 
   QWidget *toastParent = window() ? window() : this;
   if (result.cancelled) {
-    ui::Toast::show(toastParent, "Cancelled",
-                    "Page organization was cancelled.",
+    ui::Toast::show(toastParent, tr("Cancelled"),
+                    tr("Page organization was cancelled."),
                     ui::ToastVariant::Default);
   } else if (result.success) {
     ui::Dialog::info(
-        this, "Organized PDF Saved",
-        QString("Saved %1 page(s) to:\n%2\n\nOutput Size: %3")
+        this, tr("Organized PDF Saved"),
+        tr("Saved %1 page(s) to:\n%2\n\nOutput Size: %3")
             .arg(result.pageCount)
             .arg(result.outputPath)
             .arg(DropFileWidget::formatFileSize(result.outputBytes)));
   } else {
-    ui::Toast::show(toastParent, "Failed to Save Organized PDF", result.error,
-                    ui::ToastVariant::Destructive);
+    ui::Toast::show(toastParent, tr("Failed to Save Organized PDF"),
+                    result.error, ui::ToastVariant::Destructive);
   }
 }
 
@@ -387,7 +429,7 @@ void OrganizePdfPanel::updateItemDisplay(QListWidgetItem *item) const {
     item->setIcon(QIcon(QPixmap::fromImage(rotatedThumb)));
   }
 
-  item->setText(QString("Page %1 (%2 × %3 pt) — Rotation: %4°")
+  item->setText(tr("Page %1 (%2 × %3 pt) — Rotation: %4°")
                     .arg(origIndex + 1)
                     .arg(qRound(ptSize.width()))
                     .arg(qRound(ptSize.height()))

@@ -3,6 +3,7 @@
 #include "ui-kit/components/dialog.h"
 #include "ui-kit/components/scroll_area.h"
 #include "ui-kit/components/toast.h"
+#include "ui-kit/theme/i18n.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
 #include "widgets/drop_file_widget.h"
@@ -26,13 +27,13 @@ MergePdfPanel::MergePdfPanel(QWidget *parent) : QWidget(parent) {
   headerLayout->setSpacing(8);
 
   m_hintLabel =
-      new QLabel("Merge Order (drag items or use buttons to reorder):", this);
+      new QLabel(tr("Merge Order (drag items or use buttons to reorder):"), this);
   m_syncBtn =
-      new ui::Button("Sync from Drop Zone", ui::ButtonVariant::Secondary,
+      new ui::Button(tr("Sync from Drop Zone"), ui::ButtonVariant::Secondary,
                      ui::ButtonSize::Small, this);
-  m_upBtn = new ui::Button("Move Up", ui::ButtonVariant::Outline,
+  m_upBtn = new ui::Button(tr("Move Up"), ui::ButtonVariant::Outline,
                            ui::ButtonSize::Small, this);
-  m_downBtn = new ui::Button("Move Down", ui::ButtonVariant::Outline,
+  m_downBtn = new ui::Button(tr("Move Down"), ui::ButtonVariant::Outline,
                              ui::ButtonSize::Small, this);
 
   connect(m_syncBtn, &QPushButton::clicked, this,
@@ -57,6 +58,8 @@ MergePdfPanel::MergePdfPanel(QWidget *parent) : QWidget(parent) {
   applyThemeStyles();
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,
           &MergePdfPanel::applyThemeStyles);
+  connect(&ui::I18n::instance(), &ui::I18n::languageChanged, this,
+          &MergePdfPanel::retranslateUi);
 
   m_controller = new MergeController(this);
   connect(m_controller, &MergeController::finished, this,
@@ -127,6 +130,31 @@ QStringList MergePdfPanel::orderedPaths() const {
 
 int MergePdfPanel::count() const {
   return m_orderList ? m_orderList->count() : 0;
+}
+
+void MergePdfPanel::retranslateUi() {
+  if (m_hintLabel) {
+    m_hintLabel->setText(
+        tr("Merge Order (drag items or use buttons to reorder):"));
+  }
+  if (m_syncBtn) {
+    m_syncBtn->setText(tr("Sync from Drop Zone"));
+  }
+  if (m_upBtn) {
+    m_upBtn->setText(tr("Move Up"));
+  }
+  if (m_downBtn) {
+    m_downBtn->setText(tr("Move Down"));
+  }
+  if (m_orderList) {
+    for (int i = 0; i < m_orderList->count(); ++i) {
+      if (QListWidgetItem *item = m_orderList->item(i)) {
+        const QFileInfo fi(item->data(Qt::UserRole).toString());
+        item->setText(QString("%1 (%2)").arg(
+            fi.fileName(), DropFileWidget::formatFileSize(fi.size())));
+      }
+    }
+  }
 }
 
 void MergePdfPanel::applyThemeStyles() {
@@ -204,8 +232,8 @@ bool MergePdfPanel::execute(const QStringList &dropPaths) {
   QWidget *const toastParent = window() ? window() : this;
 
   if (paths.size() < 2) {
-    ui::Toast::show(toastParent, "Not Enough PDFs",
-                    "Please select at least 2 PDF files to merge.",
+    ui::Toast::show(toastParent, tr("Not Enough PDFs"),
+                    tr("Please select at least 2 PDF files to merge."),
                     ui::ToastVariant::Warning);
     return false;
   }
@@ -214,7 +242,7 @@ bool MergePdfPanel::execute(const QStringList &dropPaths) {
   const QString defaultOutput =
       firstInfo.dir().filePath(firstInfo.baseName() + "_merged.pdf");
   const QString outputPath = QFileDialog::getSaveFileName(
-      this, "Save Merged PDF", defaultOutput, "PDF Files (*.pdf)");
+      this, tr("Save Merged PDF"), defaultOutput, tr("PDF Files (*.pdf)"));
   if (outputPath.isEmpty()) {
     return false;
   }
@@ -223,8 +251,9 @@ bool MergePdfPanel::execute(const QStringList &dropPaths) {
   for (const QString &srcPath : paths) {
     if (pdfutil::isSamePdf(QFileInfo(srcPath), destInfo)) {
       ui::Toast::show(
-          toastParent, "Invalid Output File",
-          "The merged PDF destination cannot overwrite one of the input PDFs.",
+          toastParent, tr("Invalid Output File"),
+          tr("The merged PDF destination cannot overwrite one of the input "
+             "PDFs."),
           ui::ToastVariant::Destructive);
       return false;
     }
@@ -247,19 +276,19 @@ void MergePdfPanel::onMergeFinished(const MergeController::Result &result) {
 
   QWidget *const toastParent = window() ? window() : this;
   if (result.cancelled) {
-    ui::Toast::show(toastParent, "Cancelled", "PDF merge was cancelled.",
-                    ui::ToastVariant::Default);
+    ui::Toast::show(toastParent, tr("Cancelled"),
+                    tr("PDF merge was cancelled."), ui::ToastVariant::Default);
   } else if (result.success) {
     ui::Dialog::info(
-        this, "PDFs Merged",
-        QString("Merged %1 PDFs (%2 total pages) into:\n%3\n\n"
-                "Output Size: %4")
+        this, tr("PDFs Merged"),
+        tr("Merged %1 PDFs (%2 total pages) into:\n%3\n\n"
+           "Output Size: %4")
             .arg(count())
             .arg(result.totalPages)
             .arg(result.outputPath)
             .arg(DropFileWidget::formatFileSize(result.outputBytes)));
   } else {
-    ui::Toast::show(toastParent, "PDF Merge Failed", result.error,
+    ui::Toast::show(toastParent, tr("PDF Merge Failed"), result.error,
                     ui::ToastVariant::Destructive);
   }
 }

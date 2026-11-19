@@ -52,7 +52,7 @@ bool GrayscaleController::convertPdfToGrayscaleWithQtPdf(
     if (!painter) {
       painter = std::make_unique<QPainter>(&writer);
       if (!painter->isActive()) {
-        error = "Failed to initialize PDF writer.";
+        error = tr("Failed to initialize PDF writer.");
         return false;
       }
     } else {
@@ -63,7 +63,7 @@ bool GrayscaleController::convertPdfToGrayscaleWithQtPdf(
                            qMax(1, qRound(ptSize.height() * dpi / 72.0)));
     const QImage colorImg = pdfutil::renderPdfPageOnWhite(sourceDoc, page, renderSize);
     if (colorImg.isNull()) {
-      error = QString("Failed to render page %1.").arg(page + 1);
+      error = tr("Failed to render page %1.").arg(page + 1);
       return false;
     }
     const QImage grayImg = colorImg.convertToFormat(QImage::Format_Grayscale8);
@@ -95,12 +95,13 @@ GrayscaleController::convertPdfToGrayscale(const QString &inputPath,
   result.originalBytes = sourceInfo.size();
   const QDateTime sourceModified = sourceInfo.lastModified();
   if (!sourceInfo.isFile() || result.originalBytes <= 0) {
-    result.error = "The input PDF is missing or empty.";
+    result.error = tr("The input PDF is missing or empty.");
     return result;
   }
   if (pdfutil::isSamePdf(sourceInfo, destinationInfo)) {
-    result.error = "Choose a different output file. The original PDF must not "
-                   "be overwritten.";
+    result.error =
+        tr("Choose a different output file. The original PDF must not "
+           "be overwritten.");
     return result;
   }
 
@@ -108,18 +109,20 @@ GrayscaleController::convertPdfToGrayscale(const QString &inputPath,
   const auto sourceError = sourceDocument.load(sourceInfo.absoluteFilePath());
   if (sourceError != QPdfDocument::Error::None ||
       sourceDocument.pageCount() <= 0) {
-    result.error = QString("Cannot open the input PDF (PDF error %1). "
-                           "Check whether it is damaged or password-protected.")
-                       .arg(static_cast<int>(sourceError));
+    result.error =
+        tr("Cannot open the input PDF (PDF error %1). "
+           "Check whether it is damaged or password-protected.")
+            .arg(static_cast<int>(sourceError));
     return result;
   }
 
   QTemporaryDir temporaryDirectory(
       destinationInfo.absoluteDir().filePath(".pdf-grayscale-XXXXXX"));
   if (!temporaryDirectory.isValid()) {
-    result.error = QString("Cannot create temporary output in the destination "
-                           "directory: %1")
-                       .arg(temporaryDirectory.errorString());
+    result.error =
+        tr("Cannot create temporary output in the destination "
+           "directory: %1")
+            .arg(temporaryDirectory.errorString());
     return result;
   }
   const QString candidatePath = temporaryDirectory.filePath("candidate.pdf");
@@ -146,8 +149,9 @@ GrayscaleController::convertPdfToGrayscale(const QString &inputPath,
   const auto candidateError = candidateDocument.load(candidatePath);
   if (candidateError != QPdfDocument::Error::None ||
       candidateDocument.pageCount() != sourceDocument.pageCount()) {
-    result.error = "The grayscale PDF failed validation (unreadable output "
-                   "or changed page count). No destination was replaced.";
+    result.error =
+        tr("The grayscale PDF failed validation (unreadable output "
+           "or changed page count). No destination was replaced.");
     return result;
   }
   for (int page = 0; page < sourceDocument.pageCount(); ++page) {
@@ -159,8 +163,8 @@ GrayscaleController::convertPdfToGrayscale(const QString &inputPath,
     const QSizeF after = candidateDocument.pagePointSize(page);
     if (qAbs(before.width() - after.width()) > 0.5 ||
         qAbs(before.height() - after.height()) > 0.5) {
-      result.error = "The grayscale PDF changed page dimensions. "
-                     "No destination was replaced.";
+      result.error = tr("The grayscale PDF changed page dimensions. "
+                        "No destination was replaced.");
       return result;
     }
   }
@@ -174,17 +178,18 @@ GrayscaleController::convertPdfToGrayscale(const QString &inputPath,
   const QFileInfo currentSource(sourceInfo.absoluteFilePath());
   if (currentSource.size() != result.originalBytes ||
       currentSource.lastModified() != sourceModified) {
-    result.error = "The input PDF changed during conversion. Please retry.";
+    result.error = tr("The input PDF changed during conversion. Please retry.");
     return result;
   }
   const qint64 candidateBytes = QFileInfo(candidatePath).size();
   if (candidateBytes <= 0) {
-    result.error = "The grayscale PDF is empty. No destination was replaced.";
+    result.error =
+        tr("The grayscale PDF is empty. No destination was replaced.");
     return result;
   }
   if (pdfutil::isSamePdf(currentSource, QFileInfo(destinationInfo.absoluteFilePath()))) {
-    result.error = "The destination now points to the input PDF. "
-                   "No destination was replaced.";
+    result.error = tr("The destination now points to the input PDF. "
+                      "No destination was replaced.");
     return result;
   }
   if (!pdfutil::savePdfAtomically(candidatePath, destinationInfo.absoluteFilePath(),
@@ -206,10 +211,10 @@ void GrayscaleController::runJob(const Params &params) {
   if (!params.isBatch) {
     const QString &sourcePath = params.sourcePath;
     const QString &outputPath = params.outputPath;
-    emit progressChanged(0, 1, QString("Converting %1 to grayscale (1 of 1)...")
+    emit progressChanged(0, 1, tr("Converting %1 to grayscale (1 of 1)...")
                                    .arg(QFileInfo(sourcePath).fileName()));
     emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Processing),
-                           "Converting PDF to grayscale");
+                           tr("Converting PDF to grayscale"));
 
     const CompressController::SingleResult single =
         convertPdfToGrayscale(sourcePath, outputPath, params.quality);
@@ -223,13 +228,13 @@ void GrayscaleController::runJob(const Params &params) {
     switch (single.status) {
     case Status::Compressed:
       statusInt = static_cast<int>(FileStatus::Succeeded);
-      detail = QString("Saved grayscale PDF to %1").arg(outputPath);
+      detail = tr("Saved grayscale PDF to %1").arg(outputPath);
       result.success = true;
       result.successCount = 1;
       break;
     case Status::Cancelled:
       statusInt = static_cast<int>(FileStatus::Cancelled);
-      detail = "Conversion cancelled; no output saved";
+      detail = tr("Conversion cancelled; no output saved");
       result.cancelled = true;
       break;
     case Status::Unchanged:
@@ -241,7 +246,7 @@ void GrayscaleController::runJob(const Params &params) {
     }
     emit fileStatusChanged(sourcePath, statusInt, detail);
     if (single.status != Status::Cancelled) {
-      emit progressChanged(1, 1, "Completed");
+      emit progressChanged(1, 1, tr("Completed"));
     }
     emit finished(result);
     return;
@@ -251,7 +256,7 @@ void GrayscaleController::runJob(const Params &params) {
   const QStringList &sourcePaths = params.sourcePaths;
   const int totalFiles = sourcePaths.size();
   emit progressChanged(0, totalFiles,
-                       QString("Converting 0 of %1 PDFs to grayscale...")
+                       tr("Converting 0 of %1 PDFs to grayscale...")
                            .arg(totalFiles));
 
   QSet<QString> usedBaseNames;
@@ -263,10 +268,10 @@ void GrayscaleController::runJob(const Params &params) {
 
     const QString &sourcePath = sourcePaths.at(i);
     emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Processing),
-                           "Converting PDF to grayscale");
+                           tr("Converting PDF to grayscale"));
     emit progressChanged(
         i, totalFiles,
-        QString("Converting %1 (%2 of %3)...")
+        tr("Converting %1 (%2 of %3)...")
             .arg(QFileInfo(sourcePath).fileName())
             .arg(i + 1)
             .arg(totalFiles));
@@ -303,16 +308,16 @@ void GrayscaleController::runJob(const Params &params) {
     QString detail = single.error;
     if (single.status == Status::Compressed) {
       statusInt = static_cast<int>(FileStatus::Succeeded);
-      detail = QString("Saved to %1").arg(outputPath);
+      detail = tr("Saved to %1").arg(outputPath);
     } else if (single.status == Status::Cancelled) {
       statusInt = static_cast<int>(FileStatus::Cancelled);
-      detail = "Conversion cancelled; no output saved";
+      detail = tr("Conversion cancelled; no output saved");
     }
     emit fileStatusChanged(sourcePath, statusInt, detail);
 
     if (single.status != Status::Cancelled) {
       emit progressChanged(i + 1, totalFiles,
-                           QString("Processed %1 of %2 PDFs")
+                           tr("Processed %1 of %2 PDFs")
                                .arg(i + 1)
                                .arg(totalFiles));
     }

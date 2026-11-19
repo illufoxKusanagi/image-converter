@@ -2,6 +2,7 @@
 #include "ui-kit/components/dialog.h"
 #include "ui-kit/components/scroll_area.h"
 #include "ui-kit/components/toast.h"
+#include "ui-kit/theme/i18n.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
 #include "widgets/drop_file_widget.h"
@@ -14,6 +15,7 @@
 #include <QListWidgetItem>
 #include <QPushButton>
 #include <QSet>
+#include <QSignalBlocker>
 #include <QVBoxLayout>
 
 ImagesToPdfPanel::ImagesToPdfPanel(QWidget *parent) : QWidget(parent) {
@@ -26,13 +28,13 @@ ImagesToPdfPanel::ImagesToPdfPanel(QWidget *parent) : QWidget(parent) {
   headerLayout->setSpacing(8);
 
   m_hintLabel = new QLabel(
-      "Image Page Order (drag items or use buttons to reorder):", this);
+      tr("Image Page Order (drag items or use buttons to reorder):"), this);
   m_syncBtn =
-      new ui::Button("Sync from Drop Zone", ui::ButtonVariant::Secondary,
+      new ui::Button(tr("Sync from Drop Zone"), ui::ButtonVariant::Secondary,
                      ui::ButtonSize::Small, this);
-  m_upBtn = new ui::Button("Move Up", ui::ButtonVariant::Outline,
+  m_upBtn = new ui::Button(tr("Move Up"), ui::ButtonVariant::Outline,
                            ui::ButtonSize::Small, this);
-  m_downBtn = new ui::Button("Move Down", ui::ButtonVariant::Outline,
+  m_downBtn = new ui::Button(tr("Move Down"), ui::ButtonVariant::Outline,
                              ui::ButtonSize::Small, this);
 
   connect(m_syncBtn, &QPushButton::clicked, this,
@@ -56,21 +58,22 @@ ImagesToPdfPanel::ImagesToPdfPanel(QWidget *parent) : QWidget(parent) {
   optionsRow->setContentsMargins(0, 0, 0, 0);
   optionsRow->setSpacing(12);
 
-  const QStringList pageSizes = {"Fit to Image", "A4 (210 × 297 mm)",
-                                 "Letter (8.5 × 11 in)"};
+  const QStringList pageSizes = {tr("Fit to Image"), tr("A4 (210 × 297 mm)"),
+                                 tr("Letter (8.5 × 11 in)")};
   m_pageSizeSelect = new ui::Select(pageSizes, this);
-  m_pageSizeField = new ui::FormField("Page Size", m_pageSizeSelect, this);
+  m_pageSizeField =
+      new ui::FormField(tr("Page Size"), m_pageSizeSelect, this);
 
-  const QStringList orientations = {"Auto (Match Image)", "Portrait",
-                                    "Landscape"};
+  const QStringList orientations = {tr("Auto (Match Image)"), tr("Portrait"),
+                                    tr("Landscape")};
   m_orientationSelect = new ui::Select(orientations, this);
   m_orientationField =
-      new ui::FormField("Orientation", m_orientationSelect, this);
+      new ui::FormField(tr("Orientation"), m_orientationSelect, this);
 
-  const QStringList margins = {"No Margin (0 pt)", "Small (18 pt)",
-                               "Medium (36 pt)", "Large (54 pt)"};
+  const QStringList margins = {tr("No Margin (0 pt)"), tr("Small (18 pt)"),
+                               tr("Medium (36 pt)"), tr("Large (54 pt)")};
   m_marginSelect = new ui::Select(margins, this);
-  m_marginField = new ui::FormField("Page Margin", m_marginSelect, this);
+  m_marginField = new ui::FormField(tr("Page Margin"), m_marginSelect, this);
 
   optionsRow->addWidget(m_pageSizeField, 1, Qt::AlignTop);
   optionsRow->addWidget(m_orientationField, 1, Qt::AlignTop);
@@ -87,6 +90,56 @@ ImagesToPdfPanel::ImagesToPdfPanel(QWidget *parent) : QWidget(parent) {
   applyThemeStyles();
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,
           &ImagesToPdfPanel::applyThemeStyles);
+  connect(&ui::I18n::instance(), &ui::I18n::languageChanged, this,
+          &ImagesToPdfPanel::retranslateUi);
+}
+
+void ImagesToPdfPanel::retranslateUi() {
+  if (m_hintLabel) {
+    m_hintLabel->setText(
+        tr("Image Page Order (drag items or use buttons to reorder):"));
+  }
+  if (m_syncBtn) {
+    m_syncBtn->setText(tr("Sync from Drop Zone"));
+  }
+  if (m_upBtn) {
+    m_upBtn->setText(tr("Move Up"));
+  }
+  if (m_downBtn) {
+    m_downBtn->setText(tr("Move Down"));
+  }
+
+  auto retranslateSelect = [](ui::FormField *field, ui::Select *select,
+                              const QString &label, const QStringList &items) {
+    if (field) {
+      field->setLabel(label);
+    }
+    if (select) {
+      QSignalBlocker blocker(select);
+      for (int i = 0; i < items.size() && i < select->count(); ++i) {
+        select->setItemText(i, items.at(i));
+      }
+    }
+  };
+
+  retranslateSelect(
+      m_pageSizeField, m_pageSizeSelect, tr("Page Size"),
+      {tr("Fit to Image"), tr("A4 (210 × 297 mm)"), tr("Letter (8.5 × 11 in)")});
+  retranslateSelect(m_orientationField, m_orientationSelect, tr("Orientation"),
+                    {tr("Auto (Match Image)"), tr("Portrait"), tr("Landscape")});
+  retranslateSelect(m_marginField, m_marginSelect, tr("Page Margin"),
+                    {tr("No Margin (0 pt)"), tr("Small (18 pt)"),
+                     tr("Medium (36 pt)"), tr("Large (54 pt)")});
+
+  if (m_orderList) {
+    for (int i = 0; i < m_orderList->count(); ++i) {
+      if (QListWidgetItem *item = m_orderList->item(i)) {
+        const QFileInfo fi(item->data(Qt::UserRole).toString());
+        item->setText(QString("%1 (%2)").arg(
+            fi.fileName(), DropFileWidget::formatFileSize(fi.size())));
+      }
+    }
+  }
 }
 
 void ImagesToPdfPanel::syncFromPaths(const QStringList &dropPaths) {
@@ -171,9 +224,9 @@ bool ImagesToPdfPanel::execute(const QStringList &dropPaths) {
 
   const QStringList orderedImages = orderedImagePaths();
   if (orderedImages.isEmpty()) {
-    ui::Toast::show(window() ? window() : this, "No Images Selected",
-                    "Please select at least one image file (PNG, JPG, WEBP, "
-                    "TIFF, BMP, GIF).",
+    ui::Toast::show(window() ? window() : this, tr("No Images Selected"),
+                    tr("Please select at least one image file (PNG, JPG, WEBP, "
+                       "TIFF, BMP, GIF)."),
                     ui::ToastVariant::Warning);
     return false;
   }
@@ -182,7 +235,8 @@ bool ImagesToPdfPanel::execute(const QStringList &dropPaths) {
   const QString defaultOutput =
       firstInfo.dir().filePath(firstInfo.baseName() + "_merged.pdf");
   const QString outputPath = QFileDialog::getSaveFileName(
-      this, "Save Merged PDF from Images", defaultOutput, "PDF Files (*.pdf)");
+      this, tr("Save Merged PDF from Images"), defaultOutput,
+      tr("PDF Files (*.pdf)"));
   if (outputPath.isEmpty()) {
     return false;
   }
@@ -259,18 +313,18 @@ void ImagesToPdfPanel::onImagesToPdfFinished(
 
   QWidget *toastParent = window() ? window() : this;
   if (result.cancelled) {
-    ui::Toast::show(toastParent, "Cancelled",
-                    "Image-to-PDF creation was cancelled.",
+    ui::Toast::show(toastParent, tr("Cancelled"),
+                    tr("Image-to-PDF creation was cancelled."),
                     ui::ToastVariant::Default);
   } else if (result.success) {
     ui::Dialog::info(
-        this, "Merged PDF Created",
-        QString("Combined %1 image(s) into:\n%2\n\nOutput Size: %3")
+        this, tr("Merged PDF Created"),
+        tr("Combined %1 image(s) into:\n%2\n\nOutput Size: %3")
             .arg(result.pageCount)
             .arg(result.outputPath)
             .arg(DropFileWidget::formatFileSize(result.outputBytes)));
   } else {
-    ui::Toast::show(toastParent, "PDF Creation Failed", result.error,
+    ui::Toast::show(toastParent, tr("PDF Creation Failed"), result.error,
                     ui::ToastVariant::Destructive);
   }
 }

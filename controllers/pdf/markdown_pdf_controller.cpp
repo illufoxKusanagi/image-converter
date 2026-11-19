@@ -699,7 +699,7 @@ void MarkdownPdfController::runJob(const Params &params) {
   const int clampedMarginPt = qBound(0, params.marginPt, 144);
   const int clampedFontPt = qBound(6, params.baseFontPt, 36);
 
-  emit progressChanged(0, totalFiles, "Rendering documents to PDF...");
+  emit progressChanged(0, totalFiles, tr("Rendering documents to PDF..."));
 
   int pdfsCreated = 0;
   int failedFiles = 0;
@@ -716,7 +716,7 @@ void MarkdownPdfController::runJob(const Params &params) {
       for (int rem = i; rem < totalFiles; ++rem) {
         emit fileStatusChanged(sourcePaths.at(rem),
                                static_cast<int>(FileStatus::Cancelled),
-                               "PDF export cancelled");
+                               tr("PDF export cancelled"));
       }
       break;
     }
@@ -725,10 +725,10 @@ void MarkdownPdfController::runJob(const Params &params) {
     const QFileInfo sourceInfo(sourcePath);
 
     emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Processing),
-                           "Typesetting document to PDF");
+                           tr("Typesetting document to PDF"));
     emit progressChanged(
         i, totalFiles,
-        QString("Exporting %1 (%2 of %3)...")
+        tr("Exporting %1 (%2 of %3)...")
             .arg(sourceInfo.fileName())
             .arg(i + 1)
             .arg(totalFiles));
@@ -737,7 +737,7 @@ void MarkdownPdfController::runJob(const Params &params) {
     if (!inFile.open(QIODevice::ReadOnly)) {
       failedFiles++;
       const QString err =
-          QString("Cannot open file: %1").arg(inFile.errorString());
+          tr("Cannot open file: %1").arg(inFile.errorString());
       errors.append(QString("%1: %2").arg(sourceInfo.fileName(), err));
       emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Failed),
                              err);
@@ -816,7 +816,7 @@ void MarkdownPdfController::runJob(const Params &params) {
 
       QPainter painter(&writer);
       if (!painter.isActive()) {
-        fileError = "Failed to initialize PDF painter.";
+        fileError = tr("Failed to initialize PDF painter.");
       } else {
         for (size_t p = 0; p < slices.size(); ++p) {
           if (m_isCancelled) {
@@ -843,13 +843,13 @@ void MarkdownPdfController::runJob(const Params &params) {
       QPdfDocument verifyDoc;
       if (verifyDoc.load(tempPath) != QPdfDocument::Error::None ||
           verifyDoc.pageCount() <= 0) {
-        fileError = "Generated PDF failed validation.";
+        fileError = tr("Generated PDF failed validation.");
       } else {
         verifyDoc.close();
         if (!pdfutil::savePdfAtomically(tempPath, outPdfPath, m_isCancelled,
                                         fileError)) {
           if (fileError.isEmpty() && !m_isCancelled) {
-            fileError = "Failed to save PDF.";
+            fileError = tr("Failed to save PDF.");
           }
         }
       }
@@ -858,11 +858,11 @@ void MarkdownPdfController::runJob(const Params &params) {
 
     if (m_isCancelled) {
       emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Cancelled),
-                             "PDF export cancelled");
+                             tr("PDF export cancelled"));
       for (int rem = i + 1; rem < totalFiles; ++rem) {
         emit fileStatusChanged(sourcePaths.at(rem),
                                static_cast<int>(FileStatus::Cancelled),
-                               "PDF export cancelled");
+                               tr("PDF export cancelled"));
       }
       break;
     }
@@ -870,7 +870,7 @@ void MarkdownPdfController::runJob(const Params &params) {
     if (fileError.isEmpty()) {
       pdfsCreated++;
       emit fileStatusChanged(sourcePath, static_cast<int>(FileStatus::Succeeded),
-                             QString("Saved %1").arg(outFileName));
+                             tr("Saved %1").arg(outFileName));
     } else {
       failedFiles++;
       errors.append(QString("%1: %2").arg(sourceInfo.fileName(), fileError));
@@ -880,7 +880,7 @@ void MarkdownPdfController::runJob(const Params &params) {
 
     emit progressChanged(
         i + 1, totalFiles,
-        QString("Exported %1 of %2 document(s)").arg(i + 1).arg(totalFiles));
+        tr("Exported %1 of %2 document(s)").arg(i + 1).arg(totalFiles));
   }
 
   result.success = (pdfsCreated > 0 && failedFiles == 0 && !m_isCancelled);

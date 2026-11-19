@@ -2,6 +2,7 @@
 #include "controllers/pdf/pdf_utils.h"
 #include "ui-kit/components/dialog.h"
 #include "ui-kit/components/toast.h"
+#include "ui-kit/theme/i18n.h"
 #include "widgets/drop_file_widget.h"
 #include <QComboBox>
 #include <QDir>
@@ -10,6 +11,7 @@
 #include <QHBoxLayout>
 #include <QPair>
 #include <QPdfDocument>
+#include <QSignalBlocker>
 #include <QStringList>
 #include <QVector>
 #include <QtGlobal>
@@ -21,19 +23,20 @@ PdfToImagesPanel::PdfToImagesPanel(QWidget *parent) : QWidget(parent) {
 
   const QStringList exportFormats = {"PNG", "JPG", "WEBP", "TIFF", "BMP", "GIF"};
   m_formatSelect = new ui::Select(exportFormats, this);
-  m_formatField = new ui::FormField("Image Format", m_formatSelect, this);
+  m_formatField = new ui::FormField(tr("Image Format"), m_formatSelect, this);
   connect(m_formatSelect, QOverload<int>::of(&QComboBox::currentIndexChanged),
           this, &PdfToImagesPanel::exportFormatChanged);
 
-  const QStringList dpiOptions = {"72 DPI (Screen)", "150 DPI (Medium)",
-                                  "300 DPI (Print)", "600 DPI (High Detail)"};
+  const QStringList dpiOptions = {
+      tr("72 DPI (Screen)"), tr("150 DPI (Medium)"), tr("300 DPI (Print)"),
+      tr("600 DPI (High Detail)")};
   m_dpiSelect = new ui::Select(dpiOptions, this);
   m_dpiSelect->setCurrentIndex(2); // Default 300 DPI
-  m_dpiField = new ui::FormField("Render Resolution", m_dpiSelect, this);
+  m_dpiField = new ui::FormField(tr("Render Resolution"), m_dpiSelect, this);
 
-  m_pageRangeInput = new ui::Input("All pages, or e.g. 1-3, 5", this);
+  m_pageRangeInput = new ui::Input(tr("All pages, or e.g. 1-3, 5"), this);
   m_pageRangeField =
-      new ui::FormField("Page Filter (optional)", m_pageRangeInput, this);
+      new ui::FormField(tr("Page Filter (optional)"), m_pageRangeInput, this);
 
   exportLayout->addWidget(m_formatField, 1, Qt::AlignTop);
   exportLayout->addWidget(m_dpiField, 1, Qt::AlignTop);
@@ -42,6 +45,32 @@ PdfToImagesPanel::PdfToImagesPanel(QWidget *parent) : QWidget(parent) {
   m_controller = new PdfToImagesController(this);
   connect(m_controller, &PdfToImagesController::finished, this,
           &PdfToImagesPanel::onPdfToImagesFinished, Qt::QueuedConnection);
+  connect(&ui::I18n::instance(), &ui::I18n::languageChanged, this,
+          &PdfToImagesPanel::retranslateUi);
+}
+
+void PdfToImagesPanel::retranslateUi() {
+  if (m_formatField) {
+    m_formatField->setLabel(tr("Image Format"));
+  }
+  if (m_dpiField) {
+    m_dpiField->setLabel(tr("Render Resolution"));
+  }
+  if (m_dpiSelect) {
+    QSignalBlocker blocker(m_dpiSelect);
+    const QStringList dpiOptions = {
+        tr("72 DPI (Screen)"), tr("150 DPI (Medium)"), tr("300 DPI (Print)"),
+        tr("600 DPI (High Detail)")};
+    for (int i = 0; i < dpiOptions.size() && i < m_dpiSelect->count(); ++i) {
+      m_dpiSelect->setItemText(i, dpiOptions.at(i));
+    }
+  }
+  if (m_pageRangeField) {
+    m_pageRangeField->setLabel(tr("Page Filter (optional)"));
+  }
+  if (m_pageRangeInput) {
+    m_pageRangeInput->setPlaceholderText(tr("All pages, or e.g. 1-3, 5"));
+  }
 }
 
 QString PdfToImagesPanel::selectedFormat() const {
@@ -72,8 +101,8 @@ bool PdfToImagesPanel::execute(const QStringList &sourcePaths, int quality) {
   QWidget *toastParent = window() ? window() : this;
 
   if (sourcePaths.isEmpty()) {
-    ui::Toast::show(toastParent, "No PDF Selected",
-                    "Please select at least one PDF file to export.",
+    ui::Toast::show(toastParent, tr("No PDF Selected"),
+                    tr("Please select at least one PDF file to export."),
                     ui::ToastVariant::Warning);
     return false;
   }
@@ -87,8 +116,8 @@ bool PdfToImagesPanel::execute(const QStringList &sourcePaths, int quality) {
     QPdfDocument checkDoc;
     if (checkDoc.load(sourcePaths.first()) != QPdfDocument::Error::None ||
         checkDoc.pageCount() <= 0) {
-      ui::Toast::show(toastParent, "Invalid PDF",
-                      QString("Cannot open '%1'.")
+      ui::Toast::show(toastParent, tr("Invalid PDF"),
+                      tr("Cannot open '%1'.")
                           .arg(QFileInfo(sourcePaths.first()).fileName()),
                       ui::ToastVariant::Destructive);
       return false;
@@ -97,14 +126,14 @@ bool PdfToImagesPanel::execute(const QStringList &sourcePaths, int quality) {
     QString rangeErr;
     if (!pdfutil::parsePageRanges(rangeSpec, checkDoc.pageCount(), testRanges,
                                   rangeErr)) {
-      ui::Toast::show(toastParent, "Invalid Page Filter", rangeErr,
+      ui::Toast::show(toastParent, tr("Invalid Page Filter"), rangeErr,
                       ui::ToastVariant::Warning);
       return false;
     }
   }
 
   const QString outputDir = QFileDialog::getExistingDirectory(
-      this, "Select Output Directory for Exported Page Images",
+      this, tr("Select Output Directory for Exported Page Images"),
       QDir::homePath());
   if (outputDir.isEmpty()) {
     return false;
@@ -128,12 +157,13 @@ void PdfToImagesPanel::onPdfToImagesFinished(
 
   QWidget *toastParent = window() ? window() : this;
   if (result.cancelled) {
-    ui::Toast::show(toastParent, "Cancelled", "Page image export was cancelled.",
+    ui::Toast::show(toastParent, tr("Cancelled"),
+                    tr("Page image export was cancelled."),
                     ui::ToastVariant::Default);
   } else if (result.imagesExported > 0 && result.failedDocs == 0) {
     ui::Dialog::info(
-        this, "PDF Pages Exported",
-        QString("Exported %1 %2 image(s) at %3 DPI to:\n%4\n\nTotal Size: %5")
+        this, tr("PDF Pages Exported"),
+        tr("Exported %1 %2 image(s) at %3 DPI to:\n%4\n\nTotal Size: %5")
             .arg(result.imagesExported)
             .arg(result.format.toUpper())
             .arg(result.dpi)
@@ -141,8 +171,8 @@ void PdfToImagesPanel::onPdfToImagesFinished(
             .arg(DropFileWidget::formatFileSize(result.totalOutputBytes)));
   } else if (result.imagesExported > 0) {
     ui::Dialog::info(
-        this, "Export Completed with Warnings",
-        QString("Exported %1 %2 image(s) at %3 DPI to:\n%4\n\nTotal Size: %5\n\nErrors:\n%6")
+        this, tr("Export Completed with Warnings"),
+        tr("Exported %1 %2 image(s) at %3 DPI to:\n%4\n\nTotal Size: %5\n\nErrors:\n%6")
             .arg(result.imagesExported)
             .arg(result.format.toUpper())
             .arg(result.dpi)
@@ -150,9 +180,9 @@ void PdfToImagesPanel::onPdfToImagesFinished(
             .arg(DropFileWidget::formatFileSize(result.totalOutputBytes))
             .arg(result.errors.join("\n")));
   } else {
-    ui::Toast::show(toastParent, "Export Failed",
+    ui::Toast::show(toastParent, tr("Export Failed"),
                     result.errors.isEmpty()
-                        ? "Could not export pages to images."
+                        ? tr("Could not export pages to images.")
                         : result.errors.join("\n"),
                     ui::ToastVariant::Destructive);
   }

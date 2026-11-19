@@ -1,4 +1,5 @@
 #include "pages/pdf_page.h"
+#include "ui-kit/theme/i18n.h"
 #include "ui-kit/theme/icon_helper.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
@@ -12,14 +13,14 @@ PdfPage::PdfPage(QWidget *parent)
   mainLayout->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
 
   m_toolTabs = new ui::Tabs(ui::TabVariant::Segmented, this);
-  m_toolTabs->addTab("Compress");
-  m_toolTabs->addTab("Merge");
-  m_toolTabs->addTab("Split");
-  m_toolTabs->addTab("Organize");
-  m_toolTabs->addTab("PDF to Images");
-  m_toolTabs->addTab("Images to PDF");
-  m_toolTabs->addTab("Grayscale");
-  m_toolTabs->addTab("Markdown / HTML");
+  m_toolTabs->addTab(tr("Compress"));
+  m_toolTabs->addTab(tr("Merge"));
+  m_toolTabs->addTab(tr("Split"));
+  m_toolTabs->addTab(tr("Organize"));
+  m_toolTabs->addTab(tr("PDF to Images"));
+  m_toolTabs->addTab(tr("Images to PDF"));
+  m_toolTabs->addTab(tr("Grayscale"));
+  m_toolTabs->addTab(tr("Markdown / HTML"));
   connect(m_toolTabs, &ui::Tabs::currentChanged, this,
           &PdfPage::onToolTabChanged);
 
@@ -41,14 +42,14 @@ PdfPage::PdfPage(QWidget *parent)
   m_progressBar = new ui::Progress(0, this);
   m_progressBar->setVisible(false);
 
-  m_processButton = new ui::Button("Compress PDF", ui::ButtonVariant::Primary,
+  m_processButton = new ui::Button(tr("Compress PDF"), ui::ButtonVariant::Primary,
                                    ui::ButtonSize::Large, this);
   m_processButton->setMinimumWidth(320);
   connect(m_processButton, &QPushButton::clicked, this,
           &PdfPage::onProcessButtonClicked);
 
   m_cancelButton =
-      new ui::Button("Cancel Compression", ui::ButtonVariant::Destructive,
+      new ui::Button(tr("Cancel Compression"), ui::ButtonVariant::Destructive,
                      ui::ButtonSize::Large, this);
   m_cancelButton->setMinimumWidth(320);
   m_cancelButton->setVisible(false);
@@ -72,7 +73,10 @@ PdfPage::PdfPage(QWidget *parent)
 
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,
           &PdfPage::applyThemeStyles);
+  connect(&ui::I18n::instance(), &ui::I18n::languageChanged, this,
+          &PdfPage::retranslateUi);
   applyThemeStyles();
+  retranslateUi();
 }
 
 PdfPage::~PdfPage() {
@@ -192,45 +196,45 @@ void PdfPage::setupToolPanels() {
 QString PdfPage::processButtonTextForMode(PdfToolMode mode) const {
   switch (mode) {
   case PdfToolMode::Compress:
-    return "Compress PDF";
+    return tr("Compress PDF");
   case PdfToolMode::Merge:
-    return "Merge PDFs";
+    return tr("Merge PDFs");
   case PdfToolMode::Split:
-    return "Split PDF";
+    return tr("Split PDF");
   case PdfToolMode::Organize:
-    return "Save Organized PDF";
+    return tr("Save Organized PDF");
   case PdfToolMode::PdfToImages:
-    return "Export Pages to Images";
+    return tr("Export Pages to Images");
   case PdfToolMode::ImagesToPdf:
-    return "Create Merged PDF";
+    return tr("Create Merged PDF");
   case PdfToolMode::Grayscale:
-    return "Convert PDF to Grayscale";
+    return tr("Convert PDF to Grayscale");
   case PdfToolMode::MarkdownToPdf:
-    return "Export to PDF";
+    return tr("Export to PDF");
   }
-  return "Process PDF";
+  return tr("Process PDF");
 }
 
 QString PdfPage::cancelButtonTextForMode(PdfToolMode mode) const {
   switch (mode) {
   case PdfToolMode::Compress:
-    return "Cancel Compression";
+    return tr("Cancel Compression");
   case PdfToolMode::Merge:
-    return "Cancel Merge";
+    return tr("Cancel Merge");
   case PdfToolMode::Split:
-    return "Cancel Split";
+    return tr("Cancel Split");
   case PdfToolMode::Organize:
-    return "Cancel Operation";
+    return tr("Cancel Operation");
   case PdfToolMode::PdfToImages:
-    return "Cancel Export";
+    return tr("Cancel Export");
   case PdfToolMode::ImagesToPdf:
-    return "Cancel Creation";
+    return tr("Cancel Creation");
   case PdfToolMode::Grayscale:
-    return "Cancel Conversion";
+    return tr("Cancel Conversion");
   case PdfToolMode::MarkdownToPdf:
-    return "Cancel PDF Export";
+    return tr("Cancel PDF Export");
   }
-  return "Cancel";
+  return tr("Cancel");
 }
 
 void PdfPage::onToolTabChanged(int index) {
@@ -304,6 +308,28 @@ void PdfPage::updateToolModeUi() {
   }
 }
 
+void PdfPage::retranslateUi() {
+  if (m_toolTabs) {
+    m_toolTabs->setTabText(0, tr("Compress"));
+    m_toolTabs->setTabText(1, tr("Merge"));
+    m_toolTabs->setTabText(2, tr("Split"));
+    m_toolTabs->setTabText(3, tr("Organize"));
+    m_toolTabs->setTabText(4, tr("PDF to Images"));
+    m_toolTabs->setTabText(5, tr("Images to PDF"));
+    m_toolTabs->setTabText(6, tr("Grayscale"));
+    m_toolTabs->setTabText(7, tr("Markdown / HTML"));
+  }
+  if (m_processButton) {
+    m_processButton->setText(processButtonTextForMode(m_currentTool));
+  }
+  if (m_cancelButton) {
+    m_cancelButton->setText(
+        (m_isProcessing && !m_cancelButton->isEnabled())
+            ? tr("Cancelling...")
+            : cancelButtonTextForMode(m_currentTool));
+  }
+}
+
 void PdfPage::applyThemeStyles() {
   const auto &c = ui::Theme::instance().colors();
   const auto &t = ui::Theme::instance().typography();
@@ -370,7 +396,7 @@ void PdfPage::onCancelButtonClicked() {
   if (m_isProcessing && m_currentController) {
     m_currentController->cancel();
     m_cancelButton->setEnabled(false);
-    m_cancelButton->setText("Cancelling...");
+    m_cancelButton->setText(tr("Cancelling..."));
   }
 }
 

@@ -108,6 +108,11 @@ private slots:
    */
   void onImagesToPdfFinished(const ImagesToPdfController::Result &result);
 
+  /**
+   * @brief Updates user-facing strings when the active application language changes.
+   */
+  void retranslateUi();
+
 private:
   void moveCurrentItem(int delta);
 

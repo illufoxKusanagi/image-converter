@@ -80,6 +80,11 @@ private slots:
    */
   void onSplitFinished(const SplitController::Result &result);
 
+  /**
+   * @brief Updates user-facing strings when the active application language changes.
+   */
+  void retranslateUi();
+
 private:
   ui::Select *m_modeSelect{nullptr};
   ui::FormField *m_modeField{nullptr};

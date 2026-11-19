@@ -42,6 +42,7 @@ private slots:
   void onProcessButtonClicked();
   void onCancelButtonClicked();
   void applyThemeStyles();
+  void retranslateUi();
 
   // Controller signal handlers
   void onControllerProgress(int current, int total, const QString &statusText);
