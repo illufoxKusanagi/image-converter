@@ -34,14 +34,16 @@ constexpr int kTrakteerCanvasLogicalSize = 24;
 constexpr int kTrakteerWiggleDurationMs = 650;
 constexpr int kTrakteerWiggleIntervalMs = 5000;
 
-constexpr bool kUseFastCalloutTestMode = true;
+#ifdef NDEBUG
 constexpr int kCalloutMinDelayMs = 20000;
-constexpr int kCalloutMaxDelayMs = 180000;
-constexpr int kCalloutTestMinDelayMs = 1000;
-constexpr int kCalloutTestMaxDelayMs = 5000;
-constexpr int kCalloutMaxPerSession = 4;
+constexpr int kCalloutMaxDelayMs = 100000;
+#else
+constexpr int kCalloutMinDelayMs = 2000;
+constexpr int kCalloutMaxDelayMs = 6000;
+#endif
+constexpr int kCalloutMaxPerSession = 10;
 constexpr int kCalloutVisibleMs = 3200;
-constexpr int kCalloutFadeInMs = 180;
+constexpr int kCalloutFadeInMs = 250;
 constexpr int kCalloutFadeOutMs = 220;
 
 constexpr int kCalloutHorizontalPadding = 12;
@@ -230,8 +232,7 @@ TrakteerSupportButton::TrakteerSupportButton(QWidget *calloutHost,
     connect(this, &QObject::destroyed, m_callout, &QObject::deleteLater);
   }
 
-  connect(this, &QPushButton::clicked, this,
-          &TrakteerSupportButton::onClicked);
+  connect(this, &QPushButton::clicked, this, &TrakteerSupportButton::onClicked);
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,
           &TrakteerSupportButton::applyThemeStyles);
   connect(&ui::I18n::instance(), &ui::I18n::languageChanged, this,
@@ -321,9 +322,7 @@ void TrakteerSupportButton::setupAnimations() {
   m_wiggleAnim->setKeyValueAt(0.88, -4.0);
   m_wiggleAnim->setKeyValueAt(1.0, 0.0);
   connect(m_wiggleAnim, &QVariantAnimation::valueChanged, this,
-          [this](const QVariant &value) {
-            updateBadgeIcon(value.toReal());
-          });
+          [this](const QVariant &value) { updateBadgeIcon(value.toReal()); });
   connect(m_wiggleAnim, &QVariantAnimation::finished, this,
           [this]() { updateBadgeIcon(0.0); });
 
@@ -401,13 +400,8 @@ void TrakteerSupportButton::scheduleNextCallout() {
       !m_calloutDelayTimer || !m_calloutHost) {
     return;
   }
-  const bool fastTest =
-      kUseFastCalloutTestMode ||
-      (qEnvironmentVariable("IMAGECONVERTER_TEST_CALLOUT") ==
-       QLatin1String("1"));
-  const int minMs = fastTest ? kCalloutTestMinDelayMs : kCalloutMinDelayMs;
-  const int maxMs = fastTest ? kCalloutTestMaxDelayMs : kCalloutMaxDelayMs;
-  const int delayMs = QRandomGenerator::global()->bounded(minMs, maxMs + 1);
+  const int delayMs = QRandomGenerator::global()->bounded(
+      kCalloutMinDelayMs, kCalloutMaxDelayMs + 1);
   m_calloutDelayTimer->start(delayMs);
 }
 
@@ -426,7 +420,7 @@ void TrakteerSupportButton::showCallout() {
   ++m_calloutShownCount;
 
   auto *callout = static_cast<SupportCalloutWidget *>(m_callout.data());
-  callout->setText(tr("Support us!"));
+  callout->setText(tr("Love this app? Click this button to support us!"));
   positionCallout();
   m_callout->show();
   m_callout->raise();
@@ -506,7 +500,7 @@ void TrakteerSupportButton::retranslateUi() {
 
   if (m_callout) {
     auto *callout = static_cast<SupportCalloutWidget *>(m_callout.data());
-    callout->setText(tr("Support us!"));
+    callout->setText(tr("Love this app? Click this button to support us!"));
     if (m_callout->isVisible()) {
       positionCallout();
     }
@@ -523,7 +517,7 @@ void TrakteerSupportButton::applyThemeStyles() {
 
   if (m_callout) {
     auto *callout = static_cast<SupportCalloutWidget *>(m_callout.data());
-    callout->setText(tr("Support us!"));
+    callout->setText(tr("Love this app? Click this button to support us!"));
     if (m_callout->isVisible()) {
       positionCallout();
     }
