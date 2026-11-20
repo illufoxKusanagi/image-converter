@@ -345,7 +345,10 @@ int Base64OptionsPanel::encodeIndex() const {
 
 Base64WorkspaceCard::Base64WorkspaceCard(QWidget *parent)
     : ui::Card(QString(), QString(), parent) {
+  setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
   auto *content = new QWidget(this);
+  content->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   auto *layout = new QVBoxLayout(content);
   layout->setContentsMargins(0, 0, 0, 0);
   layout->setSpacing(8);
@@ -375,10 +378,11 @@ Base64WorkspaceCard::Base64WorkspaceCard(QWidget *parent)
   toolbar->addWidget(m_statsLabel, 1, Qt::AlignRight | Qt::AlignVCenter);
 
   m_textEdit = new QPlainTextEdit(content);
-  m_textEdit->setFixedHeight(130);
+  m_textEdit->setMinimumHeight(130);
+  m_textEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
   layout->addLayout(toolbar);
-  layout->addWidget(m_textEdit);
+  layout->addWidget(m_textEdit, 1);
   setContentWidget(content);
 
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,

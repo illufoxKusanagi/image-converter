@@ -8,9 +8,8 @@
 
 MainPage::MainPage(QWidget *parent)
     : QWidget(parent), mainLayout(new QVBoxLayout(this)) {
-  mainLayout->setContentsMargins(0, 8, 0, 8);
+  mainLayout->setContentsMargins(0, 8, 0, 12);
   mainLayout->setSpacing(12);
-  mainLayout->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
 
   setupImageLayout();
   initControllers();
@@ -100,6 +99,8 @@ void MainPage::setupImageLayout() {
   setupToolPanels();
 
   m_topWorkspaceStack = new QStackedWidget(this);
+  m_topWorkspaceStack->setSizePolicy(QSizePolicy::Expanding,
+                                     QSizePolicy::Expanding);
   m_dragWidget = new DropFileWidget(m_topWorkspaceStack, "Image");
   m_svgDragWidget = new DropFileWidget(m_topWorkspaceStack, "SVG");
   m_base64Card = new Base64WorkspaceCard(m_topWorkspaceStack);
@@ -131,7 +132,7 @@ void MainPage::setupImageLayout() {
           &MainPage::onCancelButtonClicked);
 
   mainLayout->addWidget(m_toolTabs);
-  mainLayout->addWidget(m_topWorkspaceStack);
+  mainLayout->addWidget(m_topWorkspaceStack, 1);
   mainLayout->addWidget(m_optionsStack);
   mainLayout->addWidget(m_progressLabel);
   mainLayout->addWidget(m_progressBar);
@@ -207,6 +208,14 @@ void MainPage::updateToolModeUi() {
 
   if (m_optionsStack) {
     m_optionsStack->setCurrentIndex(static_cast<int>(m_currentTool));
+    const bool isSvgMode = (m_currentTool == ImageToolMode::SvgToRaster);
+    m_optionsStack->setSizePolicy(
+        QSizePolicy::Expanding,
+        isSvgMode ? QSizePolicy::Preferred : QSizePolicy::Maximum);
+    if (QWidget *currentWidget = m_optionsStack->currentWidget()) {
+      m_optionsStack->setMaximumHeight(
+          isSvgMode ? QWIDGETSIZE_MAX : currentWidget->sizeHint().height() + 20);
+    }
   }
 
   if (m_processButton) {
