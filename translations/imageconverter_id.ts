@@ -1121,6 +1121,10 @@ Ukuran Output: %3</translation>
         <source>Support on Ko-fi</source>
         <translation>Dukung di Ko-fi</translation>
     </message>
+    <message>
+        <source>Love this app? Support us here!</source>
+        <translation>Suka dengan aplikasi ini? Dukung kami disini!</translation>
+    </message>
 </context>
 <context>
     <name>MarkdownPdfController</name>

@@ -34,6 +34,7 @@
         <file>icons/lucide-monitor.svg</file>
         <file>icons/lucide-heart.svg</file>
         <file>icons/lucide-coffee.svg</file>
+        <file>icons/trakteer.png</file>
     </qresource>
     <qresource prefix="/i18n">
         <file alias="imageconverter_id.qm">translations/imageconverter_id.qm</file>
