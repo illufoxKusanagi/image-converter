@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(ImageConverter VERSION 1.4.0 LANGUAGES CXX)
+project(ImageConverter VERSION 1.4.1 LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC OFF)
 set(CMAKE_AUTOMOC ON)
