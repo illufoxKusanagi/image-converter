@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "components/button.h"
 #include "mainwindow/trakteer_support_button.h"
 #include "mainwindow/update_checker.h"
 #include "ui-kit/theme/icon_helper.h"
@@ -157,10 +158,10 @@ void MainWindow::applyThemeStyles() {
   //                                    c.foreground, QSize(16, 16)));
   // }
   if (m_updateCheckBtn) {
-    m_updateCheckBtn->setFixedSize(kHeaderIconButtonSize,
-                                   kHeaderIconButtonSize);
+    m_updateCheckBtn->setSize(ui::ButtonSize::Default);
     m_updateCheckBtn->setIcon(ui::Icon::get(
         ":/icons/icons/lucide-refresh-cw.svg", c.foreground, QSize(16, 16)));
+    m_updateCheckBtn->setText(tr("Check Update"));
   }
 
   QString modeText;

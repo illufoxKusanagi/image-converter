@@ -4,8 +4,6 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QDesktopServices>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -15,14 +13,32 @@
 #include <QVersionNumber>
 
 namespace {
-constexpr const char *kReleasesApiUrl =
-    "https://api.github.com/repos/illufoxKusanagi/image-converter/releases/latest";
+constexpr const char *kLatestReleaseUrl =
+    "https://github.com/illufoxKusanagi/image-converter/releases/latest";
 constexpr const char *kDownloadPageUrl =
     "https://ariefsatria.my.id/apps/image-converter";
 constexpr const char *kSettingsLastCheckKey = "updates/lastCheckUtc";
 constexpr qint64 kWeeklyIntervalSecs = 7LL * 24LL * 3600LL;
 constexpr int kAutoCheckStartupDelayMs = 1500;
 constexpr int kRequestTimeoutMs = 5000;
+
+QString extractVersionFromReleaseUrl(const QUrl &url) {
+  const QString path = url.path(QUrl::FullyDecoded);
+  const QString marker = QStringLiteral("/releases/tag/");
+  const int idx = path.indexOf(marker);
+  if (idx < 0) {
+    return {};
+  }
+  QString tag = path.mid(idx + marker.size()).trimmed();
+  const int slashIdx = tag.indexOf(QLatin1Char('/'));
+  if (slashIdx >= 0) {
+    tag = tag.left(slashIdx);
+  }
+  if (tag.startsWith(QLatin1Char('v'), Qt::CaseInsensitive)) {
+    tag.remove(0, 1);
+  }
+  return tag.trimmed();
+}
 } // namespace
 
 UpdateChecker::UpdateChecker(QWidget *dialogParent, QObject *parent)
@@ -62,15 +78,16 @@ void UpdateChecker::startCheck(bool manual) {
   m_isChecking = true;
   emit checkingChanged(true);
 
-  QNetworkRequest request(QUrl(QString::fromLatin1(kReleasesApiUrl)));
+  QNetworkRequest request(QUrl(QString::fromLatin1(kLatestReleaseUrl)));
   request.setHeader(QNetworkRequest::UserAgentHeader,
                     QStringLiteral("ImageConverter/%1").arg(currentVersion()));
-  request.setRawHeader("Accept", "application/vnd.github+json");
+  request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                       QNetworkRequest::ManualRedirectPolicy);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
   request.setTransferTimeout(kRequestTimeoutMs);
 #endif
 
-  QNetworkReply *reply = m_networkManager->get(request);
+  QNetworkReply *reply = m_networkManager->head(request);
   if (!reply) {
     m_isChecking = false;
     emit checkingChanged(false);
@@ -95,29 +112,37 @@ void UpdateChecker::handleReply(QNetworkReply *reply, bool manual) {
 
   const int httpStatus =
       reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-  if (reply->error() != QNetworkReply::NoError || httpStatus != 200) {
+  const bool isRedirect =
+      (httpStatus == 301 || httpStatus == 302 || httpStatus == 303 ||
+       httpStatus == 307 || httpStatus == 308);
+  if (reply->error() != QNetworkReply::NoError ||
+      (!isRedirect && httpStatus != 200)) {
     if (manual && m_dialogParent) {
       ui::Toast::show(
           m_dialogParent, tr("Update Check Failed"),
-          (httpStatus == 403)
-              ? tr("GitHub API rate limit reached. Please try again later.")
-              : tr("Unable to reach GitHub. Check your internet connection and "
-                   "try again."),
+          tr("Unable to reach GitHub. Check your internet connection and "
+             "try again."),
           ui::ToastVariant::Warning);
     }
     return;
   }
 
-  const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
-  QString latestVersion;
-  if (doc.isObject()) {
-    latestVersion =
-        doc.object().value(QStringLiteral("tag_name")).toString().trimmed();
-    if (latestVersion.startsWith(QLatin1Char('v'), Qt::CaseInsensitive)) {
-      latestVersion.remove(0, 1);
+  QUrl targetUrl =
+      reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
+  if (!targetUrl.isValid()) {
+    const QByteArray rawLocation = reply->rawHeader("Location").trimmed();
+    if (!rawLocation.isEmpty()) {
+      targetUrl = QUrl::fromEncoded(rawLocation);
     }
-    latestVersion = latestVersion.trimmed();
   }
+  if (targetUrl.isValid() && targetUrl.isRelative()) {
+    targetUrl = reply->url().resolved(targetUrl);
+  }
+  if (!targetUrl.isValid()) {
+    targetUrl = reply->url();
+  }
+
+  const QString latestVersion = extractVersionFromReleaseUrl(targetUrl);
 
   const QVersionNumber latestVer = QVersionNumber::fromString(latestVersion);
   const QVersionNumber currentVer =

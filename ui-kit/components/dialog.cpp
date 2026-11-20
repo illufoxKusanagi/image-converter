@@ -33,8 +33,9 @@ Dialog::Dialog(const QString &title, const QString &description,
   m_descriptionEdit->setObjectName("dialogDescription");
   m_descriptionEdit->setAccessibleName(tr("Dialog message"));
   m_descriptionEdit->setReadOnly(true);
-  m_descriptionEdit->setTextInteractionFlags(Qt::TextSelectableByMouse |
-                                             Qt::TextSelectableByKeyboard);
+  m_descriptionEdit->setTextInteractionFlags(Qt::NoTextInteraction);
+  m_descriptionEdit->setFocusPolicy(Qt::NoFocus);
+  m_descriptionEdit->viewport()->setCursor(Qt::ArrowCursor);
   m_descriptionEdit->setFrameShape(QFrame::NoFrame);
   m_descriptionEdit->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   m_descriptionEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
