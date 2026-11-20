@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(ImageConverter VERSION 1.2.0 LANGUAGES CXX)
+project(ImageConverter VERSION 1.4.0 LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC OFF)
 set(CMAKE_AUTOMOC ON)
@@ -9,8 +9,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Pdf Concurrent Svg)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets Pdf Concurrent Svg)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Pdf Concurrent Svg Network)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets Pdf Concurrent Svg Network)
 find_package(Qt${QT_VERSION_MAJOR} QUIET OPTIONAL_COMPONENTS LinguistTools)
 if(TARGET Qt${QT_VERSION_MAJOR}::lrelease AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/translations/imageconverter_id.ts")
     add_custom_command(
@@ -105,6 +105,8 @@ set(PROJECT_SOURCES
         mainwindow/mainwindow.h
         mainwindow/trakteer_support_button.cpp
         mainwindow/trakteer_support_button.h
+        mainwindow/update_checker.cpp
+        mainwindow/update_checker.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -136,7 +138,8 @@ else()
     endif()
 endif()
 
-target_link_libraries(ImageConverter PRIVATE ui_kit Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Pdf Qt${QT_VERSION_MAJOR}::Concurrent Qt${QT_VERSION_MAJOR}::Svg)
+target_link_libraries(ImageConverter PRIVATE ui_kit Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Pdf Qt${QT_VERSION_MAJOR}::Concurrent Qt${QT_VERSION_MAJOR}::Svg Qt${QT_VERSION_MAJOR}::Network)
+target_compile_definitions(ImageConverter PRIVATE IMAGECONVERTER_VERSION="${PROJECT_VERSION}")
 target_include_directories(ImageConverter PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 if(TARGET imageconverter_translations)
     add_dependencies(ImageConverter imageconverter_translations)

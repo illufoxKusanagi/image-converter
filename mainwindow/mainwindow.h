@@ -14,6 +14,7 @@
 #include <QVBoxLayout>
 
 class TrakteerSupportButton;
+class UpdateChecker;
 
 class MainWindow : public QMainWindow {
   Q_OBJECT
@@ -33,6 +34,8 @@ private:
   ui::Tabs *m_tabs{nullptr};
   TrakteerSupportButton *m_trakteerBtn{nullptr};
   // ui::Button *m_kofiBtn{nullptr};
+  ui::Button *m_updateCheckBtn{nullptr};
+  UpdateChecker *m_updateChecker{nullptr};
   ui::Button *m_langToggleBtn{nullptr};
   ui::Button *m_themeToggleBtn{nullptr};
   QLabel *m_titleLabel{nullptr};

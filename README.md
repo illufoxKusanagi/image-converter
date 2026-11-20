@@ -41,7 +41,7 @@
 
 Most document and image conversion utilities require uploading private files to third-party servers, enforce arbitrary file-size caps or daily quotas, or bundle heavy web runtimes. **ImageConverter** is engineered around three core principles:
 
-1. **Strict Local Execution**: Every image conversion and PDF operation runs locally on your machine. The application makes zero network calls, collects zero telemetry or analytics, and imposes no file-size limits or usage quotas.
+1. **Strict Local Execution**: Every image conversion and PDF operation runs 100% locally on your machine with zero telemetry or analytics and no file-size limits or usage quotas. The only network request is a lightweight weekly or on-demand check against GitHub Releases to notify you when a new version is available.
 2. **Data Integrity & Atomic Saves**: File outputs are staged through temporary directories (`QTemporaryDir`) and committed using atomic `QSaveFile` operations (`setDirectWriteFallback(false)`). Candidate PDFs are validated against `QPdfDocument` for page count and point-dimension integrity before any destination file is written, ensuring original files are never corrupted or overwritten on failure or cancellation.
 3. **Dual-Engine PDF Processing**: When Ghostscript (`gs` / `gswin64c`) is available, PDF operations use the `pdfwrite` distiller pipeline to preserve vector text, paths, and embedded fonts while optimizing or transforming embedded streams. When Ghostscript is absent or cannot process a specific file, the application automatically falls back to Qt's native `QPdfDocument` and `QPdfWriter` pipeline.
 
