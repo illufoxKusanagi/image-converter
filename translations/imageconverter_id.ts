@@ -1113,6 +1113,14 @@ Ukuran Output: %3</translation>
         <source>System</source>
         <translation>Sistem</translation>
     </message>
+    <message>
+        <source>Support on Trakteer</source>
+        <translation>Dukung di Trakteer</translation>
+    </message>
+    <message>
+        <source>Support on Ko-fi</source>
+        <translation>Dukung di Ko-fi</translation>
+    </message>
 </context>
 <context>
     <name>MarkdownPdfController</name>

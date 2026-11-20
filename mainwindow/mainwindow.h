@@ -24,10 +24,14 @@ private slots:
   void applyThemeStyles();
   void onThemeToggleClicked();
   void onLanguageToggleClicked();
+  void onTrakteerClicked();
+  void onKofiClicked();
   void retranslateUi();
 
 private:
   ui::Tabs *m_tabs{nullptr};
+  ui::Button *m_trakteerBtn{nullptr};
+  ui::Button *m_kofiBtn{nullptr};
   ui::Button *m_langToggleBtn{nullptr};
   ui::Button *m_themeToggleBtn{nullptr};
   QLabel *m_titleLabel{nullptr};

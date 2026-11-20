@@ -1,6 +1,15 @@
 #include "mainwindow.h"
 #include "ui-kit/theme/icon_helper.h"
 #include "ui-kit/theme/style_helper.h"
+#include <QDesktopServices>
+#include <QUrl>
+
+namespace {
+// Placeholder support URLs — replace with final Trakteer and Ko-fi links.
+constexpr const char *kTrakteerUrl = "https://trakteer.id/illufox_kusanagi/tip";
+constexpr const char *kKofiUrl = "https://trakteer.id/indah_sinara/tipid";
+constexpr int kHeaderIconButtonSize = 32;
+} // namespace
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   setMinimumSize(460, 620);
@@ -11,7 +20,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   rootLayout->setContentsMargins(20, 18, 20, 20);
   rootLayout->setSpacing(18);
 
-  // Header: Title, Language Toggle & Theme Toggle
+  // Header: Title, Support Links, Language Toggle & Theme Toggle
   QWidget *headerWidget = new QWidget(m_centralWidget);
   QHBoxLayout *headerLayout = new QHBoxLayout(headerWidget);
   headerLayout->setContentsMargins(0, 0, 0, 0);
@@ -19,6 +28,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   m_titleLabel = new QLabel(tr("ImageConverter"), headerWidget);
   m_titleLabel->setFont(ui::Theme::instance().typography().font(
       ui::Theme::instance().typography().sizeXl, QFont::Bold));
+
+  m_trakteerBtn = new ui::Button("", ui::ButtonVariant::Ghost,
+                                 ui::ButtonSize::Icon, headerWidget);
+  m_trakteerBtn->setIconSize(QSize(16, 16));
+  connect(m_trakteerBtn, &QPushButton::clicked, this,
+          &MainWindow::onTrakteerClicked);
+
+  m_kofiBtn = new ui::Button("", ui::ButtonVariant::Ghost, ui::ButtonSize::Icon,
+                             headerWidget);
+  m_kofiBtn->setIconSize(QSize(16, 16));
+  connect(m_kofiBtn, &QPushButton::clicked, this, &MainWindow::onKofiClicked);
 
   m_langToggleBtn = new ui::Button(ui::I18n::instance().displayBadge(),
                                    ui::ButtonVariant::Ghost,
@@ -34,6 +54,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
   headerLayout->addWidget(m_titleLabel, 0, Qt::AlignVCenter);
   headerLayout->addStretch(1);
+  headerLayout->addWidget(m_trakteerBtn, 0, Qt::AlignVCenter);
+  headerLayout->addWidget(m_kofiBtn, 0, Qt::AlignVCenter);
   headerLayout->addWidget(m_langToggleBtn, 0, Qt::AlignVCenter);
   headerLayout->addWidget(m_themeToggleBtn, 0, Qt::AlignVCenter);
   rootLayout->addWidget(headerWidget);
@@ -70,6 +92,14 @@ void MainWindow::onLanguageToggleClicked() {
   ui::I18n::instance().toggleLanguage();
 }
 
+void MainWindow::onTrakteerClicked() {
+  QDesktopServices::openUrl(QUrl(QString::fromLatin1(kTrakteerUrl)));
+}
+
+void MainWindow::onKofiClicked() {
+  QDesktopServices::openUrl(QUrl(QString::fromLatin1(kKofiUrl)));
+}
+
 void MainWindow::retranslateUi() {
   setWindowTitle(tr("ImageConverter"));
   if (m_titleLabel) {
@@ -78,6 +108,16 @@ void MainWindow::retranslateUi() {
   if (m_tabs) {
     m_tabs->setTabText(0, tr("Convert Image"));
     m_tabs->setTabText(1, tr("PDF Tools"));
+  }
+  if (m_trakteerBtn) {
+    const QString label = tr("Support on Trakteer");
+    m_trakteerBtn->setToolTip(label);
+    m_trakteerBtn->setAccessibleName(label);
+  }
+  if (m_kofiBtn) {
+    const QString label = tr("Support on Ko-fi");
+    m_kofiBtn->setToolTip(label);
+    m_kofiBtn->setAccessibleName(label);
   }
   if (m_langToggleBtn) {
     m_langToggleBtn->setText(ui::I18n::instance().displayBadge());
@@ -101,6 +141,17 @@ void MainWindow::applyThemeStyles() {
   m_titleLabel->setStyleSheet(
       QString("color: %1; background: transparent;")
           .arg(ui::StyleHelper::toHexString(c.foreground)));
+
+  if (m_trakteerBtn) {
+    m_trakteerBtn->setFixedSize(kHeaderIconButtonSize, kHeaderIconButtonSize);
+    m_trakteerBtn->setIcon(ui::Icon::get(":/icons/icons/lucide-heart.svg",
+                                         c.foreground, QSize(16, 16)));
+  }
+  if (m_kofiBtn) {
+    m_kofiBtn->setFixedSize(kHeaderIconButtonSize, kHeaderIconButtonSize);
+    m_kofiBtn->setIcon(ui::Icon::get(":/icons/icons/lucide-coffee.svg",
+                                     c.foreground, QSize(16, 16)));
+  }
 
   QString modeText;
   QString iconPath;
