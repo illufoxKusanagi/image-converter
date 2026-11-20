@@ -1113,6 +1113,14 @@ Ukuran Output: %3</translation>
         <source>System</source>
         <translation>Sistem</translation>
     </message>
+    <message>
+        <source>Support on Ko-fi</source>
+        <translation>Dukung di Ko-fi</translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation>Periksa Pembaruan</translation>
+    </message>
 </context>
 <context>
     <name>MarkdownPdfController</name>
@@ -2328,6 +2336,66 @@ Kesalahan:
     <message>
         <source>Failed to convert SVG files.</source>
         <translation>Gagal mengonversi file SVG.</translation>
+    </message>
+</context>
+<context>
+    <name>TrakteerSupportButton</name>
+    <message>
+        <source>Support on Trakteer</source>
+        <translation>Dukung di Trakteer</translation>
+    </message>
+    <message>
+        <source>Love this app? Click this button to support us!</source>
+        <translation>Suka dengan aplikasi ini? Klik disini untuk mendukung kami!</translation>
+    </message>
+</context>
+<context>
+    <name>UpdateChecker</name>
+    <message>
+        <source>Update Available</source>
+        <translation>Pembaruan Tersedia</translation>
+    </message>
+    <message>
+        <source>A new version (%1) of ImageConverter is available.
+You are currently using version %2.
+
+Open the download page now?</source>
+        <translation>Versi baru (%1) dari ImageConverter telah tersedia.
+Anda saat ini menggunakan versi %2.
+
+Buka halaman unduhan sekarang?</translation>
+    </message>
+    <message>
+        <source>Download Update</source>
+        <translation>Unduh Pembaruan</translation>
+    </message>
+    <message>
+        <source>Later</source>
+        <translation>Nanti</translation>
+    </message>
+    <message>
+        <source>Up to Date</source>
+        <translation>Sudah Terbaru</translation>
+    </message>
+    <message>
+        <source>You are already using the latest version (%1).</source>
+        <translation>Anda sudah menggunakan versi terbaru (%1).</translation>
+    </message>
+    <message>
+        <source>Update Check Failed</source>
+        <translation>Pemeriksaan Pembaruan Gagal</translation>
+    </message>
+    <message>
+        <source>GitHub API rate limit reached. Please try again later.</source>
+        <translation>Batas permintaan API GitHub telah tercapai. Silakan coba lagi nanti.</translation>
+    </message>
+    <message>
+        <source>Unable to reach GitHub. Check your internet connection and try again.</source>
+        <translation>Tidak dapat terhubung ke GitHub. Periksa koneksi internet Anda dan coba lagi.</translation>
+    </message>
+    <message>
+        <source>Received an unexpected version format from GitHub.</source>
+        <translation>Menerima format versi yang tidak dikenali dari GitHub.</translation>
     </message>
 </context>
 <context>
