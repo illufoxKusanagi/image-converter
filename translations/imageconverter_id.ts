@@ -1114,10 +1114,6 @@ Ukuran Output: %3</translation>
         <translation>Sistem</translation>
     </message>
     <message>
-        <source>Support on Trakteer</source>
-        <translation>Dukung di Trakteer</translation>
-    </message>
-    <message>
         <source>Support on Ko-fi</source>
         <translation>Dukung di Ko-fi</translation>
     </message>
@@ -2340,6 +2336,17 @@ Kesalahan:
     <message>
         <source>Failed to convert SVG files.</source>
         <translation>Gagal mengonversi file SVG.</translation>
+    </message>
+</context>
+<context>
+    <name>TrakteerSupportButton</name>
+    <message>
+        <source>Support on Trakteer</source>
+        <translation>Dukung di Trakteer</translation>
+    </message>
+    <message>
+        <source>Support us!</source>
+        <translation>Dukung kami!</translation>
     </message>
 </context>
 <context>

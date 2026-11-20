@@ -103,6 +103,8 @@ set(PROJECT_SOURCES
         main.cpp
         mainwindow/mainwindow.cpp
         mainwindow/mainwindow.h
+        mainwindow/trakteer_support_button.cpp
+        mainwindow/trakteer_support_button.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
