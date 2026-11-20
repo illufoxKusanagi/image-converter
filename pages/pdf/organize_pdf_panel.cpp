@@ -102,11 +102,12 @@ OrganizePdfPanel::OrganizePdfPanel(QWidget *parent) : QWidget(parent) {
   m_pageList->setSelectionMode(QAbstractItemView::ExtendedSelection);
   m_pageList->setDragDropMode(QAbstractItemView::InternalMove);
   m_pageList->setDefaultDropAction(Qt::MoveAction);
-  m_pageList->setFixedHeight(140);
+  m_pageList->setMinimumHeight(140);
+  m_pageList->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
   mainLayout->addWidget(m_hintLabel);
   mainLayout->addLayout(toolbarLayout);
-  mainLayout->addWidget(m_pageList);
+  mainLayout->addWidget(m_pageList, 1);
 
   m_controller = new OrganizeController(this);
   connect(m_controller, &OrganizeController::finished, this,

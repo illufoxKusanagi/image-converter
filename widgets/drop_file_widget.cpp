@@ -15,13 +15,11 @@ DropFileWidget::DropFileWidget(QWidget *parent, QString typeFile)
   mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(12, 12, 12, 12);
   mainLayout->setSpacing(8);
-  mainLayout->setAlignment(Qt::AlignCenter);
 
   setupEmptyFileWidget();
   setupChosenFileWidget();
-  setMinimumSize(420, 240);
-  setMaximumHeight(260);
-  setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+  setMinimumSize(420, 180);
+  setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   setLayout(mainLayout);
 
   connect(m_browseButton, &QPushButton::clicked, this,
@@ -80,7 +78,7 @@ void DropFileWidget::setupEmptyFileWidget() {
   emptyFieldLayout->addWidget(m_emptyLabel, 0, Qt::AlignCenter);
   setupOrSeparatorLayout(emptyFieldLayout);
   emptyFieldLayout->addWidget(m_browseButton, 0, Qt::AlignCenter);
-  mainLayout->addWidget(m_emptyFieldWidget);
+  mainLayout->addWidget(m_emptyFieldWidget, 1);
 }
 
 void DropFileWidget::setupChosenFileWidget() {
@@ -128,7 +126,7 @@ void DropFileWidget::setupChosenFileWidget() {
   footerLayout->addStretch();
   chosenFileLayout->addLayout(footerLayout);
 
-  mainLayout->addWidget(m_chosenFileWidget);
+  mainLayout->addWidget(m_chosenFileWidget, 1);
   m_chosenFileWidget->setVisible(false);
 }
 

@@ -50,10 +50,11 @@ MergePdfPanel::MergePdfPanel(QWidget *parent) : QWidget(parent) {
   m_orderList->setDragDropMode(QAbstractItemView::InternalMove);
   m_orderList->setDefaultDropAction(Qt::MoveAction);
   m_orderList->setSelectionMode(QAbstractItemView::SingleSelection);
-  m_orderList->setFixedHeight(115);
+  m_orderList->setMinimumHeight(115);
+  m_orderList->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
   mainLayout->addLayout(headerLayout);
-  mainLayout->addWidget(m_orderList);
+  mainLayout->addWidget(m_orderList, 1);
 
   applyThemeStyles();
   connect(&ui::Theme::instance(), &ui::Theme::themeChanged, this,

@@ -8,9 +8,8 @@
 
 PdfPage::PdfPage(QWidget *parent)
     : QWidget(parent), mainLayout(new QVBoxLayout(this)) {
-  mainLayout->setContentsMargins(0, 8, 0, 8);
+  mainLayout->setContentsMargins(0, 8, 0, 12);
   mainLayout->setSpacing(12);
-  mainLayout->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
 
   m_toolTabs = new ui::Tabs(ui::TabVariant::Segmented, this);
   m_toolTabs->addTab(tr("Compress"));
@@ -57,9 +56,9 @@ PdfPage::PdfPage(QWidget *parent)
           &PdfPage::onCancelButtonClicked);
 
   mainLayout->addWidget(m_toolTabs);
-  mainLayout->addWidget(m_dragWidget);
-  mainLayout->addWidget(m_imageDragWidget);
-  mainLayout->addWidget(m_docDragWidget);
+  mainLayout->addWidget(m_dragWidget, 1);
+  mainLayout->addWidget(m_imageDragWidget, 1);
+  mainLayout->addWidget(m_docDragWidget, 1);
   mainLayout->addWidget(m_optionsStack);
   mainLayout->addWidget(m_qualityPanel);
   mainLayout->addWidget(m_progressLabel);
@@ -281,10 +280,24 @@ void PdfPage::updateToolModeUi() {
     m_optionsStack->setCurrentIndex(stackIdx);
     const bool hasCustomPanel = (m_currentTool != PdfToolMode::Compress &&
                                  m_currentTool != PdfToolMode::Grayscale);
+    const bool isListPanel = (m_currentTool == PdfToolMode::Merge ||
+                              m_currentTool == PdfToolMode::Organize ||
+                              m_currentTool == PdfToolMode::ImagesToPdf);
     m_optionsStack->setVisible(hasCustomPanel);
-    if (QWidget *currentWidget = m_optionsStack->currentWidget()) {
-      m_optionsStack->setMaximumHeight(
-          hasCustomPanel ? currentWidget->sizeHint().height() + 24 : 0);
+    if (hasCustomPanel && isListPanel) {
+      m_optionsStack->setMaximumHeight(QWIDGETSIZE_MAX);
+      m_optionsStack->setSizePolicy(QSizePolicy::Expanding,
+                                    QSizePolicy::Expanding);
+      mainLayout->setStretchFactor(
+          m_optionsStack, m_currentTool == PdfToolMode::Organize ? 2 : 1);
+    } else {
+      mainLayout->setStretchFactor(m_optionsStack, 0);
+      m_optionsStack->setSizePolicy(QSizePolicy::Expanding,
+                                    QSizePolicy::Preferred);
+      if (QWidget *currentWidget = m_optionsStack->currentWidget()) {
+        m_optionsStack->setMaximumHeight(
+            hasCustomPanel ? currentWidget->sizeHint().height() + 24 : 0);
+      }
     }
   }
 

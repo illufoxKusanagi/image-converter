@@ -52,7 +52,8 @@ ImagesToPdfPanel::ImagesToPdfPanel(QWidget *parent) : QWidget(parent) {
   m_orderList->setDragDropMode(QAbstractItemView::InternalMove);
   m_orderList->setDefaultDropAction(Qt::MoveAction);
   m_orderList->setSelectionMode(QAbstractItemView::SingleSelection);
-  m_orderList->setFixedHeight(96);
+  m_orderList->setMinimumHeight(96);
+  m_orderList->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
   auto *optionsRow = new QHBoxLayout();
   optionsRow->setContentsMargins(0, 0, 0, 0);
@@ -80,7 +81,7 @@ ImagesToPdfPanel::ImagesToPdfPanel(QWidget *parent) : QWidget(parent) {
   optionsRow->addWidget(m_marginField, 1, Qt::AlignTop);
 
   mainLayout->addLayout(headerLayout);
-  mainLayout->addWidget(m_orderList);
+  mainLayout->addWidget(m_orderList, 1);
   mainLayout->addLayout(optionsRow);
 
   m_controller = new ImagesToPdfController(this);
