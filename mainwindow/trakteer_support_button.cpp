@@ -1,4 +1,5 @@
 #include "mainwindow/trakteer_support_button.h"
+#include "components/button.h"
 #include "ui-kit/theme/i18n.h"
 #include "ui-kit/theme/style_helper.h"
 #include "ui-kit/theme/theme.h"
@@ -26,7 +27,6 @@
 namespace {
 // Placeholder support URL — replace with final Trakteer link.
 constexpr const char *kTrakteerUrl = "https://trakteer.id/illufox_kusanagi/tip";
-constexpr int kHeaderIconButtonSize = 32;
 constexpr qreal kTrakteerBadgeDpr = 2.0;
 constexpr int kTrakteerBadgeLogicalSize = 18;
 constexpr qreal kTrakteerBadgeCornerRadius = 4.5;
@@ -210,10 +210,11 @@ private:
 
 TrakteerSupportButton::TrakteerSupportButton(QWidget *calloutHost,
                                              QWidget *parent)
-    : ui::Button("", ui::ButtonVariant::Ghost, ui::ButtonSize::Icon, parent),
+    : ui::Button("", ui::ButtonVariant::Secondary, ui::ButtonSize::Default,
+                 parent),
       m_calloutHost(calloutHost) {
   setIconSize(QSize(kTrakteerCanvasLogicalSize, kTrakteerCanvasLogicalSize));
-  setFixedSize(kHeaderIconButtonSize, kHeaderIconButtonSize);
+  setText(tr("Support us on Trakteer!"));
 
   initBadgePixmap();
   setupAnimations();
@@ -494,6 +495,7 @@ void TrakteerSupportButton::positionCallout() {
 }
 
 void TrakteerSupportButton::retranslateUi() {
+  setText(tr("Support us on Trakteer!"));
   const QString label = tr("Support on Trakteer");
   setToolTip(label);
   setAccessibleName(label);
@@ -508,7 +510,6 @@ void TrakteerSupportButton::retranslateUi() {
 }
 
 void TrakteerSupportButton::applyThemeStyles() {
-  setFixedSize(kHeaderIconButtonSize, kHeaderIconButtonSize);
   const qreal currentAngle =
       (m_wiggleAnim && m_wiggleAnim->state() == QAbstractAnimation::Running)
           ? m_wiggleAnim->currentValue().toReal()

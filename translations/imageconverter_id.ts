@@ -1121,6 +1121,10 @@ Ukuran Output: %3</translation>
         <source>Check for Updates</source>
         <translation>Periksa Pembaruan</translation>
     </message>
+    <message>
+        <source>Check Update</source>
+        <translation>Cek Pembaruan</translation>
+    </message>
 </context>
 <context>
     <name>MarkdownPdfController</name>
@@ -2347,6 +2351,10 @@ Kesalahan:
     <message>
         <source>Love this app? Click this button to support us!</source>
         <translation>Suka dengan aplikasi ini? Klik disini untuk mendukung kami!</translation>
+    </message>
+    <message>
+        <source>Support us on Trakteer!</source>
+        <translation>Dukung kami di Trakteer!</translation>
     </message>
 </context>
 <context>
