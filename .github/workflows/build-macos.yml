@@ -1,0 +1,74 @@
+name: Build macOS Package
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Build Dependencies (Homebrew)
+        run: |
+          brew install qt cmake ninja
+
+      - name: Generate macOS App Icon (.icns)
+        run: |
+          mkdir -p icon.iconset
+          for size in 16 32 128 256 512; do
+            double=$((size * 2))
+            sips -z "$size" "$size" resources/icons/icon-logo.png --out "icon.iconset/icon_${size}x${size}.png" >/dev/null
+            sips -z "$double" "$double" resources/icons/icon-logo.png --out "icon.iconset/icon_${size}x${size}@2x.png" >/dev/null
+          done
+          iconutil -c icns icon.iconset -o resources/icons/icon-logo.icns
+          rm -rf icon.iconset
+
+      - name: Configure CMake
+        run: |
+          QT_PREFIX="$(brew --prefix qt)"
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${QT_PREFIX}"
+
+      - name: Build
+        run: |
+          cmake --build build --config Release
+
+      - name: Bundle Licenses & Deploy Qt Frameworks (macdeployqt)
+        run: |
+          cp LICENSE THIRD_PARTY_LICENSES.md build/ImageConverter.app/Contents/Resources/
+          "$(brew --prefix qt)/bin/macdeployqt" build/ImageConverter.app -dmg
+          mv build/ImageConverter.dmg build/ImageConverter-macos-arm64.dmg
+          test -f build/ImageConverter-macos-arm64.dmg
+
+      - name: Smoke Test Deployed App Startup
+        run: |
+          python3 - <<'EOF'
+          import os
+          import subprocess
+          import sys
+
+          env = {**os.environ, "QT_QPA_PLATFORM": "offscreen"}
+          try:
+              res = subprocess.run(
+                  ["build/ImageConverter.app/Contents/MacOS/ImageConverter"],
+                  env=env,
+                  timeout=5,
+              )
+              print(f"ImageConverter exited prematurely with code {res.returncode}", file=sys.stderr)
+              sys.exit(1)
+          except subprocess.TimeoutExpired:
+              print("Smoke test passed: ImageConverter stayed alive in offscreen mode for 5s.")
+          EOF
+
+      - name: Upload macOS Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-converter-macos-arm64
+          path: build/ImageConverter-macos-arm64.dmg

@@ -14,16 +14,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - name: Install System Dependencies
         run: |
           sudo apt-get update
@@ -31,44 +21,18 @@ jobs:
             build-essential \
             cmake \
             ninja-build \
-            libgl1-mesa-dev \
-            libxkbcommon-x11-0 \
-            libxcb-icccm4 \
-            libxcb-image0 \
-            libxcb-keysyms1 \
-            libxcb-randr0 \
-            libxcb-render-util0 \
-            libxcb-shape0 \
-            libxcb-xinerama0 \
-            libxcb-xkb1 \
-            libxcb-cursor0 \
-            libdbus-1-3 \
             dpkg-dev \
-            file
-
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: "6.7.2"
-          host: "linux"
-          target: "desktop"
-          arch: "linux_gcc_64"
-          modules: "qtpdf"
-          setup-python: false
-          cache: true
-
-      - name: Fix Qt Environment
-        run: |
-          if [ -z "$QT_ROOT_DIR" ] && [ -n "$Qt6_DIR" ]; then
-            ROOT_DIR=$(dirname $(dirname $(dirname "$Qt6_DIR")))
-            echo "QT_ROOT_DIR=$ROOT_DIR" >> $GITHUB_ENV
-          fi
+            file \
+            ghostscript \
+            libgl1-mesa-dev \
+            qt6-base-dev \
+            qt6-svg-dev \
+            qt6-pdf-dev \
+            qt6-l10n-tools
 
       - name: Configure CMake
         run: |
-          cmake -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH="${QT_ROOT_DIR}"
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: |
@@ -78,6 +42,28 @@ jobs:
         run: |
           cd build
           cpack -G DEB
+
+      - name: Verify and Smoke Test Debian Package
+        run: |
+          shopt -s nullglob
+          packages=(build/*.deb)
+          if [ "${#packages[@]}" -ne 1 ]; then
+            echo "Expected exactly 1 .deb package, found ${#packages[@]}"
+            exit 1
+          fi
+          pkg="${packages[0]}"
+          dpkg-deb -I "$pkg"
+          dpkg-deb -f "$pkg" Depends | grep -qw ghostscript
+          sudo apt-get install -y "./$pkg"
+          test -x /usr/bin/ImageConverter
+          set +e
+          QT_QPA_PLATFORM=offscreen timeout 5s /usr/bin/ImageConverter
+          rc=$?
+          set -e
+          if [ "$rc" -ne 124 ]; then
+            echo "Expected ImageConverter offscreen smoke test to stay alive until timeout (exit 124), got $rc"
+            exit 1
+          fi
 
       - name: Upload Debian Package
         uses: actions/upload-artifact@v4

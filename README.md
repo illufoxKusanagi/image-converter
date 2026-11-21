@@ -2,7 +2,7 @@
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Release](https://img.shields.io/github/v/release/illufoxKusanagi/Image-Converter?display_name=tag&sort=semver)](https://github.com/illufoxKusanagi/image-converter/releases)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-blue)](#)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)](#)
 [![C++](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=c%2B%2B&logoColor=white)](https://isocpp.org/)
 [![Qt](https://img.shields.io/badge/Qt-6.x-green)](https://www.qt.io/)
 
@@ -231,6 +231,14 @@ sudo apt install ./image-converter-*.deb
 sudo dnf install ./image-converter-*.rpm
 ```
 
+### macOS (Apple Silicon `.dmg`)
+1. Download `ImageConverter-macos-arm64.dmg` from the latest release, open it, and drag **ImageConverter** into `/Applications`.
+2. Because the macOS release is unsigned (no Apple Developer ID certificate), macOS Gatekeeper will warn that the app is from an unidentified developer or damaged. Run this command once in Terminal to remove the quarantine attribute before opening:
+   ```bash
+   xattr -cr /Applications/ImageConverter.app
+   ```
+3. *(Optional)* Install Ghostscript (`brew install ghostscript`) for vector-preserving PDF compression; otherwise ImageConverter automatically falls back to its built-in Qt PDF engine.
+
 ---
 
 ## Usage Guide
@@ -279,6 +287,11 @@ sudo dnf install -y gcc-c++ cmake ninja-build \
 - Install **Qt 6.x** via the [Qt Online Installer](https://www.qt.io/download), selecting **Qt PDF** and **Qt SVG** modules alongside **MinGW 64-bit** or **MSVC 2022 64-bit**.
 - Ensure **CMake 3.16+** and **Ninja** are available in `PATH`.
 - *(Optional)* Install **Ghostscript** (`gswin64c.exe`) in `PATH` or place a portable Ghostscript build under `gs/bin/` next to the compiled executable.
+
+#### macOS
+```bash
+brew install qt cmake ninja ghostscript
+```
 
 ### 2. Compile the Application
 

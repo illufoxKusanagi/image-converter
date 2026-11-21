@@ -113,6 +113,14 @@ if(WIN32)
     list(APPEND PROJECT_SOURCES resources/app_icon.rc)
 endif()
 
+if(APPLE AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/icon-logo.icns")
+    list(APPEND PROJECT_SOURCES resources/icons/icon-logo.icns)
+    set_source_files_properties(resources/icons/icon-logo.icns PROPERTIES
+        MACOSX_PACKAGE_LOCATION "Resources"
+    )
+    set(MACOS_ICON_PROP MACOSX_BUNDLE_ICON_FILE icon-logo.icns)
+endif()
+
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(ImageConverter
         MANUAL_FINALIZATION
@@ -154,6 +162,7 @@ if(${QT_VERSION} VERSION_LESS 6.1.0)
 endif()
 set_target_properties(ImageConverter PROPERTIES
     ${BUNDLE_ID_OPTION}
+    ${MACOS_ICON_PROP}
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
     MACOSX_BUNDLE TRUE
