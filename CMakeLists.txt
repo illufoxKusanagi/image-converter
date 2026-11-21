@@ -109,6 +109,10 @@ set(PROJECT_SOURCES
         mainwindow/update_checker.h
 )
 
+if(WIN32)
+    list(APPEND PROJECT_SOURCES resources/app_icon.rc)
+endif()
+
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(ImageConverter
         MANUAL_FINALIZATION
